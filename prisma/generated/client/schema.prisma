@@ -1,0 +1,596 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "./generated/client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  client
+  admin
+}
+
+enum ProjectStatus {
+  pending
+  under_review
+  accepted
+  in_progress
+  testing
+  completed
+  cancelled
+}
+
+enum FileType {
+  document
+  voice_note
+  image
+  other
+}
+
+enum SupportStatus {
+  open
+  in_progress
+  resolved
+  closed
+}
+
+enum PriorityLevel {
+  low
+  medium
+  high
+}
+
+enum MeetingStatus {
+  pending
+  accepted
+  declined
+  completed
+}
+
+enum InvoiceStatus {
+  pending
+  paid
+  overdue
+  cancelled
+}
+
+enum MemberStatus {
+  active
+  inactive
+}
+
+enum NotificationType {
+  project
+  payment
+  support
+  meeting
+  system
+}
+
+enum TransactionType {
+  income
+  expense
+}
+
+model User {
+  id         String   @id @default(uuid())
+  email      String   @unique
+  password   String? // Added for custom auth
+  full_name  String
+  role       UserRole @default(client)
+  avatar_url String?
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  projects          Project[]
+  project_files     ProjectFile[]
+  project_updates   ProjectUpdate[]
+  support_requests  SupportRequest[]
+  support_messages  SupportMessage[]
+  meeting_requests  MeetingRequest[]
+  invoices          Invoice[]
+  notifications     Notification[]
+  transactions      Transaction[]
+  inventory_logs    InventoryTransaction[]
+  purchase_requests PurchaseRequest[]
+  purchase_orders   PurchaseOrder[]
+  grns              GRN[]
+
+  @@map("users")
+}
+
+model Project {
+  id                String        @id @default(uuid())
+  client_id         String
+  title             String
+  description       String
+  status            ProjectStatus @default(pending)
+  github_link       String?
+  estimated_cost    Decimal?      @db.Decimal(10, 2)
+  actual_cost       Decimal?      @db.Decimal(10, 2)
+  deadline          DateTime?     @db.Date
+  test_asset_url    String?
+  deployment_url    String?
+  live_preview_type String?       @default("url")
+  live_preview_url  String?
+  technical_config  Json?
+  tickets           Json?
+  notes             String[]
+
+  // Node-Based Module Data
+  labour_data    Json? @default("[]")
+  inventory_data Json? @default("[]")
+  resources_data Json? @default("[]")
+  design_data    Json? @default("[]")
+  expenses_data  Json? @default("[]")
+  timeline_data  Json? @default("[]")
+
+  is_featured Boolean  @default(false)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  client             User                   @relation(fields: [client_id], references: [id], onDelete: Cascade)
+  files              ProjectFile[]
+  updates            ProjectUpdate[]
+  support_requests   SupportRequest[]
+  meeting_requests   MeetingRequest[]
+  invoices           Invoice[]
+  inventory_logs     InventoryTransaction[]
+  purchase_requests  PurchaseRequest[]
+  attendance         Attendance[]
+  labour_allocations LabourAllocation[]
+
+  @@map("projects")
+}
+
+model ProjectFile {
+  id          String   @id @default(uuid())
+  project_id  String
+  file_name   String
+  file_url    String
+  file_type   FileType @default(document)
+  file_size   BigInt
+  uploaded_by String
+  created_at  DateTime @default(now())
+
+  project  Project @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  uploader User    @relation(fields: [uploaded_by], references: [id], onDelete: Cascade)
+
+  @@map("project_files")
+}
+
+model ProjectUpdate {
+  id          String   @id @default(uuid())
+  project_id  String
+  update_text String
+  created_by  String
+  created_at  DateTime @default(now())
+
+  project Project @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  author  User    @relation(fields: [created_by], references: [id], onDelete: Cascade)
+
+  @@map("project_updates")
+}
+
+model SupportRequest {
+  id          String        @id @default(uuid())
+  project_id  String?
+  client_id   String
+  subject     String
+  description String
+  status      SupportStatus @default(open)
+  priority    PriorityLevel @default(medium)
+  created_at  DateTime      @default(now())
+  updated_at  DateTime      @updatedAt
+
+  project  Project?         @relation(fields: [project_id], references: [id])
+  client   User             @relation(fields: [client_id], references: [id], onDelete: Cascade)
+  messages SupportMessage[]
+
+  @@map("support_requests")
+}
+
+model SupportMessage {
+  id                 String   @id @default(uuid())
+  support_request_id String
+  user_id            String
+  message            String
+  created_at         DateTime @default(now())
+
+  request SupportRequest @relation(fields: [support_request_id], references: [id], onDelete: Cascade)
+  sender  User           @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("support_messages")
+}
+
+model MeetingRequest {
+  id               String        @id @default(uuid())
+  project_id       String?
+  client_id        String
+  requested_date   DateTime
+  duration_minutes Int           @default(30)
+  purpose          String
+  status           MeetingStatus @default(pending)
+  meeting_link     String?
+  admin_notes      String?
+  created_at       DateTime      @default(now())
+  updated_at       DateTime      @updatedAt
+
+  project Project? @relation(fields: [project_id], references: [id])
+  client  User     @relation(fields: [client_id], references: [id], onDelete: Cascade)
+
+  @@map("meeting_requests")
+}
+
+model Invoice {
+  id             String        @id @default(uuid())
+  project_id     String
+  client_id      String
+  invoice_number String        @unique
+  amount         Decimal       @db.Decimal(10, 2)
+  due_date       DateTime      @db.Date
+  status         InvoiceStatus @default(pending)
+  payment_qr_url String?
+  bank_details   Json?
+  paid_at        DateTime?
+  created_at     DateTime      @default(now())
+  updated_at     DateTime      @updatedAt
+
+  project  Project   @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  client   User      @relation(fields: [client_id], references: [id], onDelete: Cascade)
+  payments Payment[]
+
+  @@map("invoices")
+}
+
+model Payment {
+  id             String   @id @default(uuid())
+  invoice_id     String
+  amount         Decimal  @db.Decimal(10, 2)
+  payment_method String
+  transaction_id String?
+  payment_date   DateTime @default(now())
+  notes          String?
+  created_at     DateTime @default(now())
+
+  invoice Invoice @relation(fields: [invoice_id], references: [id], onDelete: Cascade)
+
+  @@map("payments")
+}
+
+model Employee {
+  id              String       @id @default(uuid())
+  employee_id     String       @unique // Custom ID like EMP-001
+  name            String
+  role            String // Designation
+  skill_type      String // Welder, Fitter, Helper
+  employment_type String // Permanent, Contract, Daily
+  department      String?
+  joining_date    DateTime     @db.Date
+  basic_salary    Decimal      @default(0) @db.Decimal(10, 2)
+  overtime_rate   Decimal      @default(0) @db.Decimal(10, 2)
+  bank_details    Json? // IBAN, Bank Name, WPS ID
+  status          MemberStatus @default(active)
+  created_at      DateTime     @default(now())
+  updated_at      DateTime     @updatedAt
+
+  attendance    Attendance[]
+  allocations   LabourAllocation[]
+  payroll_items PayrollLine[]
+
+  @@map("employees")
+}
+
+model Attendance {
+  id             String    @id @default(uuid())
+  employee_id    String
+  date           DateTime  @db.Date
+  status         String // present, absent, half_day
+  overtime_hours Float     @default(0)
+  project_id     String? // Link to project cost
+  check_in       DateTime?
+  check_out      DateTime?
+  created_at     DateTime  @default(now())
+
+  employee Employee @relation(fields: [employee_id], references: [id])
+  project  Project? @relation(fields: [project_id], references: [id])
+
+  @@unique([employee_id, date])
+  @@map("attendance")
+}
+
+model LabourAllocation {
+  id          String    @id @default(uuid())
+  employee_id String
+  project_id  String
+  start_date  DateTime  @db.Date
+  end_date    DateTime? @db.Date
+  status      String // active, completed
+  created_at  DateTime  @default(now())
+
+  employee Employee @relation(fields: [employee_id], references: [id])
+  project  Project  @relation(fields: [project_id], references: [id])
+
+  @@map("labour_allocations")
+}
+
+model Payroll {
+  id           String   @id @default(uuid())
+  month        String // YYYY-MM
+  status       String // draft, approved, paid
+  total_amount Decimal  @db.Decimal(12, 2)
+  approved_by  String?
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  lines PayrollLine[]
+
+  @@unique([month])
+  @@map("payrolls")
+}
+
+model PayrollLine {
+  id           String  @id @default(uuid())
+  payroll_id   String
+  employee_id  String
+  basic_pay    Decimal @db.Decimal(10, 2)
+  overtime_pay Decimal @db.Decimal(10, 2)
+  deductions   Decimal @default(0) @db.Decimal(10, 2)
+  total_pay    Decimal @db.Decimal(10, 2)
+  status       String // pending, paid
+
+  payroll  Payroll  @relation(fields: [payroll_id], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employee_id], references: [id])
+
+  @@map("payroll_lines")
+}
+
+// Removing old TeamMember/SalaryPayment models as they are replaced
+// model TeamMember ...
+// model SalaryPayment ...
+
+model Notification {
+  id         String           @id @default(uuid())
+  user_id    String
+  title      String
+  message    String
+  type       NotificationType @default(system)
+  link       String?
+  read       Boolean          @default(false)
+  created_at DateTime         @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model SystemSettings {
+  id         String   @id @default(uuid())
+  key        String   @unique
+  value      Json
+  updated_at DateTime @default(now())
+
+  @@map("system_settings")
+}
+
+model Transaction {
+  id               String          @id @default(uuid())
+  type             TransactionType
+  category         String
+  amount           Decimal         @db.Decimal(10, 2)
+  currency         String          @default("USD")
+  exchange_rate    Decimal?        @default(1.0) @db.Decimal(10, 4)
+  date             DateTime        @db.Date
+  description      String?
+  notes            String?
+  payment_method   String?
+  reference_number String?
+  attachment_url   String?
+  tax_rate_id      String?
+  created_by       String
+  created_at       DateTime        @default(now())
+  updated_at       DateTime        @updatedAt
+
+  creator User @relation(fields: [created_by], references: [id], onDelete: Cascade)
+
+  @@map("transactions")
+}
+
+model InventoryItem {
+  id            String   @id @default(uuid())
+  code          String   @unique
+  name          String
+  category      String
+  unit          String
+  current_stock Float    @default(0)
+  min_stock     Float?   @default(0)
+  cost_price    Decimal? @db.Decimal(10, 2)
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  transactions InventoryTransaction[]
+
+  @@map("inventory_items")
+}
+
+enum InventoryTransactionType {
+  stock_in
+  stock_out
+  issue_to_project
+  return_from_project
+  scrap
+  wastage
+}
+
+model InventoryTransaction {
+  id           String                   @id @default(uuid())
+  item_id      String
+  project_id   String?
+  type         InventoryTransactionType
+  quantity     Float
+  date         DateTime                 @default(now())
+  reference_no String?
+  notes        String?
+  created_by   String
+  created_at   DateTime                 @default(now())
+
+  item    InventoryItem @relation(fields: [item_id], references: [id], onDelete: Cascade)
+  project Project?      @relation(fields: [project_id], references: [id])
+  user    User          @relation(fields: [created_by], references: [id])
+
+  @@map("inventory_transactions")
+}
+
+enum PurchaseStatus {
+  pending
+  approved
+  ordered
+  received
+  billed
+  paid
+  cancelled
+}
+
+model PurchaseRequest {
+  id             String         @id @default(uuid())
+  project_id     String?
+  item_name      String
+  quantity       Float
+  unit           String
+  estimated_cost Decimal?       @db.Decimal(10, 2)
+  priority       PriorityLevel  @default(medium)
+  status         PurchaseStatus @default(pending)
+  requested_by   String
+  needed_by      DateTime?      @db.Date
+  notes          String?
+  created_at     DateTime       @default(now())
+  updated_at     DateTime       @updatedAt
+
+  project         Project?        @relation(fields: [project_id], references: [id])
+  requester       User            @relation(fields: [requested_by], references: [id])
+  purchase_orders PurchaseOrder[]
+
+  @@map("purchase_requests")
+}
+
+model Vendor {
+  id             String   @id @default(uuid())
+  name           String
+  contact_person String?
+  email          String?
+  phone          String?
+  address        String?
+  vat_no         String?
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+
+  purchase_orders PurchaseOrder[]
+  vendor_bills    VendorBill[]
+
+  @@map("vendors")
+}
+
+model PurchaseOrder {
+  id                  String         @id @default(uuid())
+  po_number           String         @unique
+  purchase_request_id String?
+  vendor_id           String
+  total_amount        Decimal        @db.Decimal(10, 2)
+  status              PurchaseStatus @default(approved)
+  created_by          String
+  created_at          DateTime       @default(now())
+  updated_at          DateTime       @updatedAt
+
+  purchase_request PurchaseRequest? @relation(fields: [purchase_request_id], references: [id])
+  vendor           Vendor           @relation(fields: [vendor_id], references: [id])
+  creator          User             @relation(fields: [created_by], references: [id])
+  grns             GRN[]
+  vendor_bills     VendorBill[]
+
+  @@map("purchase_orders")
+}
+
+model GRN {
+  id                String   @id @default(uuid())
+  grn_number        String   @unique
+  purchase_order_id String
+  received_date     DateTime @default(now())
+  received_by       String
+  notes             String?
+  created_at        DateTime @default(now())
+
+  purchase_order PurchaseOrder @relation(fields: [purchase_order_id], references: [id])
+  receiver       User          @relation(fields: [received_by], references: [id])
+
+  @@map("grns")
+}
+
+model VendorBill {
+  id                String        @id @default(uuid())
+  bill_number       String        @unique
+  purchase_order_id String
+  vendor_id         String
+  amount            Decimal       @db.Decimal(10, 2)
+  tax_amount        Decimal?      @db.Decimal(10, 2)
+  due_date          DateTime      @db.Date
+  status            InvoiceStatus @default(pending)
+  created_at        DateTime      @default(now())
+  updated_at        DateTime      @updatedAt
+
+  purchase_order  PurchaseOrder   @relation(fields: [purchase_order_id], references: [id])
+  vendor          Vendor          @relation(fields: [vendor_id], references: [id])
+  vendor_payments VendorPayment[]
+
+  @@map("vendor_bills")
+}
+
+model VendorPayment {
+  id             String   @id @default(uuid())
+  vendor_bill_id String
+  amount         Decimal  @db.Decimal(10, 2)
+  payment_date   DateTime @default(now())
+  payment_method String
+  reference_no   String?
+  notes          String?
+  created_at     DateTime @default(now())
+
+  vendor_bill VendorBill @relation(fields: [vendor_bill_id], references: [id])
+
+  @@map("vendor_payments")
+}
+
+model BankAccount {
+  id              String   @id @default(uuid())
+  name            String
+  account_number  String?
+  bank_name       String?
+  currency        String   @default("USD")
+  current_balance Decimal  @default(0) @db.Decimal(15, 2)
+  type            String   @default("bank") // bank, cash, credit_card
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  transactions BankTransaction[]
+
+  @@map("bank_accounts")
+}
+
+model BankTransaction {
+  id                    String   @id @default(uuid())
+  bank_account_id       String
+  date                  DateTime @db.Date
+  description           String
+  amount                Decimal  @db.Decimal(15, 2)
+  reference             String?
+  status                String   @default("cleared")
+  type                  String
+  system_transaction_id String?
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+
+  bank_account BankAccount @relation(fields: [bank_account_id], references: [id])
+
+  @@map("bank_transactions")
+}
