@@ -29,7 +29,9 @@ export async function POST(request: Request) {
         email: body.email,
         phone: body.phone,
         address: body.address,
-        vat_no: body.vat_no
+        country_code: body.country_code,
+        tax_id: body.tax_id,
+        tax_exempt: body.tax_exempt || false
       }
     });
     return NextResponse.json(vendor);

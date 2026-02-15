@@ -15,7 +15,7 @@ export function Sidebar({ isCollapsed, toggleCollapse }: SidebarProps) {
   return (
     <aside
       className={cn(
-        "fixed left-0 top-16 z-30 hidden h-[calc(100vh-4rem)] border-r bg-background md:block transition-all duration-300 ease-in-out",
+        "fixed left-0 top-0 z-30 hidden h-screen md:block transition-all duration-300 ease-in-out bg-background",
         isCollapsed ? "w-[80px]" : "w-64"
       )}
     >
@@ -23,12 +23,12 @@ export function Sidebar({ isCollapsed, toggleCollapse }: SidebarProps) {
         <div className={cn("flex h-14 items-center border-b px-4", isCollapsed ? "justify-center" : "justify-between")}>
           {!isCollapsed && (
             <Link href="/" className="flex items-center gap-2 font-bold text-lg tracking-tight px-2">
-              <div className="bg-primary/10 p-1 rounded-md">
-                <Hexagon className="h-6 w-6 text-primary" />
+              <div className="bg-primary text-primary-foreground p-1.5 rounded-lg">
+                <Hexagon className="h-5 w-5" />
               </div>
               <div className="flex flex-col leading-none">
-                <span>System Steel Engineering</span>
-                <span className="text-[10px] text-muted-foreground font-normal">System Steel Engineering Admin</span>
+                <span className="font-semibold text-base">System Steel</span>
+                <span className="text-[10px] text-muted-foreground/80 font-medium">Engineering Admin</span>
               </div>
             </Link>
           )}

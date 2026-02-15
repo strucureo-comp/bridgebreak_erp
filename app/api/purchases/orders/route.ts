@@ -30,22 +30,58 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const po = await prisma.purchaseOrder.create({
-      data: {
-        po_number: body.po_number,
-        vendor_id: body.vendor_id,
-        purchase_request_id: body.purchase_request_id === 'none' ? null : body.purchase_request_id,
-        total_amount: parseFloat(body.total_amount),
-        status: body.status || 'approved',
-        created_by: user.id
+    const { po_number, vendor_id, purchase_request_id, total_amount, status, lines } = body;
+
+    const result = await prisma.$transaction(async (tx) => {
+      // Create the Purchase Order
+      const po = await tx.purchaseOrder.create({
+        data: {
+          po_number,
+          vendor_id,
+          purchase_request_id: purchase_request_id === 'none' ? null : purchase_request_id,
+          total_amount: parseFloat(total_amount),
+          status: status || 'approved',
+          created_by: user.id,
+          lines: {
+            create: lines.map((line: any, index: number) => ({
+              description: line.description,
+              quantity: parseFloat(line.quantity),
+              unit_price: parseFloat(line.unit_price),
+              amount: parseFloat(line.amount),
+              tax_amount: parseFloat(line.tax_amount || 0),
+              total_amount: parseFloat(line.total_amount),
+              sort_order: index
+            }))
+          }
+        },
+        include: { lines: true }
+      });
+
+      // Update purchase request status if linked
+      if (purchase_request_id && purchase_request_id !== 'none') {
+        await tx.purchaseRequest.update({
+          where: { id: purchase_request_id },
+          data: { status: 'ordered' }
+        });
       }
+
+      return po;
     });
+
     return NextResponse.json({
-      ...po,
-      total_amount: Number(po.total_amount)
+      ...result,
+      total_amount: Number(result.total_amount),
+      lines: result.lines.map(l => ({
+        ...l,
+        quantity: Number(l.quantity),
+        unit_price: Number(l.unit_price),
+        amount: Number(l.amount),
+        tax_amount: Number(l.tax_amount),
+        total_amount: Number(l.total_amount)
+      }))
     });
   } catch (error) {
-    console.error(error);
+    console.error('Purchase Order POST Error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

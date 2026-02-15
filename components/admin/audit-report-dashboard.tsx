@@ -344,13 +344,11 @@ export function AuditReportDashboard({
                     ${report.financial_summary.total_expenses.toFixed(2)}
                   </p>
                 </div>
-                <div className={`rounded-lg p-4 ${
-                  report.financial_summary.net_income >= 0 ? 'bg-blue-50' : 'bg-red-50'
-                }`}>
-                  <p className="text-sm text-gray-600">Net Income</p>
-                  <p className={`text-2xl font-bold ${
-                    report.financial_summary.net_income >= 0 ? 'text-blue-600' : 'text-red-600'
+                <div className={`rounded-lg p-4 ${report.financial_summary.net_income >= 0 ? 'bg-blue-50' : 'bg-red-50'
                   }`}>
+                  <p className="text-sm text-gray-600">Net Income</p>
+                  <p className={`text-2xl font-bold ${report.financial_summary.net_income >= 0 ? 'text-blue-600' : 'text-red-600'
+                    }`}>
                     ${report.financial_summary.net_income.toFixed(2)}
                   </p>
                 </div>
@@ -379,7 +377,7 @@ export function AuditReportDashboard({
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      label={({ name, percentage }) => `${name}: ${percentage.toFixed(0)}%`}
+                      label={({ name, percent }: any) => `${name}: ${(percent * 100).toFixed(0)}%`}
                       outerRadius={80}
                       fill="#8884d8"
                       dataKey="value"
@@ -411,7 +409,7 @@ export function AuditReportDashboard({
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      label={({ name, percentage }) => `${name}: ${percentage.toFixed(0)}%`}
+                      label={({ name, percent }: any) => `${name}: ${(percent * 100).toFixed(0)}%`}
                       outerRadius={80}
                       fill="#8884d8"
                       dataKey="value"
@@ -472,9 +470,8 @@ export function AuditReportDashboard({
                   <h3 className="font-semibold capitalize text-gray-900">
                     {check.replace(/_/g, ' ')}
                   </h3>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    passed ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-                  }`}>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${passed ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                    }`}>
                     {passed ? "PASSED" : "FAILED"}
                   </span>
                 </CardContent>
@@ -607,7 +604,7 @@ export function AuditReportDashboard({
             </div>
 
             <div>
-               <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+              <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5 text-red-500" />
                 Detected Anomalies
                 <TermHelp term="anomalies" />
@@ -615,20 +612,18 @@ export function AuditReportDashboard({
               <div className="space-y-3">
                 {report.anomalies_detected.length > 0 ? (
                   report.anomalies_detected.map((anomaly, idx) => (
-                    <Card key={idx} className={`border-l-4 shadow-sm ${
-                        anomaly.category === 'error'
-                          ? 'border-l-red-500 bg-red-50/30'
-                          : anomaly.category === 'warning'
+                    <Card key={idx} className={`border-l-4 shadow-sm ${anomaly.category === 'error'
+                        ? 'border-l-red-500 bg-red-50/30'
+                        : anomaly.category === 'warning'
                           ? 'border-l-amber-500 bg-amber-50/30'
                           : 'border-l-blue-500 bg-blue-50/30'
                       }`}>
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between mb-1">
-                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full uppercase ${
-                             anomaly.category === 'error' ? 'bg-red-100 text-red-700' :
-                             anomaly.category === 'warning' ? 'bg-amber-100 text-amber-700' :
-                             'bg-blue-100 text-blue-700'
-                          }`}>
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full uppercase ${anomaly.category === 'error' ? 'bg-red-100 text-red-700' :
+                              anomaly.category === 'warning' ? 'bg-amber-100 text-amber-700' :
+                                'bg-blue-100 text-blue-700'
+                            }`}>
                             {anomaly.category}
                           </span>
                           <span className="text-xs text-muted-foreground">Impact: {anomaly.impact}</span>
@@ -677,7 +672,7 @@ export function AuditReportDashboard({
                       // Calculate max balance for relative bar width (simple approximation)
                       const maxBal = Math.max(...report.account_analysis.map(a => Math.abs(a.closing_balance))) || 1;
                       const percent = Math.min((Math.abs(account.closing_balance) / maxBal) * 100, 100);
-                      
+
                       return (
                         <TableRow key={account.account_id}>
                           <TableCell>
@@ -686,11 +681,11 @@ export function AuditReportDashboard({
                           </TableCell>
                           <TableCell>
                             <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium capitalize 
-                              ${account.account_type === 'asset' ? 'bg-blue-100 text-blue-800' : 
-                                account.account_type === 'liability' ? 'bg-red-100 text-red-800' : 
-                                account.account_type === 'equity' ? 'bg-green-100 text-green-800' : 
-                                account.account_type === 'income' ? 'bg-emerald-100 text-emerald-800' : 
-                                'bg-orange-100 text-orange-800'}`}>
+                              ${account.account_type === 'asset' ? 'bg-blue-100 text-blue-800' :
+                                account.account_type === 'liability' ? 'bg-red-100 text-red-800' :
+                                  account.account_type === 'equity' ? 'bg-green-100 text-green-800' :
+                                    account.account_type === 'income' ? 'bg-emerald-100 text-emerald-800' :
+                                      'bg-orange-100 text-orange-800'}`}>
                               {account.account_type}
                             </span>
                           </TableCell>
@@ -698,14 +693,14 @@ export function AuditReportDashboard({
                             ${account.closing_balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </TableCell>
                           <TableCell className="text-right">
-                             <span className="text-xs text-slate-500">{account.transactions_count} txns</span>
+                            <span className="text-xs text-slate-500">{account.transactions_count} txns</span>
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <div className="h-2 flex-1 bg-slate-100 rounded-full overflow-hidden">
-                                <div 
+                                <div
                                   className={`h-full rounded-full ${account.closing_balance >= 0 ? 'bg-blue-500' : 'bg-red-500'}`}
-                                  style={{ width: `${percent}%` }} 
+                                  style={{ width: `${percent}%` }}
                                 />
                               </div>
                             </div>

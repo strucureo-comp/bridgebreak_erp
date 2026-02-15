@@ -105,28 +105,50 @@ export async function GET(request: Request) {
         .filter(a => a.date.toISOString().slice(0, 7) === currentMonth).length,
       attendanceRate: employees.length > 0
         ? ((employees
-            .flatMap(e => e.attendance)
-            .filter(a => a.date.toISOString().slice(0, 7) === currentMonth && a.status === 'present').length /
+          .flatMap(e => e.attendance)
+          .filter(a => a.date.toISOString().slice(0, 7) === currentMonth && a.status === 'present').length /
           (employees.length * 20)) * 100).toFixed(1) + '%'
         : '0%'
     };
 
-    // 4. INVENTORY METRICS
-    const inventoryItems = await prisma.inventoryItem.findMany({
-      include: { transactions: true }
+    // 4. INVENTORY METRICS (SCM)
+    const products = await prisma.product.findMany({
+      include: {
+        variants: {
+          include: {
+            inventory: true
+          }
+        }
+      }
+    });
+
+    let totalStockValue = 0;
+    let lowStockCount = 0;
+    let criticalCount = 0;
+    const lowStockNames: string[] = [];
+
+    products.forEach(product => {
+      product.variants.forEach(variant => {
+        const stock = variant.inventory.reduce((sum, item) => sum + Number(item.quantity), 0);
+        // Assuming min_stock is 5 for now as it's not on Variant yet (feature refinement needed)
+        const minStock = 5;
+
+        totalStockValue += stock * Number(variant.cost);
+
+        if (stock < minStock) {
+          lowStockCount++;
+          if (lowStockNames.length < 5) lowStockNames.push(`${product.name} (${variant.sku})`);
+        }
+        if (stock === 0) criticalCount++;
+      });
     });
 
     const inventoryMetrics = {
-      totalItems: inventoryItems.length,
-      lowStockItems: inventoryItems.filter(i => i.min_stock && i.current_stock < i.min_stock).length,
-      criticalItems: inventoryItems.filter(i => i.current_stock === 0).length,
-      totalInventoryValue: inventoryItems.reduce(
-        (sum, item) => sum + (Number(item.cost_price || 0) * item.current_stock), 0
-      ),
-      stockoutRisk: inventoryItems
-        .filter(i => i.min_stock && i.current_stock < i.min_stock)
-        .map(i => i.name)
-        .slice(0, 5)
+      totalItems: products.length, // Products count
+      lowStockItems: lowStockCount, // Variant level
+      criticalItems: criticalCount,
+      totalInventoryValue: totalStockValue,
+      stockoutRisk: lowStockNames
     };
 
     // 5. PROCUREMENT METRICS

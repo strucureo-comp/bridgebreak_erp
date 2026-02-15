@@ -4,7 +4,7 @@ import { getCurrentUser } from '@/lib/session';
 
 /**
  * GET /api/inventory/low-stock-alerts
- * Identify items below minimum stock levels
+ * Identify items below minimum stock levels (reorder_point)
  * Ready to auto-generate purchase requests
  */
 export async function GET(request: Request) {
@@ -14,43 +14,50 @@ export async function GET(request: Request) {
   }
 
   try {
-    const items = await prisma.inventoryItem.findMany({
+    const variants = await prisma.productVariant.findMany({
       include: {
+        product: true,
+        inventory: true,
         transactions: {
-          orderBy: { created_at: 'desc' },
-          take: 5
+          orderBy: { date: 'desc' },
+          take: 30
         }
       }
-    }) as Array<any>;
+    });
 
-    const lowStockAlerts = items
-      .filter(item => Number(item.min_stock ?? 0) > 0 && item.current_stock < Number(item.min_stock ?? 0))
-      .map(item => {
-        const minStock = Number(item.min_stock ?? 0);
-        // Calculate average daily usage
-        const last30Days = (item.transactions || [])
-          .filter((t: any) => new Date(t.created_at).getTime() > Date.now() - 30 * 24 * 60 * 60 * 1000);
-        const avgDailyUsage = last30Days.length > 0
-          ? last30Days.reduce((sum: number, t: any) => sum + (t.type.includes('out') ? t.quantity : 0), 0) / 30
-          : 0;
+    const lowStockAlerts = variants
+      .map((variant: any) => {
+        const currentStock = variant.inventory.reduce((sum: number, i: any) => sum + Number(i.quantity), 0);
+        const reorderPoint = variant.reorder_point || 0;
 
-        return {
-          itemId: item.id,
-          code: item.code,
-          name: item.name,
-          category: item.category,
-          unit: item.unit,
-          currentStock: item.current_stock,
-          minStock: minStock,
-          maxStock: minStock * 3, // Suggested max
-          stockout: item.current_stock <= 0,
-          daysToStockout: avgDailyUsage > 0 ? Math.ceil(item.current_stock / avgDailyUsage) : null,
-          costPrice: item.cost_price,
-          reorderQuantity: Math.max(minStock * 2, 10),
-          suggestedCost: Number(item.cost_price || 0) * Math.max(minStock * 2, 10),
-          avgDailyUsage: avgDailyUsage.toFixed(2)
-        };
-      });
+        if (reorderPoint > 0 && currentStock <= reorderPoint) {
+          // Calculate average daily usage
+          const last30Days = variant.transactions
+            .filter((t: any) => new Date(t.date).getTime() > Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+          const totalOut = last30Days
+            .filter((t: any) => t.type === 'out')
+            .reduce((sum: number, t: any) => sum + Number(t.quantity), 0);
+
+          const avgDailyUsage = totalOut / 30;
+
+          return {
+            variantId: variant.id,
+            sku: variant.sku,
+            name: variant.name || variant.product.name,
+            productName: variant.product.name,
+            currentStock,
+            minStock: reorderPoint,
+            reorderQuantity: variant.reorder_quantity || Math.max(reorderPoint * 2, 10),
+            stockout: currentStock <= 0,
+            daysToStockout: avgDailyUsage > 0 ? Math.ceil(currentStock / avgDailyUsage) : null,
+            cost: Number(variant.cost),
+            suggestedCost: Number(variant.cost) * (variant.reorder_quantity || Math.max(reorderPoint * 2, 10))
+          };
+        }
+        return null;
+      })
+      .filter((item): item is NonNullable<typeof item> => item !== null);
 
     return NextResponse.json({
       itemsNeedingReorder: lowStockAlerts.length,
@@ -66,7 +73,6 @@ export async function GET(request: Request) {
 /**
  * POST /api/inventory/auto-generate-purchase-requests
  * Automatically create purchase requests for low-stock items
- * Optionally create purchase orders with default vendor
  */
 export async function POST(request: Request) {
   const user = await getCurrentUser();
@@ -76,34 +82,39 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { itemIds, defaultVendorId, autoCreatePO } = body;
+    const { variantIds, defaultVendorId, autoCreatePO } = body;
 
-    const items = await prisma.inventoryItem.findMany({
-      where: itemIds ? { id: { in: itemIds } } : {
-        min_stock: { gt: 0 },
-        current_stock: { lt: prisma.inventoryItem.fields.min_stock }
-      }
+    // Fetch variants that need reorder
+    const variants = await prisma.productVariant.findMany({
+      where: variantIds ? { id: { in: variantIds } } : {
+        reorder_point: { gt: 0 }
+      },
+      include: { product: true, inventory: true }
     });
 
     const createdRequests = [];
     const createdOrders = [];
 
-    for (const item of items) {
-      // Create purchase request
-      const reorderQty = Math.max((item.min_stock || 10) * 2, 10);
-      const estimatedCost = Number(item.cost_price || 0) * reorderQty;
+    for (const variant of variants) {
+      const currentStock = variant.inventory.reduce((sum, i) => sum + Number(i.quantity), 0);
+
+      // Double check if it actually needs reorder if not explicitly requested
+      if (!variantIds && currentStock > variant.reorder_point) continue;
+
+      const reorderQty = variant.reorder_quantity || Math.max(variant.reorder_point * 2, 10);
+      const estimatedCost = Number(variant.cost) * reorderQty;
 
       const purchaseRequest = await prisma.purchaseRequest.create({
         data: {
-          item_name: item.name,
+          item_name: `${variant.product.name} (${variant.sku})`,
           quantity: reorderQty,
-          unit: item.unit,
+          unit: variant.product.uom,
           estimated_cost: estimatedCost,
           status: 'pending',
-          priority: item.current_stock <= 0 ? 'high' : 'medium',
+          priority: currentStock <= 0 ? 'high' : 'medium',
           requested_by: user.id,
           needed_by: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-          notes: `Auto-generated: ${item.name} (${item.code}) - Current: ${item.current_stock}, Min: ${item.min_stock}`
+          notes: `Auto-replenishment: Stock ${currentStock} <= Reorder Point ${variant.reorder_point}`
         }
       });
 
@@ -111,7 +122,7 @@ export async function POST(request: Request) {
 
       // Optionally create PO
       if (autoCreatePO && defaultVendorId) {
-        const poNumber = `PO-${Date.now()}-${item.code}`;
+        const poNumber = `PO-${Date.now()}-${variant.sku}`;
         const purchaseOrder = await prisma.purchaseOrder.create({
           data: {
             po_number: poNumber,
@@ -131,9 +142,7 @@ export async function POST(request: Request) {
       success: true,
       message: `Created ${createdRequests.length} purchase requests`,
       requestsCreated: createdRequests.length,
-      ordersCreated: createdOrders.length,
-      requests: createdRequests,
-      orders: createdOrders
+      ordersCreated: createdOrders.length
     });
   } catch (error) {
     console.error('Auto-PO error:', error);

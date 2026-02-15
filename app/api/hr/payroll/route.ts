@@ -42,7 +42,7 @@ export async function POST(request: Request) {
 
   try {
     const { month } = await request.json();
-    
+
     // Check if exists
     const existing = await prisma.payroll.findUnique({ where: { month } });
     if (existing) return NextResponse.json({ error: 'Payroll already exists for this month' }, { status: 400 });
@@ -78,7 +78,9 @@ export async function POST(request: Request) {
           employee_id: emp.id,
           basic_pay: basicPay,
           overtime_pay: overtimePay,
+          gross_pay: totalPay,
           deductions: 0,
+          net_pay: totalPay,
           total_pay: totalPay,
           status: 'pending'
         });
@@ -101,11 +103,13 @@ export async function POST(request: Request) {
     return NextResponse.json({
       ...payroll,
       total_amount: Number(payroll.total_amount),
-      lines: payroll.lines.map(line => ({
+      lines: payroll.lines.map((line: any) => ({
         ...line,
         basic_pay: Number(line.basic_pay),
         overtime_pay: Number(line.overtime_pay),
+        gross_pay: Number(line.gross_pay),
         deductions: Number(line.deductions),
+        net_pay: Number(line.net_pay),
         total_pay: Number(line.total_pay)
       }))
     });

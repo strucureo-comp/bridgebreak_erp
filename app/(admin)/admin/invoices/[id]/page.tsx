@@ -53,8 +53,8 @@ export default function EditInvoicePage({ params }: { params: { id: string } }) 
             if (invoiceData) {
                 setOriginalInvoice(invoiceData);
                 setFormData({
-                    client_id: invoiceData.client_id,
-                    project_id: invoiceData.project_id,
+                    client_id: invoiceData.client_id || '',
+                    project_id: invoiceData.project_id || '',
                     invoice_number: invoiceData.invoice_number,
                     amount: invoiceData.amount.toString(),
                     due_date: invoiceData.due_date,

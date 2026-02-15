@@ -92,6 +92,65 @@ exports.Prisma.TransactionIsolationLevel = makeStrictEnum({
   Serializable: 'Serializable'
 });
 
+exports.Prisma.TenantScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  trade_license: 'trade_license',
+  business_type: 'business_type',
+  industry: 'industry',
+  country: 'country',
+  currency: 'currency',
+  tax_regime: 'tax_regime',
+  timezone: 'timezone',
+  financial_year_start: 'financial_year_start',
+  logo_url: 'logo_url',
+  setup_stage: 'setup_stage',
+  company_setup_complete: 'company_setup_complete',
+  finance_setup_complete: 'finance_setup_complete',
+  roles_setup_complete: 'roles_setup_complete',
+  module_finance: 'module_finance',
+  module_sales: 'module_sales',
+  module_operations: 'module_operations',
+  module_hr: 'module_hr',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
+exports.Prisma.SubscriptionPlanScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  code: 'code',
+  description: 'description',
+  price_monthly: 'price_monthly',
+  price_yearly: 'price_yearly',
+  trial_days: 'trial_days',
+  max_users: 'max_users',
+  module_finance: 'module_finance',
+  module_sales: 'module_sales',
+  module_operations: 'module_operations',
+  module_hr: 'module_hr',
+  module_reports: 'module_reports',
+  is_active: 'is_active',
+  sort_order: 'sort_order',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
+exports.Prisma.SubscriptionScalarFieldEnum = {
+  id: 'id',
+  tenant_id: 'tenant_id',
+  plan_id: 'plan_id',
+  status: 'status',
+  billing_interval: 'billing_interval',
+  trial_start: 'trial_start',
+  trial_end: 'trial_end',
+  current_period_start: 'current_period_start',
+  current_period_end: 'current_period_end',
+  cancelled_at: 'cancelled_at',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
 exports.Prisma.UserScalarFieldEnum = {
   id: 'id',
   email: 'email',
@@ -99,6 +158,8 @@ exports.Prisma.UserScalarFieldEnum = {
   full_name: 'full_name',
   role: 'role',
   avatar_url: 'avatar_url',
+  tenant_id: 'tenant_id',
+  erp_role: 'erp_role',
   created_at: 'created_at',
   updated_at: 'updated_at'
 };
@@ -188,15 +249,37 @@ exports.Prisma.InvoiceScalarFieldEnum = {
   id: 'id',
   project_id: 'project_id',
   client_id: 'client_id',
+  customer_id: 'customer_id',
   invoice_number: 'invoice_number',
   amount: 'amount',
+  tax_amount: 'tax_amount',
+  tax_breakdown: 'tax_breakdown',
+  total_amount: 'total_amount',
+  currency: 'currency',
+  exchange_rate: 'exchange_rate',
   due_date: 'due_date',
   status: 'status',
+  posting_status: 'posting_status',
   payment_qr_url: 'payment_qr_url',
   bank_details: 'bank_details',
+  notes: 'notes',
+  terms: 'terms',
   paid_at: 'paid_at',
   created_at: 'created_at',
   updated_at: 'updated_at'
+};
+
+exports.Prisma.InvoiceLineScalarFieldEnum = {
+  id: 'id',
+  invoice_id: 'invoice_id',
+  description: 'description',
+  quantity: 'quantity',
+  unit_price: 'unit_price',
+  amount: 'amount',
+  tax_rate_id: 'tax_rate_id',
+  tax_amount: 'tax_amount',
+  total_amount: 'total_amount',
+  sort_order: 'sort_order'
 };
 
 exports.Prisma.PaymentScalarFieldEnum = {
@@ -208,6 +291,29 @@ exports.Prisma.PaymentScalarFieldEnum = {
   payment_date: 'payment_date',
   notes: 'notes',
   created_at: 'created_at'
+};
+
+exports.Prisma.DepartmentScalarFieldEnum = {
+  id: 'id',
+  code: 'code',
+  name: 'name',
+  head_id: 'head_id',
+  parent_id: 'parent_id',
+  is_active: 'is_active',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
+exports.Prisma.HRRoleScalarFieldEnum = {
+  id: 'id',
+  code: 'code',
+  title: 'title',
+  grade: 'grade',
+  min_salary: 'min_salary',
+  max_salary: 'max_salary',
+  is_active: 'is_active',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
 };
 
 exports.Prisma.EmployeeScalarFieldEnum = {
@@ -223,6 +329,41 @@ exports.Prisma.EmployeeScalarFieldEnum = {
   overtime_rate: 'overtime_rate',
   bank_details: 'bank_details',
   status: 'status',
+  email: 'email',
+  phone: 'phone',
+  date_of_birth: 'date_of_birth',
+  gender: 'gender',
+  blood_group: 'blood_group',
+  marital_status: 'marital_status',
+  nationality: 'nationality',
+  address: 'address',
+  emergency_contact: 'emergency_contact',
+  photo_url: 'photo_url',
+  lifecycle_status: 'lifecycle_status',
+  confirmation_date: 'confirmation_date',
+  resignation_date: 'resignation_date',
+  exit_date: 'exit_date',
+  exit_reason: 'exit_reason',
+  pf_number: 'pf_number',
+  esi_number: 'esi_number',
+  uan_number: 'uan_number',
+  pan_number: 'pan_number',
+  aadhar_number: 'aadhar_number',
+  department_id: 'department_id',
+  hr_role_id: 'hr_role_id',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
+exports.Prisma.EmployeeDocumentScalarFieldEnum = {
+  id: 'id',
+  employee_id: 'employee_id',
+  name: 'name',
+  doc_type: 'doc_type',
+  file_url: 'file_url',
+  file_name: 'file_name',
+  expiry_date: 'expiry_date',
+  notes: 'notes',
   created_at: 'created_at',
   updated_at: 'updated_at'
 };
@@ -236,7 +377,70 @@ exports.Prisma.AttendanceScalarFieldEnum = {
   project_id: 'project_id',
   check_in: 'check_in',
   check_out: 'check_out',
+  notes: 'notes',
   created_at: 'created_at'
+};
+
+exports.Prisma.LeaveTypeScalarFieldEnum = {
+  id: 'id',
+  code: 'code',
+  name: 'name',
+  days_per_year: 'days_per_year',
+  is_paid: 'is_paid',
+  carry_forward: 'carry_forward',
+  max_carry: 'max_carry',
+  is_active: 'is_active',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
+exports.Prisma.LeaveScalarFieldEnum = {
+  id: 'id',
+  employee_id: 'employee_id',
+  leave_type_id: 'leave_type_id',
+  from_date: 'from_date',
+  to_date: 'to_date',
+  days: 'days',
+  reason: 'reason',
+  status: 'status',
+  approved_by: 'approved_by',
+  approved_at: 'approved_at',
+  remarks: 'remarks',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
+exports.Prisma.HolidayScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  date: 'date',
+  type: 'type',
+  is_active: 'is_active',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
+exports.Prisma.SalaryStructureScalarFieldEnum = {
+  id: 'id',
+  employee_id: 'employee_id',
+  effective_from: 'effective_from',
+  basic: 'basic',
+  hra: 'hra',
+  da: 'da',
+  ta: 'ta',
+  special_allowance: 'special_allowance',
+  pf_employee: 'pf_employee',
+  pf_employer: 'pf_employer',
+  esi_employee: 'esi_employee',
+  esi_employer: 'esi_employer',
+  professional_tax: 'professional_tax',
+  tds: 'tds',
+  gross_salary: 'gross_salary',
+  net_salary: 'net_salary',
+  is_current: 'is_current',
+  notes: 'notes',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
 };
 
 exports.Prisma.LabourAllocationScalarFieldEnum = {
@@ -254,7 +458,11 @@ exports.Prisma.PayrollScalarFieldEnum = {
   month: 'month',
   status: 'status',
   total_amount: 'total_amount',
+  total_deductions: 'total_deductions',
+  total_employer_cost: 'total_employer_cost',
   approved_by: 'approved_by',
+  posted_to_finance: 'posted_to_finance',
+  finance_journal_id: 'finance_journal_id',
   created_at: 'created_at',
   updated_at: 'updated_at'
 };
@@ -264,10 +472,34 @@ exports.Prisma.PayrollLineScalarFieldEnum = {
   payroll_id: 'payroll_id',
   employee_id: 'employee_id',
   basic_pay: 'basic_pay',
+  hra: 'hra',
+  da: 'da',
+  ta: 'ta',
+  special_allowance: 'special_allowance',
   overtime_pay: 'overtime_pay',
+  gross_pay: 'gross_pay',
+  pf_deduction: 'pf_deduction',
+  esi_deduction: 'esi_deduction',
+  professional_tax: 'professional_tax',
+  tds: 'tds',
   deductions: 'deductions',
+  net_pay: 'net_pay',
   total_pay: 'total_pay',
   status: 'status'
+};
+
+exports.Prisma.HREventScalarFieldEnum = {
+  id: 'id',
+  employee_id: 'employee_id',
+  type: 'type',
+  title: 'title',
+  description: 'description',
+  event_date: 'event_date',
+  effective_date: 'effective_date',
+  metadata: 'metadata',
+  created_by: 'created_by',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
 };
 
 exports.Prisma.NotificationScalarFieldEnum = {
@@ -288,6 +520,24 @@ exports.Prisma.SystemSettingsScalarFieldEnum = {
   updated_at: 'updated_at'
 };
 
+exports.Prisma.TaxRateScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  code: 'code',
+  rate: 'rate',
+  type: 'type',
+  country_code: 'country_code',
+  region: 'region',
+  category: 'category',
+  description: 'description',
+  is_compound: 'is_compound',
+  is_active: 'is_active',
+  valid_from: 'valid_from',
+  valid_until: 'valid_until',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
 exports.Prisma.TransactionScalarFieldEnum = {
   id: 'id',
   type: 'type',
@@ -305,32 +555,6 @@ exports.Prisma.TransactionScalarFieldEnum = {
   created_by: 'created_by',
   created_at: 'created_at',
   updated_at: 'updated_at'
-};
-
-exports.Prisma.InventoryItemScalarFieldEnum = {
-  id: 'id',
-  code: 'code',
-  name: 'name',
-  category: 'category',
-  unit: 'unit',
-  current_stock: 'current_stock',
-  min_stock: 'min_stock',
-  cost_price: 'cost_price',
-  created_at: 'created_at',
-  updated_at: 'updated_at'
-};
-
-exports.Prisma.InventoryTransactionScalarFieldEnum = {
-  id: 'id',
-  item_id: 'item_id',
-  project_id: 'project_id',
-  type: 'type',
-  quantity: 'quantity',
-  date: 'date',
-  reference_no: 'reference_no',
-  notes: 'notes',
-  created_by: 'created_by',
-  created_at: 'created_at'
 };
 
 exports.Prisma.PurchaseRequestScalarFieldEnum = {
@@ -356,6 +580,9 @@ exports.Prisma.VendorScalarFieldEnum = {
   email: 'email',
   phone: 'phone',
   address: 'address',
+  country_code: 'country_code',
+  tax_id: 'tax_id',
+  tax_exempt: 'tax_exempt',
   vat_no: 'vat_no',
   created_at: 'created_at',
   updated_at: 'updated_at'
@@ -371,6 +598,19 @@ exports.Prisma.PurchaseOrderScalarFieldEnum = {
   created_by: 'created_by',
   created_at: 'created_at',
   updated_at: 'updated_at'
+};
+
+exports.Prisma.PurchaseOrderLineScalarFieldEnum = {
+  id: 'id',
+  purchase_order_id: 'purchase_order_id',
+  description: 'description',
+  quantity: 'quantity',
+  unit_price: 'unit_price',
+  amount: 'amount',
+  tax_rate_id: 'tax_rate_id',
+  tax_amount: 'tax_amount',
+  total_amount: 'total_amount',
+  sort_order: 'sort_order'
 };
 
 exports.Prisma.GRNScalarFieldEnum = {
@@ -390,10 +630,28 @@ exports.Prisma.VendorBillScalarFieldEnum = {
   vendor_id: 'vendor_id',
   amount: 'amount',
   tax_amount: 'tax_amount',
+  tax_breakdown: 'tax_breakdown',
+  total_amount: 'total_amount',
+  currency: 'currency',
   due_date: 'due_date',
   status: 'status',
+  posting_status: 'posting_status',
+  notes: 'notes',
   created_at: 'created_at',
   updated_at: 'updated_at'
+};
+
+exports.Prisma.VendorBillLineScalarFieldEnum = {
+  id: 'id',
+  vendor_bill_id: 'vendor_bill_id',
+  description: 'description',
+  quantity: 'quantity',
+  unit_price: 'unit_price',
+  amount: 'amount',
+  tax_rate_id: 'tax_rate_id',
+  tax_amount: 'tax_amount',
+  total_amount: 'total_amount',
+  sort_order: 'sort_order'
 };
 
 exports.Prisma.VendorPaymentScalarFieldEnum = {
@@ -404,6 +662,127 @@ exports.Prisma.VendorPaymentScalarFieldEnum = {
   payment_method: 'payment_method',
   reference_no: 'reference_no',
   notes: 'notes',
+  created_at: 'created_at'
+};
+
+exports.Prisma.CreditNoteScalarFieldEnum = {
+  id: 'id',
+  number: 'number',
+  customer_id: 'customer_id',
+  invoice_id: 'invoice_id',
+  date: 'date',
+  amount: 'amount',
+  tax_amount: 'tax_amount',
+  total_amount: 'total_amount',
+  currency: 'currency',
+  reason: 'reason',
+  status: 'status',
+  posting_status: 'posting_status',
+  notes: 'notes',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
+exports.Prisma.CreditNoteLineScalarFieldEnum = {
+  id: 'id',
+  credit_note_id: 'credit_note_id',
+  description: 'description',
+  quantity: 'quantity',
+  unit_price: 'unit_price',
+  amount: 'amount',
+  tax_rate_id: 'tax_rate_id',
+  tax_amount: 'tax_amount',
+  total_amount: 'total_amount',
+  sort_order: 'sort_order'
+};
+
+exports.Prisma.CreditNoteApplicationScalarFieldEnum = {
+  id: 'id',
+  credit_note_id: 'credit_note_id',
+  invoice_id: 'invoice_id',
+  amount: 'amount',
+  date: 'date',
+  created_at: 'created_at'
+};
+
+exports.Prisma.DebitNoteScalarFieldEnum = {
+  id: 'id',
+  number: 'number',
+  vendor_id: 'vendor_id',
+  vendor_bill_id: 'vendor_bill_id',
+  date: 'date',
+  amount: 'amount',
+  tax_amount: 'tax_amount',
+  total_amount: 'total_amount',
+  currency: 'currency',
+  reason: 'reason',
+  status: 'status',
+  posting_status: 'posting_status',
+  notes: 'notes',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
+exports.Prisma.DebitNoteLineScalarFieldEnum = {
+  id: 'id',
+  debit_note_id: 'debit_note_id',
+  description: 'description',
+  quantity: 'quantity',
+  unit_price: 'unit_price',
+  amount: 'amount',
+  tax_rate_id: 'tax_rate_id',
+  tax_amount: 'tax_amount',
+  total_amount: 'total_amount',
+  sort_order: 'sort_order'
+};
+
+exports.Prisma.DebitNoteApplicationScalarFieldEnum = {
+  id: 'id',
+  debit_note_id: 'debit_note_id',
+  vendor_bill_id: 'vendor_bill_id',
+  amount: 'amount',
+  date: 'date',
+  created_at: 'created_at'
+};
+
+exports.Prisma.StockJournalScalarFieldEnum = {
+  id: 'id',
+  number: 'number',
+  date: 'date',
+  type: 'type',
+  reference: 'reference',
+  reason: 'reason',
+  posting_status: 'posting_status',
+  total_value: 'total_value',
+  valuation_method: 'valuation_method',
+  notes: 'notes',
+  created_by: 'created_by',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
+exports.Prisma.StockJournalLineScalarFieldEnum = {
+  id: 'id',
+  stock_journal_id: 'stock_journal_id',
+  variant_id: 'variant_id',
+  from_location_id: 'from_location_id',
+  to_location_id: 'to_location_id',
+  quantity: 'quantity',
+  unit_cost: 'unit_cost',
+  total_cost: 'total_cost',
+  lot_number: 'lot_number',
+  expiry_date: 'expiry_date',
+  notes: 'notes',
+  sort_order: 'sort_order'
+};
+
+exports.Prisma.StockJournalGLEntryScalarFieldEnum = {
+  id: 'id',
+  stock_journal_id: 'stock_journal_id',
+  account_id: 'account_id',
+  debit: 'debit',
+  credit: 'credit',
+  description: 'description',
   created_at: 'created_at'
 };
 
@@ -431,6 +810,442 @@ exports.Prisma.BankTransactionScalarFieldEnum = {
   system_transaction_id: 'system_transaction_id',
   created_at: 'created_at',
   updated_at: 'updated_at'
+};
+
+exports.Prisma.AccountScalarFieldEnum = {
+  id: 'id',
+  code: 'code',
+  name: 'name',
+  type: 'type',
+  parent_id: 'parent_id',
+  balance: 'balance',
+  is_system: 'is_system',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
+exports.Prisma.JournalEntryScalarFieldEnum = {
+  id: 'id',
+  date: 'date',
+  description: 'description',
+  reference: 'reference',
+  status: 'status',
+  created_by: 'created_by',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
+exports.Prisma.JournalLineScalarFieldEnum = {
+  id: 'id',
+  journal_entry_id: 'journal_entry_id',
+  account_id: 'account_id',
+  debit: 'debit',
+  credit: 'credit',
+  description: 'description'
+};
+
+exports.Prisma.BudgetScalarFieldEnum = {
+  id: 'id',
+  account_id: 'account_id',
+  period: 'period',
+  amount: 'amount',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
+exports.Prisma.LeadScalarFieldEnum = {
+  id: 'id',
+  first_name: 'first_name',
+  last_name: 'last_name',
+  email: 'email',
+  phone: 'phone',
+  company: 'company',
+  title: 'title',
+  status: 'status',
+  source: 'source',
+  score: 'score',
+  owner_id: 'owner_id',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
+exports.Prisma.CustomerAccountScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  industry: 'industry',
+  website: 'website',
+  phone: 'phone',
+  address: 'address',
+  country_code: 'country_code',
+  tax_id: 'tax_id',
+  tax_exempt: 'tax_exempt',
+  tax_exempt_reason: 'tax_exempt_reason',
+  owner_id: 'owner_id',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
+exports.Prisma.ContactScalarFieldEnum = {
+  id: 'id',
+  account_id: 'account_id',
+  first_name: 'first_name',
+  last_name: 'last_name',
+  email: 'email',
+  phone: 'phone',
+  title: 'title',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
+exports.Prisma.OpportunityScalarFieldEnum = {
+  id: 'id',
+  account_id: 'account_id',
+  name: 'name',
+  amount: 'amount',
+  stage: 'stage',
+  probability: 'probability',
+  close_date: 'close_date',
+  owner_id: 'owner_id',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
+exports.Prisma.ActivityScalarFieldEnum = {
+  id: 'id',
+  type: 'type',
+  subject: 'subject',
+  description: 'description',
+  due_date: 'due_date',
+  completed: 'completed',
+  lead_id: 'lead_id',
+  account_id: 'account_id',
+  contact_id: 'contact_id',
+  opportunity_id: 'opportunity_id',
+  user_id: 'user_id',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
+exports.Prisma.ProductScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  description: 'description',
+  type: 'type',
+  category: 'category',
+  uom: 'uom',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
+exports.Prisma.ProductVariantScalarFieldEnum = {
+  id: 'id',
+  product_id: 'product_id',
+  sku: 'sku',
+  name: 'name',
+  price: 'price',
+  cost: 'cost',
+  reorder_point: 'reorder_point',
+  reorder_quantity: 'reorder_quantity',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
+exports.Prisma.ProductAttributeScalarFieldEnum = {
+  id: 'id',
+  product_id: 'product_id',
+  name: 'name',
+  value: 'value'
+};
+
+exports.Prisma.WarehouseScalarFieldEnum = {
+  id: 'id',
+  code: 'code',
+  name: 'name',
+  address: 'address',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
+exports.Prisma.LocationScalarFieldEnum = {
+  id: 'id',
+  warehouse_id: 'warehouse_id',
+  code: 'code',
+  name: 'name',
+  type: 'type'
+};
+
+exports.Prisma.InventoryItemScalarFieldEnum = {
+  id: 'id',
+  variant_id: 'variant_id',
+  location_id: 'location_id',
+  quantity: 'quantity',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
+exports.Prisma.InventoryTransactionScalarFieldEnum = {
+  id: 'id',
+  type: 'type',
+  variant_id: 'variant_id',
+  from_location_id: 'from_location_id',
+  to_location_id: 'to_location_id',
+  quantity: 'quantity',
+  reference: 'reference',
+  date: 'date',
+  created_by: 'created_by',
+  project_id: 'project_id'
+};
+
+exports.Prisma.FixedAssetScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  asset_number: 'asset_number',
+  purchase_date: 'purchase_date',
+  purchase_cost: 'purchase_cost',
+  salvage_value: 'salvage_value',
+  useful_life_years: 'useful_life_years',
+  accumulated_depreciation: 'accumulated_depreciation',
+  current_book_value: 'current_book_value',
+  last_depreciation_date: 'last_depreciation_date',
+  status: 'status',
+  location: 'location',
+  serial_number: 'serial_number',
+  asset_account_id: 'asset_account_id',
+  depreciation_account_id: 'depreciation_account_id',
+  expense_account_id: 'expense_account_id',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
+exports.Prisma.DepreciationScheduleScalarFieldEnum = {
+  id: 'id',
+  fixed_asset_id: 'fixed_asset_id',
+  date: 'date',
+  amount: 'amount',
+  is_posted: 'is_posted',
+  journal_entry_id: 'journal_entry_id'
+};
+
+exports.Prisma.ApprovalWorkflowScalarFieldEnum = {
+  id: 'id',
+  entity_type: 'entity_type',
+  min_amount: 'min_amount',
+  approver_role: 'approver_role',
+  approver_id: 'approver_id',
+  is_active: 'is_active',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
+exports.Prisma.ApprovalRequestScalarFieldEnum = {
+  id: 'id',
+  entity_type: 'entity_type',
+  entity_id: 'entity_id',
+  status: 'status',
+  requested_by: 'requested_by',
+  approved_by: 'approved_by',
+  comments: 'comments',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
+exports.Prisma.BudgetControlScalarFieldEnum = {
+  id: 'id',
+  account_id: 'account_id',
+  period: 'period',
+  limit_amount: 'limit_amount',
+  consumed_amount: 'consumed_amount',
+  action: 'action',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
+exports.Prisma.QuoteScalarFieldEnum = {
+  id: 'id',
+  number: 'number',
+  account_id: 'account_id',
+  project_id: 'project_id',
+  issue_date: 'issue_date',
+  valid_until: 'valid_until',
+  status: 'status',
+  total_amount: 'total_amount',
+  notes: 'notes',
+  terms: 'terms',
+  created_by: 'created_by',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
+exports.Prisma.QuoteLineScalarFieldEnum = {
+  id: 'id',
+  quote_id: 'quote_id',
+  description: 'description',
+  quantity: 'quantity',
+  unit_price: 'unit_price',
+  total_price: 'total_price'
+};
+
+exports.Prisma.SalesOrderScalarFieldEnum = {
+  id: 'id',
+  number: 'number',
+  quote_id: 'quote_id',
+  account_id: 'account_id',
+  project_id: 'project_id',
+  order_date: 'order_date',
+  status: 'status',
+  total_amount: 'total_amount',
+  created_by: 'created_by',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
+exports.Prisma.SalesOrderLineScalarFieldEnum = {
+  id: 'id',
+  sales_order_id: 'sales_order_id',
+  description: 'description',
+  quantity: 'quantity',
+  unit_price: 'unit_price',
+  total_price: 'total_price'
+};
+
+exports.Prisma.TimesheetEntryScalarFieldEnum = {
+  id: 'id',
+  project_id: 'project_id',
+  user_id: 'user_id',
+  date: 'date',
+  hours: 'hours',
+  description: 'description',
+  billable: 'billable',
+  status: 'status',
+  approver_id: 'approver_id',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
+exports.Prisma.ExpenseClaimScalarFieldEnum = {
+  id: 'id',
+  project_id: 'project_id',
+  user_id: 'user_id',
+  date: 'date',
+  amount: 'amount',
+  category: 'category',
+  description: 'description',
+  receipt_url: 'receipt_url',
+  billable: 'billable',
+  status: 'status',
+  approver_id: 'approver_id',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
+exports.Prisma.PriceListScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  currency: 'currency',
+  start_date: 'start_date',
+  end_date: 'end_date',
+  active: 'active'
+};
+
+exports.Prisma.PriceListItemScalarFieldEnum = {
+  id: 'id',
+  price_list_id: 'price_list_id',
+  variant_id: 'variant_id',
+  price: 'price',
+  min_quantity: 'min_quantity'
+};
+
+exports.Prisma.ProductBundleScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  description: 'description',
+  sku: 'sku',
+  price: 'price',
+  active: 'active',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
+exports.Prisma.ProductBundleItemScalarFieldEnum = {
+  id: 'id',
+  bundle_id: 'bundle_id',
+  variant_id: 'variant_id',
+  quantity: 'quantity'
+};
+
+exports.Prisma.ResourceBookingScalarFieldEnum = {
+  id: 'id',
+  project_id: 'project_id',
+  user_id: 'user_id',
+  start_date: 'start_date',
+  end_date: 'end_date',
+  hours: 'hours',
+  status: 'status',
+  notes: 'notes',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
+exports.Prisma.PerformanceGoalScalarFieldEnum = {
+  id: 'id',
+  user_id: 'user_id',
+  title: 'title',
+  description: 'description',
+  status: 'status',
+  due_date: 'due_date',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
+exports.Prisma.PerformanceReviewScalarFieldEnum = {
+  id: 'id',
+  user_id: 'user_id',
+  reviewer_id: 'reviewer_id',
+  cycle: 'cycle',
+  status: 'status',
+  rating: 'rating',
+  feedback: 'feedback',
+  review_date: 'review_date',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
+exports.Prisma.BillOfMaterialScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  variant_id: 'variant_id',
+  quantity: 'quantity',
+  active: 'active',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
+exports.Prisma.BomComponentScalarFieldEnum = {
+  id: 'id',
+  bom_id: 'bom_id',
+  variant_id: 'variant_id',
+  quantity: 'quantity'
+};
+
+exports.Prisma.ProductionOrderScalarFieldEnum = {
+  id: 'id',
+  number: 'number',
+  bom_id: 'bom_id',
+  variant_id: 'variant_id',
+  quantity: 'quantity',
+  status: 'status',
+  start_date: 'start_date',
+  end_date: 'end_date',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
+exports.Prisma.ProductionComponentScalarFieldEnum = {
+  id: 'id',
+  production_order_id: 'production_order_id',
+  variant_id: 'variant_id',
+  expected_qty: 'expected_qty',
+  actual_qty: 'actual_qty'
 };
 
 exports.Prisma.SortOrder = {
@@ -462,6 +1277,35 @@ exports.Prisma.JsonNullValueFilter = {
   JsonNull: Prisma.JsonNull,
   AnyNull: Prisma.AnyNull
 };
+exports.BusinessType = exports.$Enums.BusinessType = {
+  service: 'service',
+  trading: 'trading',
+  manufacturing: 'manufacturing',
+  hybrid: 'hybrid'
+};
+
+exports.SubscriptionStatus = exports.$Enums.SubscriptionStatus = {
+  trial: 'trial',
+  active: 'active',
+  past_due: 'past_due',
+  cancelled: 'cancelled',
+  expired: 'expired'
+};
+
+exports.BillingInterval = exports.$Enums.BillingInterval = {
+  trial: 'trial',
+  monthly: 'monthly',
+  yearly: 'yearly'
+};
+
+exports.SetupStage = exports.$Enums.SetupStage = {
+  subscription: 'subscription',
+  company_profile: 'company_profile',
+  finance_setup: 'finance_setup',
+  roles_setup: 'roles_setup',
+  completed: 'completed'
+};
+
 exports.UserRole = exports.$Enums.UserRole = {
   client: 'client',
   admin: 'admin'
@@ -529,13 +1373,36 @@ exports.TransactionType = exports.$Enums.TransactionType = {
   expense: 'expense'
 };
 
-exports.InventoryTransactionType = exports.$Enums.InventoryTransactionType = {
-  stock_in: 'stock_in',
-  stock_out: 'stock_out',
-  issue_to_project: 'issue_to_project',
-  return_from_project: 'return_from_project',
-  scrap: 'scrap',
-  wastage: 'wastage'
+exports.PostingStatus = exports.$Enums.PostingStatus = {
+  draft: 'draft',
+  posted: 'posted',
+  voided: 'voided'
+};
+
+exports.EmployeeLifecycleStatus = exports.$Enums.EmployeeLifecycleStatus = {
+  probation: 'probation',
+  confirmed: 'confirmed',
+  notice_period: 'notice_period',
+  resigned: 'resigned',
+  terminated: 'terminated',
+  retired: 'retired'
+};
+
+exports.LeaveStatus = exports.$Enums.LeaveStatus = {
+  pending: 'pending',
+  approved: 'approved',
+  rejected: 'rejected',
+  cancelled: 'cancelled'
+};
+
+exports.HREventType = exports.$Enums.HREventType = {
+  hiring: 'hiring',
+  appraisal: 'appraisal',
+  promotion: 'promotion',
+  transfer: 'transfer',
+  warning: 'warning',
+  layoff: 'layoff',
+  exit: 'exit'
 };
 
 exports.PurchaseStatus = exports.$Enums.PurchaseStatus = {
@@ -548,7 +1415,160 @@ exports.PurchaseStatus = exports.$Enums.PurchaseStatus = {
   cancelled: 'cancelled'
 };
 
+exports.CreditNoteStatus = exports.$Enums.CreditNoteStatus = {
+  draft: 'draft',
+  posted: 'posted',
+  applied: 'applied',
+  refunded: 'refunded',
+  voided: 'voided'
+};
+
+exports.DebitNoteStatus = exports.$Enums.DebitNoteStatus = {
+  draft: 'draft',
+  posted: 'posted',
+  applied: 'applied',
+  refunded: 'refunded',
+  voided: 'voided'
+};
+
+exports.StockJournalType = exports.$Enums.StockJournalType = {
+  adjustment: 'adjustment',
+  transfer: 'transfer',
+  count: 'count',
+  damage: 'damage',
+  obsolete: 'obsolete',
+  revaluation: 'revaluation'
+};
+
+exports.ValuationMethod = exports.$Enums.ValuationMethod = {
+  fifo: 'fifo',
+  lifo: 'lifo',
+  weighted_average: 'weighted_average',
+  standard_cost: 'standard_cost'
+};
+
+exports.AccountType = exports.$Enums.AccountType = {
+  asset: 'asset',
+  liability: 'liability',
+  equity: 'equity',
+  revenue: 'revenue',
+  expense: 'expense'
+};
+
+exports.JournalStatus = exports.$Enums.JournalStatus = {
+  draft: 'draft',
+  posted: 'posted',
+  voided: 'voided'
+};
+
+exports.LeadStatus = exports.$Enums.LeadStatus = {
+  new: 'new',
+  contacted: 'contacted',
+  qualified: 'qualified',
+  lost: 'lost',
+  converted: 'converted'
+};
+
+exports.OpportunityStage = exports.$Enums.OpportunityStage = {
+  prospecting: 'prospecting',
+  qualification: 'qualification',
+  proposal: 'proposal',
+  negotiation: 'negotiation',
+  closed_won: 'closed_won',
+  closed_lost: 'closed_lost'
+};
+
+exports.ActivityType = exports.$Enums.ActivityType = {
+  call: 'call',
+  email: 'email',
+  meeting: 'meeting',
+  task: 'task',
+  note: 'note'
+};
+
+exports.ProductType = exports.$Enums.ProductType = {
+  service: 'service',
+  goods: 'goods',
+  digital: 'digital'
+};
+
+exports.InventoryMovementType = exports.$Enums.InventoryMovementType = {
+  in: 'in',
+  out: 'out',
+  transfer: 'transfer',
+  adjustment: 'adjustment',
+  count: 'count'
+};
+
+exports.AssetStatus = exports.$Enums.AssetStatus = {
+  active: 'active',
+  disposed: 'disposed',
+  written_off: 'written_off'
+};
+
+exports.QuoteStatus = exports.$Enums.QuoteStatus = {
+  draft: 'draft',
+  sent: 'sent',
+  accepted: 'accepted',
+  rejected: 'rejected',
+  expired: 'expired',
+  converted: 'converted'
+};
+
+exports.OrderStatus = exports.$Enums.OrderStatus = {
+  draft: 'draft',
+  confirmed: 'confirmed',
+  fulfilled: 'fulfilled',
+  cancelled: 'cancelled'
+};
+
+exports.TimesheetStatus = exports.$Enums.TimesheetStatus = {
+  draft: 'draft',
+  submitted: 'submitted',
+  approved: 'approved',
+  rejected: 'rejected'
+};
+
+exports.ExpenseStatus = exports.$Enums.ExpenseStatus = {
+  draft: 'draft',
+  submitted: 'submitted',
+  approved: 'approved',
+  rejected: 'rejected',
+  reimbursed: 'reimbursed'
+};
+
+exports.BookingStatus = exports.$Enums.BookingStatus = {
+  tentative: 'tentative',
+  confirmed: 'confirmed',
+  cancelled: 'cancelled'
+};
+
+exports.GoalStatus = exports.$Enums.GoalStatus = {
+  not_started: 'not_started',
+  in_progress: 'in_progress',
+  completed: 'completed',
+  cancelled: 'cancelled'
+};
+
+exports.ReviewStatus = exports.$Enums.ReviewStatus = {
+  draft: 'draft',
+  scheduled: 'scheduled',
+  completed: 'completed',
+  signed_off: 'signed_off'
+};
+
+exports.ProductionStatus = exports.$Enums.ProductionStatus = {
+  planned: 'planned',
+  released: 'released',
+  in_progress: 'in_progress',
+  completed: 'completed',
+  cancelled: 'cancelled'
+};
+
 exports.Prisma.ModelName = {
+  Tenant: 'Tenant',
+  SubscriptionPlan: 'SubscriptionPlan',
+  Subscription: 'Subscription',
   User: 'User',
   Project: 'Project',
   ProjectFile: 'ProjectFile',
@@ -557,25 +1577,82 @@ exports.Prisma.ModelName = {
   SupportMessage: 'SupportMessage',
   MeetingRequest: 'MeetingRequest',
   Invoice: 'Invoice',
+  InvoiceLine: 'InvoiceLine',
   Payment: 'Payment',
+  Department: 'Department',
+  HRRole: 'HRRole',
   Employee: 'Employee',
+  EmployeeDocument: 'EmployeeDocument',
   Attendance: 'Attendance',
+  LeaveType: 'LeaveType',
+  Leave: 'Leave',
+  Holiday: 'Holiday',
+  SalaryStructure: 'SalaryStructure',
   LabourAllocation: 'LabourAllocation',
   Payroll: 'Payroll',
   PayrollLine: 'PayrollLine',
+  HREvent: 'HREvent',
   Notification: 'Notification',
   SystemSettings: 'SystemSettings',
+  TaxRate: 'TaxRate',
   Transaction: 'Transaction',
-  InventoryItem: 'InventoryItem',
-  InventoryTransaction: 'InventoryTransaction',
   PurchaseRequest: 'PurchaseRequest',
   Vendor: 'Vendor',
   PurchaseOrder: 'PurchaseOrder',
+  PurchaseOrderLine: 'PurchaseOrderLine',
   GRN: 'GRN',
   VendorBill: 'VendorBill',
+  VendorBillLine: 'VendorBillLine',
   VendorPayment: 'VendorPayment',
+  CreditNote: 'CreditNote',
+  CreditNoteLine: 'CreditNoteLine',
+  CreditNoteApplication: 'CreditNoteApplication',
+  DebitNote: 'DebitNote',
+  DebitNoteLine: 'DebitNoteLine',
+  DebitNoteApplication: 'DebitNoteApplication',
+  StockJournal: 'StockJournal',
+  StockJournalLine: 'StockJournalLine',
+  StockJournalGLEntry: 'StockJournalGLEntry',
   BankAccount: 'BankAccount',
-  BankTransaction: 'BankTransaction'
+  BankTransaction: 'BankTransaction',
+  Account: 'Account',
+  JournalEntry: 'JournalEntry',
+  JournalLine: 'JournalLine',
+  Budget: 'Budget',
+  Lead: 'Lead',
+  CustomerAccount: 'CustomerAccount',
+  Contact: 'Contact',
+  Opportunity: 'Opportunity',
+  Activity: 'Activity',
+  Product: 'Product',
+  ProductVariant: 'ProductVariant',
+  ProductAttribute: 'ProductAttribute',
+  Warehouse: 'Warehouse',
+  Location: 'Location',
+  InventoryItem: 'InventoryItem',
+  InventoryTransaction: 'InventoryTransaction',
+  FixedAsset: 'FixedAsset',
+  DepreciationSchedule: 'DepreciationSchedule',
+  ApprovalWorkflow: 'ApprovalWorkflow',
+  ApprovalRequest: 'ApprovalRequest',
+  BudgetControl: 'BudgetControl',
+  Quote: 'Quote',
+  QuoteLine: 'QuoteLine',
+  SalesOrder: 'SalesOrder',
+  SalesOrderLine: 'SalesOrderLine',
+  TimesheetEntry: 'TimesheetEntry',
+  ExpenseClaim: 'ExpenseClaim',
+  PriceList: 'PriceList',
+  PriceListItem: 'PriceListItem',
+  ProductBundle: 'ProductBundle',
+  ProductBundleItem: 'ProductBundleItem',
+  ResourceBooking: 'ResourceBooking',
+  PerformanceGoal: 'PerformanceGoal',
+  PerformanceReview: 'PerformanceReview',
+  BillOfMaterial: 'BillOfMaterial',
+  BomComponent: 'BomComponent',
+  ProductionOrder: 'ProductionOrder',
+  ProductionComponent: 'ProductionComponent'
 };
 /**
  * Create the Client
@@ -585,10 +1662,10 @@ const config = {
   "clientVersion": "7.3.0",
   "engineVersion": "9d6ad21cbbceab97458517b147a6a09ff43aa735",
   "activeProvider": "postgresql",
-  "inlineSchema": "generator client {\n  provider = \"prisma-client-js\"\n  output   = \"./generated/client\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n}\n\nenum UserRole {\n  client\n  admin\n}\n\nenum ProjectStatus {\n  pending\n  under_review\n  accepted\n  in_progress\n  testing\n  completed\n  cancelled\n}\n\nenum FileType {\n  document\n  voice_note\n  image\n  other\n}\n\nenum SupportStatus {\n  open\n  in_progress\n  resolved\n  closed\n}\n\nenum PriorityLevel {\n  low\n  medium\n  high\n}\n\nenum MeetingStatus {\n  pending\n  accepted\n  declined\n  completed\n}\n\nenum InvoiceStatus {\n  pending\n  paid\n  overdue\n  cancelled\n}\n\nenum MemberStatus {\n  active\n  inactive\n}\n\nenum NotificationType {\n  project\n  payment\n  support\n  meeting\n  system\n}\n\nenum TransactionType {\n  income\n  expense\n}\n\nmodel User {\n  id         String   @id @default(uuid())\n  email      String   @unique\n  password   String? // Added for custom auth\n  full_name  String\n  role       UserRole @default(client)\n  avatar_url String?\n  created_at DateTime @default(now())\n  updated_at DateTime @updatedAt\n\n  projects          Project[]\n  project_files     ProjectFile[]\n  project_updates   ProjectUpdate[]\n  support_requests  SupportRequest[]\n  support_messages  SupportMessage[]\n  meeting_requests  MeetingRequest[]\n  invoices          Invoice[]\n  notifications     Notification[]\n  transactions      Transaction[]\n  inventory_logs    InventoryTransaction[]\n  purchase_requests PurchaseRequest[]\n  purchase_orders   PurchaseOrder[]\n  grns              GRN[]\n\n  @@map(\"users\")\n}\n\nmodel Project {\n  id                String        @id @default(uuid())\n  client_id         String\n  title             String\n  description       String\n  status            ProjectStatus @default(pending)\n  github_link       String?\n  estimated_cost    Decimal?      @db.Decimal(10, 2)\n  actual_cost       Decimal?      @db.Decimal(10, 2)\n  deadline          DateTime?     @db.Date\n  test_asset_url    String?\n  deployment_url    String?\n  live_preview_type String?       @default(\"url\")\n  live_preview_url  String?\n  technical_config  Json?\n  tickets           Json?\n  notes             String[]\n\n  // Node-Based Module Data\n  labour_data    Json? @default(\"[]\")\n  inventory_data Json? @default(\"[]\")\n  resources_data Json? @default(\"[]\")\n  design_data    Json? @default(\"[]\")\n  expenses_data  Json? @default(\"[]\")\n  timeline_data  Json? @default(\"[]\")\n\n  is_featured Boolean  @default(false)\n  created_at  DateTime @default(now())\n  updated_at  DateTime @updatedAt\n\n  client             User                   @relation(fields: [client_id], references: [id], onDelete: Cascade)\n  files              ProjectFile[]\n  updates            ProjectUpdate[]\n  support_requests   SupportRequest[]\n  meeting_requests   MeetingRequest[]\n  invoices           Invoice[]\n  inventory_logs     InventoryTransaction[]\n  purchase_requests  PurchaseRequest[]\n  attendance         Attendance[]\n  labour_allocations LabourAllocation[]\n\n  @@map(\"projects\")\n}\n\nmodel ProjectFile {\n  id          String   @id @default(uuid())\n  project_id  String\n  file_name   String\n  file_url    String\n  file_type   FileType @default(document)\n  file_size   BigInt\n  uploaded_by String\n  created_at  DateTime @default(now())\n\n  project  Project @relation(fields: [project_id], references: [id], onDelete: Cascade)\n  uploader User    @relation(fields: [uploaded_by], references: [id], onDelete: Cascade)\n\n  @@map(\"project_files\")\n}\n\nmodel ProjectUpdate {\n  id          String   @id @default(uuid())\n  project_id  String\n  update_text String\n  created_by  String\n  created_at  DateTime @default(now())\n\n  project Project @relation(fields: [project_id], references: [id], onDelete: Cascade)\n  author  User    @relation(fields: [created_by], references: [id], onDelete: Cascade)\n\n  @@map(\"project_updates\")\n}\n\nmodel SupportRequest {\n  id          String        @id @default(uuid())\n  project_id  String?\n  client_id   String\n  subject     String\n  description String\n  status      SupportStatus @default(open)\n  priority    PriorityLevel @default(medium)\n  created_at  DateTime      @default(now())\n  updated_at  DateTime      @updatedAt\n\n  project  Project?         @relation(fields: [project_id], references: [id])\n  client   User             @relation(fields: [client_id], references: [id], onDelete: Cascade)\n  messages SupportMessage[]\n\n  @@map(\"support_requests\")\n}\n\nmodel SupportMessage {\n  id                 String   @id @default(uuid())\n  support_request_id String\n  user_id            String\n  message            String\n  created_at         DateTime @default(now())\n\n  request SupportRequest @relation(fields: [support_request_id], references: [id], onDelete: Cascade)\n  sender  User           @relation(fields: [user_id], references: [id], onDelete: Cascade)\n\n  @@map(\"support_messages\")\n}\n\nmodel MeetingRequest {\n  id               String        @id @default(uuid())\n  project_id       String?\n  client_id        String\n  requested_date   DateTime\n  duration_minutes Int           @default(30)\n  purpose          String\n  status           MeetingStatus @default(pending)\n  meeting_link     String?\n  admin_notes      String?\n  created_at       DateTime      @default(now())\n  updated_at       DateTime      @updatedAt\n\n  project Project? @relation(fields: [project_id], references: [id])\n  client  User     @relation(fields: [client_id], references: [id], onDelete: Cascade)\n\n  @@map(\"meeting_requests\")\n}\n\nmodel Invoice {\n  id             String        @id @default(uuid())\n  project_id     String\n  client_id      String\n  invoice_number String        @unique\n  amount         Decimal       @db.Decimal(10, 2)\n  due_date       DateTime      @db.Date\n  status         InvoiceStatus @default(pending)\n  payment_qr_url String?\n  bank_details   Json?\n  paid_at        DateTime?\n  created_at     DateTime      @default(now())\n  updated_at     DateTime      @updatedAt\n\n  project  Project   @relation(fields: [project_id], references: [id], onDelete: Cascade)\n  client   User      @relation(fields: [client_id], references: [id], onDelete: Cascade)\n  payments Payment[]\n\n  @@map(\"invoices\")\n}\n\nmodel Payment {\n  id             String   @id @default(uuid())\n  invoice_id     String\n  amount         Decimal  @db.Decimal(10, 2)\n  payment_method String\n  transaction_id String?\n  payment_date   DateTime @default(now())\n  notes          String?\n  created_at     DateTime @default(now())\n\n  invoice Invoice @relation(fields: [invoice_id], references: [id], onDelete: Cascade)\n\n  @@map(\"payments\")\n}\n\nmodel Employee {\n  id              String       @id @default(uuid())\n  employee_id     String       @unique // Custom ID like EMP-001\n  name            String\n  role            String // Designation\n  skill_type      String // Welder, Fitter, Helper\n  employment_type String // Permanent, Contract, Daily\n  department      String?\n  joining_date    DateTime     @db.Date\n  basic_salary    Decimal      @default(0) @db.Decimal(10, 2)\n  overtime_rate   Decimal      @default(0) @db.Decimal(10, 2)\n  bank_details    Json? // IBAN, Bank Name, WPS ID\n  status          MemberStatus @default(active)\n  created_at      DateTime     @default(now())\n  updated_at      DateTime     @updatedAt\n\n  attendance    Attendance[]\n  allocations   LabourAllocation[]\n  payroll_items PayrollLine[]\n\n  @@map(\"employees\")\n}\n\nmodel Attendance {\n  id             String    @id @default(uuid())\n  employee_id    String\n  date           DateTime  @db.Date\n  status         String // present, absent, half_day\n  overtime_hours Float     @default(0)\n  project_id     String? // Link to project cost\n  check_in       DateTime?\n  check_out      DateTime?\n  created_at     DateTime  @default(now())\n\n  employee Employee @relation(fields: [employee_id], references: [id])\n  project  Project? @relation(fields: [project_id], references: [id])\n\n  @@unique([employee_id, date])\n  @@map(\"attendance\")\n}\n\nmodel LabourAllocation {\n  id          String    @id @default(uuid())\n  employee_id String\n  project_id  String\n  start_date  DateTime  @db.Date\n  end_date    DateTime? @db.Date\n  status      String // active, completed\n  created_at  DateTime  @default(now())\n\n  employee Employee @relation(fields: [employee_id], references: [id])\n  project  Project  @relation(fields: [project_id], references: [id])\n\n  @@map(\"labour_allocations\")\n}\n\nmodel Payroll {\n  id           String   @id @default(uuid())\n  month        String // YYYY-MM\n  status       String // draft, approved, paid\n  total_amount Decimal  @db.Decimal(12, 2)\n  approved_by  String?\n  created_at   DateTime @default(now())\n  updated_at   DateTime @updatedAt\n\n  lines PayrollLine[]\n\n  @@unique([month])\n  @@map(\"payrolls\")\n}\n\nmodel PayrollLine {\n  id           String  @id @default(uuid())\n  payroll_id   String\n  employee_id  String\n  basic_pay    Decimal @db.Decimal(10, 2)\n  overtime_pay Decimal @db.Decimal(10, 2)\n  deductions   Decimal @default(0) @db.Decimal(10, 2)\n  total_pay    Decimal @db.Decimal(10, 2)\n  status       String // pending, paid\n\n  payroll  Payroll  @relation(fields: [payroll_id], references: [id], onDelete: Cascade)\n  employee Employee @relation(fields: [employee_id], references: [id])\n\n  @@map(\"payroll_lines\")\n}\n\n// Removing old TeamMember/SalaryPayment models as they are replaced\n// model TeamMember ...\n// model SalaryPayment ...\n\nmodel Notification {\n  id         String           @id @default(uuid())\n  user_id    String\n  title      String\n  message    String\n  type       NotificationType @default(system)\n  link       String?\n  read       Boolean          @default(false)\n  created_at DateTime         @default(now())\n\n  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)\n\n  @@map(\"notifications\")\n}\n\nmodel SystemSettings {\n  id         String   @id @default(uuid())\n  key        String   @unique\n  value      Json\n  updated_at DateTime @default(now())\n\n  @@map(\"system_settings\")\n}\n\nmodel Transaction {\n  id               String          @id @default(uuid())\n  type             TransactionType\n  category         String\n  amount           Decimal         @db.Decimal(10, 2)\n  currency         String          @default(\"USD\")\n  exchange_rate    Decimal?        @default(1.0) @db.Decimal(10, 4)\n  date             DateTime        @db.Date\n  description      String?\n  notes            String?\n  payment_method   String?\n  reference_number String?\n  attachment_url   String?\n  tax_rate_id      String?\n  created_by       String\n  created_at       DateTime        @default(now())\n  updated_at       DateTime        @updatedAt\n\n  creator User @relation(fields: [created_by], references: [id], onDelete: Cascade)\n\n  @@map(\"transactions\")\n}\n\nmodel InventoryItem {\n  id            String   @id @default(uuid())\n  code          String   @unique\n  name          String\n  category      String\n  unit          String\n  current_stock Float    @default(0)\n  min_stock     Float?   @default(0)\n  cost_price    Decimal? @db.Decimal(10, 2)\n  created_at    DateTime @default(now())\n  updated_at    DateTime @updatedAt\n\n  transactions InventoryTransaction[]\n\n  @@map(\"inventory_items\")\n}\n\nenum InventoryTransactionType {\n  stock_in\n  stock_out\n  issue_to_project\n  return_from_project\n  scrap\n  wastage\n}\n\nmodel InventoryTransaction {\n  id           String                   @id @default(uuid())\n  item_id      String\n  project_id   String?\n  type         InventoryTransactionType\n  quantity     Float\n  date         DateTime                 @default(now())\n  reference_no String?\n  notes        String?\n  created_by   String\n  created_at   DateTime                 @default(now())\n\n  item    InventoryItem @relation(fields: [item_id], references: [id], onDelete: Cascade)\n  project Project?      @relation(fields: [project_id], references: [id])\n  user    User          @relation(fields: [created_by], references: [id])\n\n  @@map(\"inventory_transactions\")\n}\n\nenum PurchaseStatus {\n  pending\n  approved\n  ordered\n  received\n  billed\n  paid\n  cancelled\n}\n\nmodel PurchaseRequest {\n  id             String         @id @default(uuid())\n  project_id     String?\n  item_name      String\n  quantity       Float\n  unit           String\n  estimated_cost Decimal?       @db.Decimal(10, 2)\n  priority       PriorityLevel  @default(medium)\n  status         PurchaseStatus @default(pending)\n  requested_by   String\n  needed_by      DateTime?      @db.Date\n  notes          String?\n  created_at     DateTime       @default(now())\n  updated_at     DateTime       @updatedAt\n\n  project         Project?        @relation(fields: [project_id], references: [id])\n  requester       User            @relation(fields: [requested_by], references: [id])\n  purchase_orders PurchaseOrder[]\n\n  @@map(\"purchase_requests\")\n}\n\nmodel Vendor {\n  id             String   @id @default(uuid())\n  name           String\n  contact_person String?\n  email          String?\n  phone          String?\n  address        String?\n  vat_no         String?\n  created_at     DateTime @default(now())\n  updated_at     DateTime @updatedAt\n\n  purchase_orders PurchaseOrder[]\n  vendor_bills    VendorBill[]\n\n  @@map(\"vendors\")\n}\n\nmodel PurchaseOrder {\n  id                  String         @id @default(uuid())\n  po_number           String         @unique\n  purchase_request_id String?\n  vendor_id           String\n  total_amount        Decimal        @db.Decimal(10, 2)\n  status              PurchaseStatus @default(approved)\n  created_by          String\n  created_at          DateTime       @default(now())\n  updated_at          DateTime       @updatedAt\n\n  purchase_request PurchaseRequest? @relation(fields: [purchase_request_id], references: [id])\n  vendor           Vendor           @relation(fields: [vendor_id], references: [id])\n  creator          User             @relation(fields: [created_by], references: [id])\n  grns             GRN[]\n  vendor_bills     VendorBill[]\n\n  @@map(\"purchase_orders\")\n}\n\nmodel GRN {\n  id                String   @id @default(uuid())\n  grn_number        String   @unique\n  purchase_order_id String\n  received_date     DateTime @default(now())\n  received_by       String\n  notes             String?\n  created_at        DateTime @default(now())\n\n  purchase_order PurchaseOrder @relation(fields: [purchase_order_id], references: [id])\n  receiver       User          @relation(fields: [received_by], references: [id])\n\n  @@map(\"grns\")\n}\n\nmodel VendorBill {\n  id                String        @id @default(uuid())\n  bill_number       String        @unique\n  purchase_order_id String\n  vendor_id         String\n  amount            Decimal       @db.Decimal(10, 2)\n  tax_amount        Decimal?      @db.Decimal(10, 2)\n  due_date          DateTime      @db.Date\n  status            InvoiceStatus @default(pending)\n  created_at        DateTime      @default(now())\n  updated_at        DateTime      @updatedAt\n\n  purchase_order  PurchaseOrder   @relation(fields: [purchase_order_id], references: [id])\n  vendor          Vendor          @relation(fields: [vendor_id], references: [id])\n  vendor_payments VendorPayment[]\n\n  @@map(\"vendor_bills\")\n}\n\nmodel VendorPayment {\n  id             String   @id @default(uuid())\n  vendor_bill_id String\n  amount         Decimal  @db.Decimal(10, 2)\n  payment_date   DateTime @default(now())\n  payment_method String\n  reference_no   String?\n  notes          String?\n  created_at     DateTime @default(now())\n\n  vendor_bill VendorBill @relation(fields: [vendor_bill_id], references: [id])\n\n  @@map(\"vendor_payments\")\n}\n\nmodel BankAccount {\n  id              String   @id @default(uuid())\n  name            String\n  account_number  String?\n  bank_name       String?\n  currency        String   @default(\"USD\")\n  current_balance Decimal  @default(0) @db.Decimal(15, 2)\n  type            String   @default(\"bank\") // bank, cash, credit_card\n  created_at      DateTime @default(now())\n  updated_at      DateTime @updatedAt\n\n  transactions BankTransaction[]\n\n  @@map(\"bank_accounts\")\n}\n\nmodel BankTransaction {\n  id                    String   @id @default(uuid())\n  bank_account_id       String\n  date                  DateTime @db.Date\n  description           String\n  amount                Decimal  @db.Decimal(15, 2)\n  reference             String?\n  status                String   @default(\"cleared\")\n  type                  String\n  system_transaction_id String?\n  created_at            DateTime @default(now())\n  updated_at            DateTime @updatedAt\n\n  bank_account BankAccount @relation(fields: [bank_account_id], references: [id])\n\n  @@map(\"bank_transactions\")\n}\n"
+  "inlineSchema": "generator client {\n  provider = \"prisma-client-js\"\n  output   = \"./generated/client\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n}\n\n// ==========================================\n// PLATFORM CORE (SaaS Foundation)\n// ==========================================\n\nenum BusinessType {\n  service\n  trading\n  manufacturing\n  hybrid\n}\n\nenum SubscriptionStatus {\n  trial\n  active\n  past_due\n  cancelled\n  expired\n}\n\nenum BillingInterval {\n  trial\n  monthly\n  yearly\n}\n\nenum SetupStage {\n  subscription // Step 1: Plan selected\n  company_profile // Step 2: Company details filled\n  finance_setup // Step 3: COA + Tax + FY configured\n  roles_setup // Step 4: At least one role created\n  completed // All gates passed\n}\n\nmodel Tenant {\n  id                   String       @id @default(uuid())\n  name                 String // Company legal name\n  trade_license        String?\n  business_type        BusinessType @default(service)\n  industry             String? // e.g. \"Engineering & Construction\"\n  country              String       @default(\"AE\")\n  currency             String       @default(\"AED\")\n  tax_regime           String       @default(\"VAT\") // VAT, GST, Sales Tax\n  timezone             String       @default(\"Asia/Dubai\")\n  financial_year_start Int          @default(1) // Month number: 1=Jan, 4=Apr\n  logo_url             String?\n\n  // Setup progress tracking\n  setup_stage            SetupStage @default(subscription)\n  company_setup_complete Boolean    @default(false)\n  finance_setup_complete Boolean    @default(false)\n  roles_setup_complete   Boolean    @default(false)\n\n  // Feature flags (from subscription)\n  module_finance    Boolean @default(true) // Always on (core)\n  module_sales      Boolean @default(false)\n  module_operations Boolean @default(false)\n  module_hr         Boolean @default(false)\n\n  created_at DateTime @default(now())\n  updated_at DateTime @updatedAt\n\n  // Relations\n  users         User[]\n  subscriptions Subscription[]\n\n  @@map(\"tenants\")\n}\n\nmodel SubscriptionPlan {\n  id          String  @id @default(uuid())\n  name        String // e.g. \"Starter\", \"Professional\", \"Enterprise\"\n  code        String  @unique // e.g. \"starter\", \"pro\", \"enterprise\"\n  description String?\n\n  // Pricing\n  price_monthly Decimal @db.Decimal(10, 2)\n  price_yearly  Decimal @db.Decimal(10, 2)\n  trial_days    Int     @default(14)\n\n  // Feature access\n  max_users         Int     @default(5)\n  module_finance    Boolean @default(true) // Always included\n  module_sales      Boolean @default(false)\n  module_operations Boolean @default(false)\n  module_hr         Boolean @default(false)\n  module_reports    Boolean @default(true) // Always included\n\n  is_active  Boolean  @default(true)\n  sort_order Int      @default(0)\n  created_at DateTime @default(now())\n  updated_at DateTime @updatedAt\n\n  subscriptions Subscription[]\n\n  @@map(\"subscription_plans\")\n}\n\nmodel Subscription {\n  id               String             @id @default(uuid())\n  tenant_id        String\n  plan_id          String\n  status           SubscriptionStatus @default(trial)\n  billing_interval BillingInterval    @default(trial)\n\n  // Dates\n  trial_start          DateTime?\n  trial_end            DateTime?\n  current_period_start DateTime?\n  current_period_end   DateTime?\n  cancelled_at         DateTime?\n\n  created_at DateTime @default(now())\n  updated_at DateTime @updatedAt\n\n  tenant Tenant           @relation(fields: [tenant_id], references: [id], onDelete: Cascade)\n  plan   SubscriptionPlan @relation(fields: [plan_id], references: [id])\n\n  @@map(\"subscriptions\")\n}\n\n// ==========================================\n// USER & AUTH\n// ==========================================\n\nenum UserRole {\n  client\n  admin\n}\n\nenum ProjectStatus {\n  pending\n  under_review\n  accepted\n  in_progress\n  testing\n  completed\n  cancelled\n}\n\nenum FileType {\n  document\n  voice_note\n  image\n  other\n}\n\nenum SupportStatus {\n  open\n  in_progress\n  resolved\n  closed\n}\n\nenum PriorityLevel {\n  low\n  medium\n  high\n}\n\nenum MeetingStatus {\n  pending\n  accepted\n  declined\n  completed\n}\n\nenum InvoiceStatus {\n  pending\n  paid\n  overdue\n  cancelled\n}\n\nenum MemberStatus {\n  active\n  inactive\n}\n\nenum NotificationType {\n  project\n  payment\n  support\n  meeting\n  system\n}\n\nenum TransactionType {\n  income\n  expense\n}\n\nmodel User {\n  id         String   @id @default(uuid())\n  email      String   @unique\n  password   String? // Added for custom auth\n  full_name  String\n  role       UserRole @default(client)\n  avatar_url String?\n\n  // Tenant / Multi-tenancy\n  tenant_id String?\n  tenant    Tenant? @relation(fields: [tenant_id], references: [id])\n\n  // Module-level permissions (overrides from role)\n  erp_role String? // super_admin, finance, hr, sales, operations, viewer\n\n  created_at DateTime @default(now())\n  updated_at DateTime @updatedAt\n\n  projects          Project[]\n  project_files     ProjectFile[]\n  project_updates   ProjectUpdate[]\n  support_requests  SupportRequest[]\n  support_messages  SupportMessage[]\n  meeting_requests  MeetingRequest[]\n  invoices          Invoice[]\n  notifications     Notification[]\n  transactions      Transaction[]\n  inventory_logs    InventoryTransaction[]\n  purchase_requests PurchaseRequest[]\n  purchase_orders   PurchaseOrder[]\n  grns              GRN[]\n  journal_entries   JournalEntry[]\n  stock_journals    StockJournal[]\n\n  // CRM Relations\n  leads_owned             Lead[]            @relation(\"LeadOwner\")\n  customer_accounts_owned CustomerAccount[] @relation(\"AccountOwner\")\n  opportunities_owned     Opportunity[]     @relation(\"OpportunityOwner\")\n  activities              Activity[]\n\n  // Approval Relations\n  approval_requests_made     ApprovalRequest[] @relation(\"RequestedApprovals\")\n  approval_requests_actioned ApprovalRequest[] @relation(\"ActionedApprovals\")\n\n  // Sales & Project Relations\n  created_quotes      Quote[]\n  created_orders      SalesOrder[]\n  timesheet_entries   TimesheetEntry[]\n  expense_claims      ExpenseClaim[]\n  timesheets_approved TimesheetEntry[]  @relation(\"TimesheetApprover\")\n  expenses_approved   ExpenseClaim[]    @relation(\"ExpenseApprover\")\n  resource_bookings   ResourceBooking[]\n\n  // Phase 7 Relations\n  performance_goals PerformanceGoal[]\n  reviews_received  PerformanceReview[] @relation(\"Reviewee\")\n  reviews_given     PerformanceReview[] @relation(\"Reviewer\")\n\n  @@map(\"users\")\n}\n\nmodel Project {\n  id                String        @id @default(uuid())\n  client_id         String\n  title             String\n  description       String\n  status            ProjectStatus @default(pending)\n  github_link       String?\n  estimated_cost    Decimal?      @db.Decimal(10, 2)\n  actual_cost       Decimal?      @db.Decimal(10, 2)\n  deadline          DateTime?     @db.Date\n  test_asset_url    String?\n  deployment_url    String?\n  live_preview_type String?       @default(\"url\")\n  live_preview_url  String?\n  technical_config  Json?\n  tickets           Json?\n  notes             String[]\n\n  // Node-Based Module Data\n  labour_data    Json? @default(\"[]\")\n  inventory_data Json? @default(\"[]\")\n  resources_data Json? @default(\"[]\")\n  design_data    Json? @default(\"[]\")\n  expenses_data  Json? @default(\"[]\")\n  timeline_data  Json? @default(\"[]\")\n\n  is_featured Boolean  @default(false)\n  created_at  DateTime @default(now())\n  updated_at  DateTime @updatedAt\n\n  client             User                   @relation(fields: [client_id], references: [id], onDelete: Cascade)\n  files              ProjectFile[]\n  updates            ProjectUpdate[]\n  support_requests   SupportRequest[]\n  meeting_requests   MeetingRequest[]\n  invoices           Invoice[]\n  inventory_logs     InventoryTransaction[]\n  purchase_requests  PurchaseRequest[]\n  attendance         Attendance[]\n  labour_allocations LabourAllocation[]\n\n  // Phase 6 Relations\n  quotes            Quote[]\n  sales_orders      SalesOrder[]\n  timesheet_entries TimesheetEntry[]\n  expense_claims    ExpenseClaim[]\n  resource_bookings ResourceBooking[]\n\n  @@map(\"projects\")\n}\n\nmodel ProjectFile {\n  id          String   @id @default(uuid())\n  project_id  String\n  file_name   String\n  file_url    String\n  file_type   FileType @default(document)\n  file_size   BigInt\n  uploaded_by String\n  created_at  DateTime @default(now())\n\n  project  Project @relation(fields: [project_id], references: [id], onDelete: Cascade)\n  uploader User    @relation(fields: [uploaded_by], references: [id], onDelete: Cascade)\n\n  @@map(\"project_files\")\n}\n\nmodel ProjectUpdate {\n  id          String   @id @default(uuid())\n  project_id  String\n  update_text String\n  created_by  String\n  created_at  DateTime @default(now())\n\n  project Project @relation(fields: [project_id], references: [id], onDelete: Cascade)\n  author  User    @relation(fields: [created_by], references: [id], onDelete: Cascade)\n\n  @@map(\"project_updates\")\n}\n\nmodel SupportRequest {\n  id          String        @id @default(uuid())\n  project_id  String?\n  client_id   String\n  subject     String\n  description String\n  status      SupportStatus @default(open)\n  priority    PriorityLevel @default(medium)\n  created_at  DateTime      @default(now())\n  updated_at  DateTime      @updatedAt\n\n  project  Project?         @relation(fields: [project_id], references: [id])\n  client   User             @relation(fields: [client_id], references: [id], onDelete: Cascade)\n  messages SupportMessage[]\n\n  @@map(\"support_requests\")\n}\n\nmodel SupportMessage {\n  id                 String   @id @default(uuid())\n  support_request_id String\n  user_id            String\n  message            String\n  created_at         DateTime @default(now())\n\n  request SupportRequest @relation(fields: [support_request_id], references: [id], onDelete: Cascade)\n  sender  User           @relation(fields: [user_id], references: [id], onDelete: Cascade)\n\n  @@map(\"support_messages\")\n}\n\nmodel MeetingRequest {\n  id               String        @id @default(uuid())\n  project_id       String?\n  client_id        String\n  requested_date   DateTime\n  duration_minutes Int           @default(30)\n  purpose          String\n  status           MeetingStatus @default(pending)\n  meeting_link     String?\n  admin_notes      String?\n  created_at       DateTime      @default(now())\n  updated_at       DateTime      @updatedAt\n\n  project Project? @relation(fields: [project_id], references: [id])\n  client  User     @relation(fields: [client_id], references: [id], onDelete: Cascade)\n\n  @@map(\"meeting_requests\")\n}\n\nenum PostingStatus {\n  draft\n  posted\n  voided\n}\n\nmodel Invoice {\n  id             String        @id @default(uuid())\n  project_id     String? // Made optional to support direct invoices\n  client_id      String? // Made optional in favor of customer_id\n  customer_id    String? // Link to CRM CustomerAccount\n  invoice_number String        @unique\n  amount         Decimal       @db.Decimal(10, 2)\n  tax_amount     Decimal?      @default(0) @db.Decimal(10, 2)\n  tax_breakdown  Json? // Detailed tax breakdown { cgst, sgst, igst, vat, etc. }\n  total_amount   Decimal       @db.Decimal(10, 2) // amount + tax_amount\n  currency       String        @default(\"USD\")\n  exchange_rate  Decimal?      @default(1.0) @db.Decimal(10, 4)\n  due_date       DateTime      @db.Date\n  status         InvoiceStatus @default(pending)\n  posting_status PostingStatus @default(draft)\n  payment_qr_url String?\n  bank_details   Json?\n  notes          String?\n  terms          String?\n  paid_at        DateTime?\n  created_at     DateTime      @default(now())\n  updated_at     DateTime      @updatedAt\n\n  project                  Project?                @relation(fields: [project_id], references: [id], onDelete: Cascade)\n  client                   User?                   @relation(fields: [client_id], references: [id], onDelete: Cascade)\n  customer                 CustomerAccount?        @relation(fields: [customer_id], references: [id])\n  payments                 Payment[]\n  lines                    InvoiceLine[]\n  credit_notes             CreditNote[]\n  credit_note_applications CreditNoteApplication[]\n\n  @@map(\"invoices\")\n}\n\nmodel InvoiceLine {\n  id           String   @id @default(uuid())\n  invoice_id   String\n  description  String\n  quantity     Decimal  @db.Decimal(10, 2)\n  unit_price   Decimal  @db.Decimal(10, 2)\n  amount       Decimal  @db.Decimal(10, 2) // quantity * unit_price\n  tax_rate_id  String?\n  tax_amount   Decimal? @default(0) @db.Decimal(10, 2)\n  total_amount Decimal  @db.Decimal(10, 2) // amount + tax_amount\n  sort_order   Int      @default(0)\n\n  invoice Invoice @relation(fields: [invoice_id], references: [id], onDelete: Cascade)\n\n  @@map(\"invoice_lines\")\n}\n\nmodel Payment {\n  id             String   @id @default(uuid())\n  invoice_id     String\n  amount         Decimal  @db.Decimal(10, 2)\n  payment_method String\n  transaction_id String?\n  payment_date   DateTime @default(now())\n  notes          String?\n  created_at     DateTime @default(now())\n\n  invoice Invoice @relation(fields: [invoice_id], references: [id], onDelete: Cascade)\n\n  @@map(\"payments\")\n}\n\n// --- HR Module ---\n\nenum EmployeeLifecycleStatus {\n  probation\n  confirmed\n  notice_period\n  resigned\n  terminated\n  retired\n}\n\nenum LeaveStatus {\n  pending\n  approved\n  rejected\n  cancelled\n}\n\nenum HREventType {\n  hiring\n  appraisal\n  promotion\n  transfer\n  warning\n  layoff\n  exit\n}\n\nmodel Department {\n  id         String   @id @default(uuid())\n  code       String   @unique\n  name       String\n  head_id    String? // Employee who heads the department\n  parent_id  String? // For department hierarchy\n  is_active  Boolean  @default(true)\n  created_at DateTime @default(now())\n  updated_at DateTime @updatedAt\n\n  parent    Department?  @relation(\"DeptHierarchy\", fields: [parent_id], references: [id])\n  children  Department[] @relation(\"DeptHierarchy\")\n  employees Employee[]\n\n  @@map(\"departments\")\n}\n\nmodel HRRole {\n  id         String   @id @default(uuid())\n  code       String   @unique\n  title      String\n  grade      String? // e.g., \"L1\", \"L2\", \"Manager\"\n  min_salary Decimal? @db.Decimal(10, 2)\n  max_salary Decimal? @db.Decimal(10, 2)\n  is_active  Boolean  @default(true)\n  created_at DateTime @default(now())\n  updated_at DateTime @updatedAt\n\n  employees Employee[]\n\n  @@map(\"hr_roles\")\n}\n\nmodel Employee {\n  id              String       @id @default(uuid())\n  employee_id     String       @unique // Custom ID like EMP-001\n  name            String\n  role            String // Designation (legacy text)\n  skill_type      String // Welder, Fitter, Helper\n  employment_type String // Permanent, Contract, Daily\n  department      String? // Legacy text field\n  joining_date    DateTime     @db.Date\n  basic_salary    Decimal      @default(0) @db.Decimal(10, 2)\n  overtime_rate   Decimal      @default(0) @db.Decimal(10, 2)\n  bank_details    Json? // IBAN, Bank Name, WPS ID\n  status          MemberStatus @default(active)\n\n  // Extended HR fields\n  email             String?\n  phone             String?\n  date_of_birth     DateTime? @db.Date\n  gender            String? // male, female, other\n  blood_group       String?\n  marital_status    String? // single, married, divorced\n  nationality       String?\n  address           String?\n  emergency_contact Json? // { name, phone, relation }\n  photo_url         String?\n\n  // Lifecycle\n  lifecycle_status  EmployeeLifecycleStatus @default(probation)\n  confirmation_date DateTime?               @db.Date\n  resignation_date  DateTime?               @db.Date\n  exit_date         DateTime?               @db.Date\n  exit_reason       String?\n\n  // Statutory\n  pf_number     String?\n  esi_number    String?\n  uan_number    String? // Universal Account Number\n  pan_number    String?\n  aadhar_number String?\n\n  // Relations to new models\n  department_id String?\n  hr_role_id    String?\n\n  dept    Department? @relation(fields: [department_id], references: [id])\n  hr_role HRRole?     @relation(fields: [hr_role_id], references: [id])\n\n  created_at DateTime @default(now())\n  updated_at DateTime @updatedAt\n\n  attendance        Attendance[]\n  allocations       LabourAllocation[]\n  payroll_items     PayrollLine[]\n  documents         EmployeeDocument[]\n  leaves            Leave[]\n  salary_structures SalaryStructure[]\n  hr_events         HREvent[]\n\n  @@map(\"employees\")\n}\n\nmodel EmployeeDocument {\n  id          String    @id @default(uuid())\n  employee_id String\n  name        String // e.g. \"Passport\", \"ID Proof\"\n  doc_type    String // identity, education, experience, contract, other\n  file_url    String?\n  file_name   String?\n  expiry_date DateTime? @db.Date\n  notes       String?\n  created_at  DateTime  @default(now())\n  updated_at  DateTime  @updatedAt\n\n  employee Employee @relation(fields: [employee_id], references: [id], onDelete: Cascade)\n\n  @@map(\"employee_documents\")\n}\n\nmodel Attendance {\n  id             String    @id @default(uuid())\n  employee_id    String\n  date           DateTime  @db.Date\n  status         String // present, absent, half_day\n  overtime_hours Float     @default(0)\n  project_id     String? // Link to project cost\n  check_in       DateTime?\n  check_out      DateTime?\n  notes          String?\n  created_at     DateTime  @default(now())\n\n  employee Employee @relation(fields: [employee_id], references: [id])\n  project  Project? @relation(fields: [project_id], references: [id])\n\n  @@unique([employee_id, date])\n  @@map(\"attendance\")\n}\n\nmodel LeaveType {\n  id            String   @id @default(uuid())\n  code          String   @unique // CL, SL, EL, etc.\n  name          String // Casual Leave, Sick Leave, Earned Leave\n  days_per_year Int      @default(0)\n  is_paid       Boolean  @default(true)\n  carry_forward Boolean  @default(false)\n  max_carry     Int      @default(0)\n  is_active     Boolean  @default(true)\n  created_at    DateTime @default(now())\n  updated_at    DateTime @updatedAt\n\n  leaves Leave[]\n\n  @@map(\"leave_types\")\n}\n\nmodel Leave {\n  id            String      @id @default(uuid())\n  employee_id   String\n  leave_type_id String\n  from_date     DateTime    @db.Date\n  to_date       DateTime    @db.Date\n  days          Decimal     @db.Decimal(4, 1) // 1, 0.5, etc.\n  reason        String?\n  status        LeaveStatus @default(pending)\n  approved_by   String?\n  approved_at   DateTime?\n  remarks       String? // Manager remarks\n  created_at    DateTime    @default(now())\n  updated_at    DateTime    @updatedAt\n\n  employee   Employee  @relation(fields: [employee_id], references: [id])\n  leave_type LeaveType @relation(fields: [leave_type_id], references: [id])\n\n  @@map(\"leaves\")\n}\n\nmodel Holiday {\n  id         String   @id @default(uuid())\n  name       String\n  date       DateTime @db.Date\n  type       String   @default(\"public\") // public, restricted, optional\n  is_active  Boolean  @default(true)\n  created_at DateTime @default(now())\n  updated_at DateTime @updatedAt\n\n  @@unique([date])\n  @@map(\"holidays\")\n}\n\nmodel SalaryStructure {\n  id                String   @id @default(uuid())\n  employee_id       String\n  effective_from    DateTime @db.Date\n  basic             Decimal  @db.Decimal(10, 2)\n  hra               Decimal  @default(0) @db.Decimal(10, 2) // House Rent Allowance\n  da                Decimal  @default(0) @db.Decimal(10, 2) // Dearness Allowance\n  ta                Decimal  @default(0) @db.Decimal(10, 2) // Travel Allowance\n  special_allowance Decimal  @default(0) @db.Decimal(10, 2)\n  pf_employee       Decimal  @default(0) @db.Decimal(10, 2) // Employee PF contribution\n  pf_employer       Decimal  @default(0) @db.Decimal(10, 2) // Employer PF contribution\n  esi_employee      Decimal  @default(0) @db.Decimal(10, 2)\n  esi_employer      Decimal  @default(0) @db.Decimal(10, 2)\n  professional_tax  Decimal  @default(0) @db.Decimal(10, 2)\n  tds               Decimal  @default(0) @db.Decimal(10, 2) // Tax Deducted at Source\n  gross_salary      Decimal  @db.Decimal(10, 2)\n  net_salary        Decimal  @db.Decimal(10, 2)\n  is_current        Boolean  @default(true)\n  notes             String?\n  created_at        DateTime @default(now())\n  updated_at        DateTime @updatedAt\n\n  employee Employee @relation(fields: [employee_id], references: [id])\n\n  @@map(\"salary_structures\")\n}\n\nmodel LabourAllocation {\n  id          String    @id @default(uuid())\n  employee_id String\n  project_id  String\n  start_date  DateTime  @db.Date\n  end_date    DateTime? @db.Date\n  status      String // active, completed\n  created_at  DateTime  @default(now())\n\n  employee Employee @relation(fields: [employee_id], references: [id])\n  project  Project  @relation(fields: [project_id], references: [id])\n\n  @@map(\"labour_allocations\")\n}\n\nmodel Payroll {\n  id                  String   @id @default(uuid())\n  month               String // YYYY-MM\n  status              String // draft, approved, paid, posted\n  total_amount        Decimal  @db.Decimal(12, 2)\n  total_deductions    Decimal  @default(0) @db.Decimal(12, 2)\n  total_employer_cost Decimal  @default(0) @db.Decimal(12, 2)\n  approved_by         String?\n  posted_to_finance   Boolean  @default(false)\n  finance_journal_id  String? // Link to JournalEntry when posted\n  created_at          DateTime @default(now())\n  updated_at          DateTime @updatedAt\n\n  lines PayrollLine[]\n\n  @@unique([month])\n  @@map(\"payrolls\")\n}\n\nmodel PayrollLine {\n  id                String  @id @default(uuid())\n  payroll_id        String\n  employee_id       String\n  basic_pay         Decimal @db.Decimal(10, 2)\n  hra               Decimal @default(0) @db.Decimal(10, 2)\n  da                Decimal @default(0) @db.Decimal(10, 2)\n  ta                Decimal @default(0) @db.Decimal(10, 2)\n  special_allowance Decimal @default(0) @db.Decimal(10, 2)\n  overtime_pay      Decimal @db.Decimal(10, 2)\n  gross_pay         Decimal @default(0) @db.Decimal(10, 2)\n  pf_deduction      Decimal @default(0) @db.Decimal(10, 2)\n  esi_deduction     Decimal @default(0) @db.Decimal(10, 2)\n  professional_tax  Decimal @default(0) @db.Decimal(10, 2)\n  tds               Decimal @default(0) @db.Decimal(10, 2)\n  deductions        Decimal @default(0) @db.Decimal(10, 2)\n  net_pay           Decimal @db.Decimal(10, 2)\n  total_pay         Decimal @db.Decimal(10, 2)\n  status            String // pending, paid\n\n  payroll  Payroll  @relation(fields: [payroll_id], references: [id], onDelete: Cascade)\n  employee Employee @relation(fields: [employee_id], references: [id])\n\n  @@map(\"payroll_lines\")\n}\n\nmodel HREvent {\n  id             String      @id @default(uuid())\n  employee_id    String\n  type           HREventType\n  title          String\n  description    String?\n  event_date     DateTime    @db.Date\n  effective_date DateTime?   @db.Date\n  metadata       Json? // Extra data like new role, new salary, rating, etc.\n  created_by     String?\n  created_at     DateTime    @default(now())\n  updated_at     DateTime    @updatedAt\n\n  employee Employee @relation(fields: [employee_id], references: [id])\n\n  @@map(\"hr_events\")\n}\n\n// Removing old TeamMember/SalaryPayment models as they are replaced\n// model TeamMember ...\n// model SalaryPayment ...\n\nmodel Notification {\n  id         String           @id @default(uuid())\n  user_id    String\n  title      String\n  message    String\n  type       NotificationType @default(system)\n  link       String?\n  read       Boolean          @default(false)\n  created_at DateTime         @default(now())\n\n  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)\n\n  @@map(\"notifications\")\n}\n\nmodel SystemSettings {\n  id         String   @id @default(uuid())\n  key        String   @unique\n  value      Json\n  updated_at DateTime @default(now())\n\n  @@map(\"system_settings\")\n}\n\n// Tax Rate Configuration - supports all countries\nmodel TaxRate {\n  id           String    @id @default(uuid())\n  name         String // e.g., \"Standard VAT\", \"GST 18%\"\n  code         String    @unique // e.g., \"VAT_20\", \"GST_18\"\n  rate         Decimal   @db.Decimal(5, 2) // percentage\n  type         String // VAT, GST, CGST, SGST, IGST, SALES_TAX, etc.\n  country_code String // ISO country code (e.g., \"US\", \"IN\", \"GB\")\n  region       String? // State/Province for regional taxes (e.g., \"CA\", \"ON\")\n  category     String    @default(\"standard\") // standard, reduced, zero, exempt\n  description  String?\n  is_compound  Boolean   @default(false) // For compound tax calculations\n  is_active    Boolean   @default(true)\n  valid_from   DateTime  @default(now())\n  valid_until  DateTime?\n  created_at   DateTime  @default(now())\n  updated_at   DateTime  @updatedAt\n\n  @@index([country_code, is_active])\n  @@index([code])\n  @@map(\"tax_rates\")\n}\n\nmodel Transaction {\n  id               String          @id @default(uuid())\n  type             TransactionType\n  category         String\n  amount           Decimal         @db.Decimal(10, 2)\n  currency         String          @default(\"USD\")\n  exchange_rate    Decimal?        @default(1.0) @db.Decimal(10, 4)\n  date             DateTime        @db.Date\n  description      String?\n  notes            String?\n  payment_method   String?\n  reference_number String?\n  attachment_url   String?\n  tax_rate_id      String?\n  created_by       String\n  created_at       DateTime        @default(now())\n  updated_at       DateTime        @updatedAt\n\n  creator User @relation(fields: [created_by], references: [id], onDelete: Cascade)\n\n  @@map(\"transactions\")\n}\n\n// Legacy Inventory models removed in favor of SCM module\n\nenum PurchaseStatus {\n  pending\n  approved\n  ordered\n  received\n  billed\n  paid\n  cancelled\n}\n\nmodel PurchaseRequest {\n  id             String         @id @default(uuid())\n  project_id     String?\n  item_name      String\n  quantity       Float\n  unit           String\n  estimated_cost Decimal?       @db.Decimal(10, 2)\n  priority       PriorityLevel  @default(medium)\n  status         PurchaseStatus @default(pending)\n  requested_by   String\n  needed_by      DateTime?      @db.Date\n  notes          String?\n  created_at     DateTime       @default(now())\n  updated_at     DateTime       @updatedAt\n\n  project         Project?        @relation(fields: [project_id], references: [id])\n  requester       User            @relation(fields: [requested_by], references: [id])\n  purchase_orders PurchaseOrder[]\n\n  @@map(\"purchase_requests\")\n}\n\nmodel Vendor {\n  id             String   @id @default(uuid())\n  name           String\n  contact_person String?\n  email          String?\n  phone          String?\n  address        String?\n  country_code   String?  @default(\"US\") // ISO country code for tax\n  tax_id         String? // VAT/GST/Tax ID\n  tax_exempt     Boolean  @default(false)\n  vat_no         String? // Legacy field\n  created_at     DateTime @default(now())\n  updated_at     DateTime @updatedAt\n\n  purchase_orders PurchaseOrder[]\n  vendor_bills    VendorBill[]\n  debit_notes     DebitNote[]\n\n  @@map(\"vendors\")\n}\n\nmodel PurchaseOrder {\n  id                  String         @id @default(uuid())\n  po_number           String         @unique\n  purchase_request_id String?\n  vendor_id           String\n  total_amount        Decimal        @db.Decimal(10, 2)\n  status              PurchaseStatus @default(approved)\n  created_by          String\n  created_at          DateTime       @default(now())\n  updated_at          DateTime       @updatedAt\n\n  purchase_request PurchaseRequest?    @relation(fields: [purchase_request_id], references: [id])\n  vendor           Vendor              @relation(fields: [vendor_id], references: [id])\n  creator          User                @relation(fields: [created_by], references: [id])\n  grns             GRN[]\n  vendor_bills     VendorBill[]\n  lines            PurchaseOrderLine[]\n\n  @@map(\"purchase_orders\")\n}\n\nmodel PurchaseOrderLine {\n  id                String   @id @default(uuid())\n  purchase_order_id String\n  description       String\n  quantity          Decimal  @db.Decimal(10, 2)\n  unit_price        Decimal  @db.Decimal(10, 2)\n  amount            Decimal  @db.Decimal(10, 2)\n  tax_rate_id       String?\n  tax_amount        Decimal? @default(0) @db.Decimal(10, 2)\n  total_amount      Decimal  @db.Decimal(10, 2)\n  sort_order        Int      @default(0)\n\n  purchase_order PurchaseOrder @relation(fields: [purchase_order_id], references: [id], onDelete: Cascade)\n\n  @@map(\"purchase_order_lines\")\n}\n\nmodel GRN {\n  id                String   @id @default(uuid())\n  grn_number        String   @unique\n  purchase_order_id String\n  received_date     DateTime @default(now())\n  received_by       String\n  notes             String?\n  created_at        DateTime @default(now())\n\n  purchase_order PurchaseOrder @relation(fields: [purchase_order_id], references: [id])\n  receiver       User          @relation(fields: [received_by], references: [id])\n\n  @@map(\"grns\")\n}\n\nmodel VendorBill {\n  id                String        @id @default(uuid())\n  bill_number       String        @unique\n  purchase_order_id String?\n  vendor_id         String\n  amount            Decimal       @db.Decimal(10, 2)\n  tax_amount        Decimal?      @default(0) @db.Decimal(10, 2)\n  tax_breakdown     Json? // Detailed tax breakdown\n  total_amount      Decimal       @db.Decimal(10, 2)\n  currency          String        @default(\"USD\")\n  due_date          DateTime      @db.Date\n  status            InvoiceStatus @default(pending)\n  posting_status    PostingStatus @default(draft)\n  notes             String?\n  created_at        DateTime      @default(now())\n  updated_at        DateTime      @updatedAt\n\n  purchase_order          PurchaseOrder?         @relation(fields: [purchase_order_id], references: [id])\n  vendor                  Vendor                 @relation(fields: [vendor_id], references: [id])\n  vendor_payments         VendorPayment[]\n  lines                   VendorBillLine[]\n  debit_notes             DebitNote[]\n  debit_note_applications DebitNoteApplication[]\n\n  @@map(\"vendor_bills\")\n}\n\nmodel VendorBillLine {\n  id             String   @id @default(uuid())\n  vendor_bill_id String\n  description    String\n  quantity       Decimal  @db.Decimal(10, 2)\n  unit_price     Decimal  @db.Decimal(10, 2)\n  amount         Decimal  @db.Decimal(10, 2)\n  tax_rate_id    String?\n  tax_amount     Decimal? @default(0) @db.Decimal(10, 2)\n  total_amount   Decimal  @db.Decimal(10, 2)\n  sort_order     Int      @default(0)\n\n  vendor_bill VendorBill @relation(fields: [vendor_bill_id], references: [id], onDelete: Cascade)\n\n  @@map(\"vendor_bill_lines\")\n}\n\nmodel VendorPayment {\n  id             String   @id @default(uuid())\n  vendor_bill_id String\n  amount         Decimal  @db.Decimal(10, 2)\n  payment_date   DateTime @default(now())\n  payment_method String\n  reference_no   String?\n  notes          String?\n  created_at     DateTime @default(now())\n\n  vendor_bill VendorBill @relation(fields: [vendor_bill_id], references: [id])\n\n  @@map(\"vendor_payments\")\n}\n\n// --- Credit Notes (Customer Returns) ---\n\nenum CreditNoteStatus {\n  draft\n  posted\n  applied\n  refunded\n  voided\n}\n\nmodel CreditNote {\n  id             String           @id @default(uuid())\n  number         String           @unique // CN-2025-001\n  customer_id    String\n  invoice_id     String? // Original invoice being credited\n  date           DateTime         @db.Date\n  amount         Decimal          @db.Decimal(10, 2) // Subtotal\n  tax_amount     Decimal?         @default(0) @db.Decimal(10, 2)\n  total_amount   Decimal          @db.Decimal(10, 2)\n  currency       String           @default(\"USD\")\n  reason         String? // Reason for credit\n  status         CreditNoteStatus @default(draft)\n  posting_status PostingStatus    @default(draft)\n  notes          String?\n  created_at     DateTime         @default(now())\n  updated_at     DateTime         @updatedAt\n\n  customer     CustomerAccount         @relation(fields: [customer_id], references: [id])\n  invoice      Invoice?                @relation(fields: [invoice_id], references: [id])\n  lines        CreditNoteLine[]\n  applications CreditNoteApplication[]\n\n  @@map(\"credit_notes\")\n}\n\nmodel CreditNoteLine {\n  id             String   @id @default(uuid())\n  credit_note_id String\n  description    String\n  quantity       Decimal  @db.Decimal(10, 2)\n  unit_price     Decimal  @db.Decimal(10, 2)\n  amount         Decimal  @db.Decimal(10, 2)\n  tax_rate_id    String?\n  tax_amount     Decimal? @default(0) @db.Decimal(10, 2)\n  total_amount   Decimal  @db.Decimal(10, 2)\n  sort_order     Int      @default(0)\n\n  credit_note CreditNote @relation(fields: [credit_note_id], references: [id], onDelete: Cascade)\n\n  @@map(\"credit_note_lines\")\n}\n\nmodel CreditNoteApplication {\n  id             String   @id @default(uuid())\n  credit_note_id String\n  invoice_id     String // Invoice being paid with credit note\n  amount         Decimal  @db.Decimal(10, 2)\n  date           DateTime @default(now()) @db.Date\n  created_at     DateTime @default(now())\n\n  credit_note CreditNote @relation(fields: [credit_note_id], references: [id], onDelete: Cascade)\n  invoice     Invoice    @relation(fields: [invoice_id], references: [id], onDelete: Cascade)\n\n  @@map(\"credit_note_applications\")\n}\n\n// --- Debit Notes (Vendor Returns/Chargebacks) ---\n\nenum DebitNoteStatus {\n  draft\n  posted\n  applied\n  refunded\n  voided\n}\n\nmodel DebitNote {\n  id             String          @id @default(uuid())\n  number         String          @unique // DN-2025-001\n  vendor_id      String\n  vendor_bill_id String? // Original bill being debited\n  date           DateTime        @db.Date\n  amount         Decimal         @db.Decimal(10, 2) // Subtotal\n  tax_amount     Decimal?        @default(0) @db.Decimal(10, 2)\n  total_amount   Decimal         @db.Decimal(10, 2)\n  currency       String          @default(\"USD\")\n  reason         String? // Reason for debit\n  status         DebitNoteStatus @default(draft)\n  posting_status PostingStatus   @default(draft)\n  notes          String?\n  created_at     DateTime        @default(now())\n  updated_at     DateTime        @updatedAt\n\n  vendor       Vendor                 @relation(fields: [vendor_id], references: [id])\n  vendor_bill  VendorBill?            @relation(fields: [vendor_bill_id], references: [id])\n  lines        DebitNoteLine[]\n  applications DebitNoteApplication[]\n\n  @@map(\"debit_notes\")\n}\n\nmodel DebitNoteLine {\n  id            String   @id @default(uuid())\n  debit_note_id String\n  description   String\n  quantity      Decimal  @db.Decimal(10, 2)\n  unit_price    Decimal  @db.Decimal(10, 2)\n  amount        Decimal  @db.Decimal(10, 2)\n  tax_rate_id   String?\n  tax_amount    Decimal? @default(0) @db.Decimal(10, 2)\n  total_amount  Decimal  @db.Decimal(10, 2)\n  sort_order    Int      @default(0)\n\n  debit_note DebitNote @relation(fields: [debit_note_id], references: [id], onDelete: Cascade)\n\n  @@map(\"debit_note_lines\")\n}\n\nmodel DebitNoteApplication {\n  id             String   @id @default(uuid())\n  debit_note_id  String\n  vendor_bill_id String // Bill being paid with debit note\n  amount         Decimal  @db.Decimal(10, 2)\n  date           DateTime @default(now()) @db.Date\n  created_at     DateTime @default(now())\n\n  debit_note  DebitNote  @relation(fields: [debit_note_id], references: [id], onDelete: Cascade)\n  vendor_bill VendorBill @relation(fields: [vendor_bill_id], references: [id], onDelete: Cascade)\n\n  @@map(\"debit_note_applications\")\n}\n\n// --- Stock Journal (Inventory GL Integration) ---\n\nenum StockJournalType {\n  adjustment\n  transfer\n  count\n  damage\n  obsolete\n  revaluation\n}\n\nenum ValuationMethod {\n  fifo\n  lifo\n  weighted_average\n  standard_cost\n}\n\nmodel StockJournal {\n  id               String           @id @default(uuid())\n  number           String           @unique // SJ-2025-001\n  date             DateTime         @db.Date\n  type             StockJournalType\n  reference        String? // PO, SO, or other reference\n  reason           String?\n  posting_status   PostingStatus    @default(draft)\n  total_value      Decimal          @default(0) @db.Decimal(15, 2)\n  valuation_method ValuationMethod  @default(fifo)\n  notes            String?\n  created_by       String\n  created_at       DateTime         @default(now())\n  updated_at       DateTime         @updatedAt\n\n  creator    User                  @relation(fields: [created_by], references: [id])\n  lines      StockJournalLine[]\n  gl_entries StockJournalGLEntry[]\n\n  @@map(\"stock_journals\")\n}\n\nmodel StockJournalLine {\n  id               String    @id @default(uuid())\n  stock_journal_id String\n  variant_id       String\n  from_location_id String?\n  to_location_id   String?\n  quantity         Decimal   @db.Decimal(10, 4)\n  unit_cost        Decimal   @db.Decimal(15, 4)\n  total_cost       Decimal   @db.Decimal(15, 2)\n  lot_number       String?\n  expiry_date      DateTime? @db.Date\n  notes            String?\n  sort_order       Int       @default(0)\n\n  stock_journal StockJournal   @relation(fields: [stock_journal_id], references: [id], onDelete: Cascade)\n  variant       ProductVariant @relation(fields: [variant_id], references: [id])\n\n  @@map(\"stock_journal_lines\")\n}\n\nmodel StockJournalGLEntry {\n  id               String   @id @default(uuid())\n  stock_journal_id String\n  account_id       String\n  debit            Decimal  @default(0) @db.Decimal(15, 2)\n  credit           Decimal  @default(0) @db.Decimal(15, 2)\n  description      String?\n  created_at       DateTime @default(now())\n\n  stock_journal StockJournal @relation(fields: [stock_journal_id], references: [id], onDelete: Cascade)\n  account       Account      @relation(fields: [account_id], references: [id])\n\n  @@map(\"stock_journal_gl_entries\")\n}\n\nmodel BankAccount {\n  id              String   @id @default(uuid())\n  name            String\n  account_number  String?\n  bank_name       String?\n  currency        String   @default(\"USD\")\n  current_balance Decimal  @default(0) @db.Decimal(15, 2)\n  type            String   @default(\"bank\") // bank, cash, credit_card\n  created_at      DateTime @default(now())\n  updated_at      DateTime @updatedAt\n\n  transactions BankTransaction[]\n\n  @@map(\"bank_accounts\")\n}\n\nmodel BankTransaction {\n  id                    String   @id @default(uuid())\n  bank_account_id       String\n  date                  DateTime @db.Date\n  description           String\n  amount                Decimal  @db.Decimal(15, 2)\n  reference             String?\n  status                String   @default(\"cleared\")\n  type                  String\n  system_transaction_id String?\n  created_at            DateTime @default(now())\n  updated_at            DateTime @updatedAt\n\n  bank_account BankAccount @relation(fields: [bank_account_id], references: [id])\n\n  @@map(\"bank_transactions\")\n}\n\n// --- Dynamics 365 Finance Core ---\n\nenum AccountType {\n  asset\n  liability\n  equity\n  revenue\n  expense\n}\n\nenum JournalStatus {\n  draft\n  posted\n  voided\n}\n\nmodel Account {\n  id         String      @id @default(uuid())\n  code       String      @unique\n  name       String\n  type       AccountType\n  parent_id  String?\n  balance    Decimal     @default(0) @db.Decimal(15, 2)\n  is_system  Boolean     @default(false) // If true, cannot be deleted (e.g. Retained Earnings)\n  created_at DateTime    @default(now())\n  updated_at DateTime    @updatedAt\n\n  parent                Account?              @relation(\"AccountHierarchy\", fields: [parent_id], references: [id])\n  children              Account[]             @relation(\"AccountHierarchy\")\n  journal_lines         JournalLine[]\n  budget_lines          Budget[]\n  budget_controls       BudgetControl[]\n  stock_journal_entries StockJournalGLEntry[]\n\n  @@map(\"accounts\")\n}\n\nmodel JournalEntry {\n  id          String        @id @default(uuid())\n  date        DateTime      @db.Date\n  description String\n  reference   String?\n  status      JournalStatus @default(draft)\n  created_by  String\n  created_at  DateTime      @default(now())\n  updated_at  DateTime      @updatedAt\n\n  creator User          @relation(fields: [created_by], references: [id])\n  lines   JournalLine[]\n\n  @@map(\"journal_entries\")\n}\n\nmodel JournalLine {\n  id               String  @id @default(uuid())\n  journal_entry_id String\n  account_id       String\n  debit            Decimal @default(0) @db.Decimal(15, 2)\n  credit           Decimal @default(0) @db.Decimal(15, 2)\n  description      String?\n\n  journal_entry JournalEntry @relation(fields: [journal_entry_id], references: [id], onDelete: Cascade)\n  account       Account      @relation(fields: [account_id], references: [id])\n\n  @@map(\"journal_lines\")\n}\n\nmodel Budget {\n  id         String   @id @default(uuid())\n  account_id String\n  period     String // e.g. \"2026-Q1\" or \"2026-03\"\n  amount     Decimal  @db.Decimal(15, 2)\n  created_at DateTime @default(now())\n  updated_at DateTime @updatedAt\n\n  account Account @relation(fields: [account_id], references: [id])\n\n  @@unique([account_id, period])\n  @@map(\"budgets\")\n}\n\n// --- Customer Relationship Management (CRM) ---\n\nenum LeadStatus {\n  new\n  contacted\n  qualified\n  lost\n  converted\n}\n\nenum OpportunityStage {\n  prospecting\n  qualification\n  proposal\n  negotiation\n  closed_won\n  closed_lost\n}\n\nenum ActivityType {\n  call\n  email\n  meeting\n  task\n  note\n}\n\nmodel Lead {\n  id         String     @id @default(uuid())\n  first_name String\n  last_name  String\n  email      String?\n  phone      String?\n  company    String?\n  title      String?\n  status     LeadStatus @default(new)\n  source     String? // e.g. \"Web\", \"Referral\", \"LinkedIn\"\n  score      Int        @default(0)\n\n  owner_id String\n  owner    User   @relation(\"LeadOwner\", fields: [owner_id], references: [id])\n\n  activities Activity[]\n\n  created_at DateTime @default(now())\n  updated_at DateTime @updatedAt\n}\n\nmodel CustomerAccount {\n  id                String  @id @default(uuid())\n  name              String\n  industry          String?\n  website           String?\n  phone             String?\n  address           String?\n  country_code      String? @default(\"US\") // ISO country code for tax\n  tax_id            String? // VAT/GST/Tax ID\n  tax_exempt        Boolean @default(false)\n  tax_exempt_reason String?\n\n  owner_id String\n  owner    User   @relation(\"AccountOwner\", fields: [owner_id], references: [id])\n\n  contacts      Contact[]\n  opportunities Opportunity[]\n  activities    Activity[]\n  invoices      Invoice[]\n  quotes        Quote[]\n  sales_orders  SalesOrder[]\n  credit_notes  CreditNote[]\n\n  created_at DateTime @default(now())\n  updated_at DateTime @updatedAt\n}\n\nmodel Contact {\n  id         String           @id @default(uuid())\n  account_id String?\n  account    CustomerAccount? @relation(fields: [account_id], references: [id])\n\n  first_name String\n  last_name  String\n  email      String?\n  phone      String?\n  title      String?\n\n  activities Activity[]\n\n  created_at DateTime @default(now())\n  updated_at DateTime @updatedAt\n}\n\nmodel Opportunity {\n  id         String          @id @default(uuid())\n  account_id String\n  account    CustomerAccount @relation(fields: [account_id], references: [id])\n\n  name        String\n  amount      Decimal          @default(0) @db.Decimal(15, 2)\n  stage       OpportunityStage @default(prospecting)\n  probability Int              @default(10) // Percentage 0-100\n  close_date  DateTime?        @db.Date\n\n  owner_id String\n  owner    User   @relation(\"OpportunityOwner\", fields: [owner_id], references: [id])\n\n  activities Activity[]\n\n  created_at DateTime @default(now())\n  updated_at DateTime @updatedAt\n}\n\nmodel Activity {\n  id          String       @id @default(uuid())\n  type        ActivityType\n  subject     String\n  description String?\n  due_date    DateTime?\n  completed   Boolean      @default(false)\n\n  // Polymorphic-like associations (optional based on context)\n  lead_id String?\n  lead    Lead?   @relation(fields: [lead_id], references: [id])\n\n  account_id String?\n  account    CustomerAccount? @relation(fields: [account_id], references: [id])\n\n  contact_id String?\n  contact    Contact? @relation(fields: [contact_id], references: [id])\n\n  opportunity_id String?\n  opportunity    Opportunity? @relation(fields: [opportunity_id], references: [id])\n\n  user_id String\n  user    User   @relation(fields: [user_id], references: [id])\n\n  created_at DateTime @default(now())\n  updated_at DateTime @updatedAt\n}\n\n// --- Supply Chain Management (SCM) ---\n\nenum ProductType {\n  service\n  goods\n  digital\n}\n\nenum InventoryMovementType {\n  in\n  out\n  transfer\n  adjustment\n  count\n}\n\nmodel Product {\n  id          String      @id @default(uuid())\n  name        String\n  description String?\n  type        ProductType @default(goods)\n  category    String?\n  uom         String      @default(\"each\") // Unit of Measure\n\n  variants   ProductVariant[]\n  attributes ProductAttribute[]\n\n  created_at DateTime @default(now())\n  updated_at DateTime @updatedAt\n}\n\nmodel ProductVariant {\n  id         String  @id @default(uuid())\n  product_id String\n  product    Product @relation(fields: [product_id], references: [id])\n\n  sku   String  @unique\n  name  String // Generated from attributes (e.g. \"T-Shirt - Red - L\")\n  price Decimal @default(0)\n  cost  Decimal @default(0)\n\n  reorder_point    Int @default(0)\n  reorder_quantity Int @default(0)\n\n  inventory    InventoryItem[]\n  transactions InventoryTransaction[]\n\n  // Phase 6 Relations\n  price_list_items PriceListItem[]\n  bundle_items     ProductBundleItem[]\n\n  // Phase 7 Relations\n  boms_as_finished_good BillOfMaterial[]\n  boms_as_component     BomComponent[]\n  production_orders     ProductionOrder[]\n  production_components ProductionComponent[]\n\n  // Stock Journal Relations\n  stock_journal_lines StockJournalLine[]\n\n  created_at DateTime @default(now())\n  updated_at DateTime @updatedAt\n}\n\nmodel ProductAttribute {\n  id         String  @id @default(uuid())\n  product_id String\n  product    Product @relation(fields: [product_id], references: [id])\n\n  name  String // e.g. \"Color\"\n  value String // e.g. \"Red\"\n}\n\nmodel Warehouse {\n  id      String  @id @default(uuid())\n  code    String  @unique\n  name    String\n  address String?\n\n  locations Location[]\n\n  created_at DateTime @default(now())\n  updated_at DateTime @updatedAt\n}\n\nmodel Location {\n  id           String    @id @default(uuid())\n  warehouse_id String\n  warehouse    Warehouse @relation(fields: [warehouse_id], references: [id])\n\n  code String // e.g. \"A-01-01\"\n  name String? // e.g. \"Aisle A, Rack 1, Shelf 1\"\n  type String? // e.g. \"Picking\", \"Bulk\", \"Returns\"\n\n  inventory InventoryItem[]\n}\n\n// Enhanced Inventory Item tracking specific location\nmodel InventoryItem {\n  id         String         @id @default(uuid())\n  variant_id String\n  variant    ProductVariant @relation(fields: [variant_id], references: [id])\n\n  location_id String\n  location    Location @relation(fields: [location_id], references: [id])\n\n  quantity Decimal @default(0)\n\n  created_at DateTime @default(now())\n  updated_at DateTime @updatedAt\n\n  @@unique([variant_id, location_id])\n}\n\nmodel InventoryTransaction {\n  id String @id @default(uuid())\n\n  type InventoryMovementType\n\n  variant_id String\n  variant    ProductVariant @relation(fields: [variant_id], references: [id])\n\n  from_location_id String?\n  to_location_id   String?\n\n  quantity  Decimal\n  reference String? // PO Number, SO Number\n  date      DateTime @default(now())\n\n  created_by String\n  user       User   @relation(fields: [created_by], references: [id])\n\n  project_id String?\n  project    Project? @relation(fields: [project_id], references: [id])\n}\n\n// --- Fixed Assets ---\n\nenum AssetStatus {\n  active\n  disposed\n  written_off\n}\n\nmodel FixedAsset {\n  id                String   @id @default(uuid())\n  name              String\n  asset_number      String   @unique\n  purchase_date     DateTime @db.Date\n  purchase_cost     Decimal  @db.Decimal(15, 2)\n  salvage_value     Decimal  @default(0) @db.Decimal(15, 2)\n  useful_life_years Int\n\n  // Depreciation tracking\n  accumulated_depreciation Decimal   @default(0) @db.Decimal(15, 2)\n  current_book_value       Decimal   @db.Decimal(15, 2) // purchase_cost - accumulated_depreciation\n  last_depreciation_date   DateTime? @db.Date\n\n  status        AssetStatus @default(active)\n  location      String?\n  serial_number String?\n\n  // GL Integration (Simplification: linking to Accounts)\n  asset_account_id        String\n  depreciation_account_id String // Accumulated Depreciation (Contra Asset)\n  expense_account_id      String // Depreciation Expense\n\n  created_at DateTime @default(now())\n  updated_at DateTime @updatedAt\n\n  depreciation_schedule DepreciationSchedule[]\n\n  @@map(\"fixed_assets\")\n}\n\nmodel DepreciationSchedule {\n  id               String   @id @default(uuid())\n  fixed_asset_id   String\n  date             DateTime @db.Date\n  amount           Decimal  @db.Decimal(15, 2)\n  is_posted        Boolean  @default(false)\n  journal_entry_id String?\n\n  fixed_asset FixedAsset @relation(fields: [fixed_asset_id], references: [id], onDelete: Cascade)\n\n  @@map(\"depreciation_schedules\")\n}\n\n// --- Advanced Controls (Phase 5.2) ---\n\nmodel ApprovalWorkflow {\n  id            String   @id @default(uuid())\n  entity_type   String // \"Invoice\", \"Bill\", \"JournalEntry\", \"PurchaseOrder\"\n  min_amount    Decimal  @db.Decimal(15, 2)\n  approver_role String? // e.g. \"admin\", \"finance_manager\"\n  approver_id   String? // Specific user override\n  is_active     Boolean  @default(true)\n  created_at    DateTime @default(now())\n  updated_at    DateTime @updatedAt\n\n  @@unique([entity_type, min_amount])\n  @@map(\"approval_workflows\")\n}\n\nmodel ApprovalRequest {\n  id          String @id @default(uuid())\n  entity_type String\n  entity_id   String\n  status      String @default(\"pending\") // pending, approved, rejected\n\n  requested_by String\n  requester    User   @relation(\"RequestedApprovals\", fields: [requested_by], references: [id])\n\n  approved_by String?\n  approver    User?   @relation(\"ActionedApprovals\", fields: [approved_by], references: [id])\n\n  comments   String?\n  created_at DateTime @default(now())\n  updated_at DateTime @updatedAt\n\n  @@map(\"approval_requests\")\n}\n\nmodel BudgetControl {\n  id              String  @id @default(uuid())\n  account_id      String\n  account         Account @relation(fields: [account_id], references: [id])\n  period          String // \"YYYY-MM\" or \"YYYY\"\n  limit_amount    Decimal @db.Decimal(15, 2)\n  consumed_amount Decimal @default(0) @db.Decimal(15, 2)\n  action          String  @default(\"warn\") // \"warn\", \"block\"\n\n  created_at DateTime @default(now())\n  updated_at DateTime @updatedAt\n\n  @@unique([account_id, period])\n  @@map(\"budget_controls\")\n}\n\n// --- Sales Operations (Quote-to-Cash) ---\n\nenum QuoteStatus {\n  draft\n  sent\n  accepted\n  rejected\n  expired\n  converted\n}\n\nmodel Quote {\n  id           String      @id @default(uuid())\n  number       String      @unique // QT-2025-001\n  account_id   String\n  project_id   String?\n  issue_date   DateTime    @default(now()) @db.Date\n  valid_until  DateTime    @db.Date\n  status       QuoteStatus @default(draft)\n  total_amount Decimal     @db.Decimal(15, 2)\n  notes        String?\n  terms        String?\n\n  created_by String\n  created_at DateTime @default(now())\n  updated_at DateTime @updatedAt\n\n  account CustomerAccount @relation(fields: [account_id], references: [id])\n  project Project?        @relation(fields: [project_id], references: [id])\n  creator User            @relation(fields: [created_by], references: [id])\n  lines   QuoteLine[]\n  orders  SalesOrder[]\n\n  @@map(\"quotes\")\n}\n\nmodel QuoteLine {\n  id          String  @id @default(uuid())\n  quote_id    String\n  description String\n  quantity    Decimal @db.Decimal(10, 2)\n  unit_price  Decimal @db.Decimal(10, 2)\n  total_price Decimal @db.Decimal(10, 2)\n\n  quote Quote @relation(fields: [quote_id], references: [id], onDelete: Cascade)\n\n  @@map(\"quote_lines\")\n}\n\nenum OrderStatus {\n  draft\n  confirmed\n  fulfilled\n  cancelled\n}\n\nmodel SalesOrder {\n  id           String      @id @default(uuid())\n  number       String      @unique // SO-2025-001\n  quote_id     String?\n  account_id   String\n  project_id   String?\n  order_date   DateTime    @default(now()) @db.Date\n  status       OrderStatus @default(draft)\n  total_amount Decimal     @db.Decimal(15, 2)\n\n  created_by String\n  created_at DateTime @default(now())\n  updated_at DateTime @updatedAt\n\n  quote   Quote?           @relation(fields: [quote_id], references: [id])\n  account CustomerAccount  @relation(fields: [account_id], references: [id])\n  project Project?         @relation(fields: [project_id], references: [id])\n  creator User             @relation(fields: [created_by], references: [id])\n  lines   SalesOrderLine[]\n\n  @@map(\"sales_orders\")\n}\n\nmodel SalesOrderLine {\n  id             String  @id @default(uuid())\n  sales_order_id String\n  description    String\n  quantity       Decimal @db.Decimal(10, 2)\n  unit_price     Decimal @db.Decimal(10, 2)\n  total_price    Decimal @db.Decimal(10, 2)\n\n  sales_order SalesOrder @relation(fields: [sales_order_id], references: [id], onDelete: Cascade)\n\n  @@map(\"sales_order_lines\")\n}\n\n// --- Project Operations (Time & Expenses) ---\n\nenum TimesheetStatus {\n  draft\n  submitted\n  approved\n  rejected\n}\n\nmodel TimesheetEntry {\n  id          String          @id @default(uuid())\n  project_id  String\n  user_id     String // Employee\n  date        DateTime        @db.Date\n  hours       Decimal         @db.Decimal(5, 2)\n  description String?\n  billable    Boolean         @default(true)\n  status      TimesheetStatus @default(draft)\n\n  approver_id String?\n\n  created_at DateTime @default(now())\n  updated_at DateTime @updatedAt\n\n  project  Project @relation(fields: [project_id], references: [id])\n  user     User    @relation(fields: [user_id], references: [id])\n  approver User?   @relation(\"TimesheetApprover\", fields: [approver_id], references: [id])\n\n  @@map(\"timesheet_entries\")\n}\n\nenum ExpenseStatus {\n  draft\n  submitted\n  approved\n  rejected\n  reimbursed\n}\n\nmodel ExpenseClaim {\n  id          String        @id @default(uuid())\n  project_id  String\n  user_id     String // Employee\n  date        DateTime      @db.Date\n  amount      Decimal       @db.Decimal(10, 2)\n  category    String // e.g. \"Travel\", \"Meals\"\n  description String?\n  receipt_url String?\n  billable    Boolean       @default(true)\n  status      ExpenseStatus @default(draft)\n\n  approver_id String?\n\n  created_at DateTime @default(now())\n  updated_at DateTime @updatedAt\n\n  project  Project @relation(fields: [project_id], references: [id])\n  user     User    @relation(fields: [user_id], references: [id])\n  approver User?   @relation(\"ExpenseApprover\", fields: [approver_id], references: [id])\n\n  @@map(\"expense_claims\")\n}\n\n// --- Sales Operations (Part 2: Bundles & Price Lists) ---\n\nmodel PriceList {\n  id         String    @id @default(uuid())\n  name       String\n  currency   String    @default(\"USD\")\n  start_date DateTime? @db.Date // Optional validity period\n  end_date   DateTime? @db.Date\n  active     Boolean   @default(true)\n\n  items PriceListItem[]\n\n  @@map(\"price_lists\")\n}\n\nmodel PriceListItem {\n  id            String  @id @default(uuid())\n  price_list_id String\n  variant_id    String\n  price         Decimal @db.Decimal(10, 2)\n  min_quantity  Int     @default(1) // Volume pricing support\n\n  price_list PriceList      @relation(fields: [price_list_id], references: [id], onDelete: Cascade)\n  variant    ProductVariant @relation(fields: [variant_id], references: [id])\n\n  @@unique([price_list_id, variant_id, min_quantity])\n  @@map(\"price_list_items\")\n}\n\nmodel ProductBundle {\n  id          String  @id @default(uuid())\n  name        String\n  description String?\n  sku         String  @unique\n  price       Decimal @db.Decimal(10, 2)\n  active      Boolean @default(true)\n\n  items ProductBundleItem[]\n\n  created_at DateTime @default(now())\n  updated_at DateTime @updatedAt\n\n  @@map(\"product_bundles\")\n}\n\nmodel ProductBundleItem {\n  id         String @id @default(uuid())\n  bundle_id  String\n  variant_id String\n  quantity   Int    @default(1)\n\n  bundle  ProductBundle  @relation(fields: [bundle_id], references: [id], onDelete: Cascade)\n  variant ProductVariant @relation(fields: [variant_id], references: [id])\n\n  @@unique([bundle_id, variant_id])\n  @@map(\"product_bundle_items\")\n}\n\n// --- Project Operations (Part 2: Resource Scheduling) ---\n\nenum BookingStatus {\n  tentative\n  confirmed\n  cancelled\n}\n\nmodel ResourceBooking {\n  id         String        @id @default(uuid())\n  project_id String\n  user_id    String // Resource\n  start_date DateTime      @db.Date\n  end_date   DateTime      @db.Date\n  hours      Decimal       @db.Decimal(5, 2) // Total hours allocated or per day? Let's say Total for period for simplicity, or daily.\n  // Actually, typically resource booking is \"Booked for X hours/day from A to B\".\n  // Let's assume 'hours per day' for simpler allocation logic.\n  status     BookingStatus @default(confirmed)\n  notes      String?\n\n  created_at DateTime @default(now())\n  updated_at DateTime @updatedAt\n\n  project Project @relation(fields: [project_id], references: [id])\n  user    User    @relation(fields: [user_id], references: [id])\n\n  @@map(\"resource_bookings\")\n}\n\n// --- Phase 7: Human Capital (HR Advanced) ---\n\nenum GoalStatus {\n  not_started\n  in_progress\n  completed\n  cancelled\n}\n\nenum ReviewStatus {\n  draft\n  scheduled\n  completed\n  signed_off\n}\n\nmodel PerformanceGoal {\n  id          String     @id @default(uuid())\n  user_id     String\n  title       String\n  description String?\n  status      GoalStatus @default(not_started)\n  due_date    DateTime?  @db.Date\n\n  created_at DateTime @default(now())\n  updated_at DateTime @updatedAt\n\n  user User @relation(fields: [user_id], references: [id])\n\n  @@map(\"performance_goals\")\n}\n\nmodel PerformanceReview {\n  id          String       @id @default(uuid())\n  user_id     String // Employee being reviewed\n  reviewer_id String // Manager/Reviewer\n  cycle       String // e.g. \"2025 Q1\"\n  status      ReviewStatus @default(draft)\n  rating      Int? // 1-5\n  feedback    String?      @db.Text\n\n  review_date DateTime? @db.Date\n\n  created_at DateTime @default(now())\n  updated_at DateTime @updatedAt\n\n  user     User @relation(\"Reviewee\", fields: [user_id], references: [id])\n  reviewer User @relation(\"Reviewer\", fields: [reviewer_id], references: [id])\n\n  @@map(\"performance_reviews\")\n}\n\n// --- Phase 7: Manufacturing (Production) ---\n\nenum ProductionStatus {\n  planned\n  released\n  in_progress\n  completed\n  cancelled\n}\n\nmodel BillOfMaterial {\n  id         String  @id @default(uuid())\n  name       String\n  variant_id String // The finished good\n  quantity   Decimal @default(1) // Yield quantity\n  active     Boolean @default(true)\n\n  components        BomComponent[]\n  production_orders ProductionOrder[]\n\n  created_at DateTime @default(now())\n  updated_at DateTime @updatedAt\n\n  variant ProductVariant @relation(fields: [variant_id], references: [id])\n\n  @@map(\"bill_of_materials\")\n}\n\nmodel BomComponent {\n  id         String  @id @default(uuid())\n  bom_id     String\n  variant_id String // The raw material/component\n  quantity   Decimal @db.Decimal(10, 4) // Qty per BOM yield\n\n  bom     BillOfMaterial @relation(fields: [bom_id], references: [id], onDelete: Cascade)\n  variant ProductVariant @relation(fields: [variant_id], references: [id])\n\n  @@map(\"bom_components\")\n}\n\nmodel ProductionOrder {\n  id         String           @id @default(uuid())\n  number     String           @unique // PROD-2025-001\n  bom_id     String\n  variant_id String // Redundant but useful for quick queries\n  quantity   Decimal          @db.Decimal(10, 2)\n  status     ProductionStatus @default(planned)\n\n  start_date DateTime? @db.Date\n  end_date   DateTime? @db.Date\n\n  components ProductionComponent[]\n\n  created_at DateTime @default(now())\n  updated_at DateTime @updatedAt\n\n  bom     BillOfMaterial @relation(fields: [bom_id], references: [id])\n  variant ProductVariant @relation(fields: [variant_id], references: [id])\n\n  @@map(\"production_orders\")\n}\n\nmodel ProductionComponent {\n  id                  String  @id @default(uuid())\n  production_order_id String\n  variant_id          String\n  expected_qty        Decimal @db.Decimal(10, 4)\n  actual_qty          Decimal @default(0) @db.Decimal(10, 4)\n\n  production_order ProductionOrder @relation(fields: [production_order_id], references: [id], onDelete: Cascade)\n  variant          ProductVariant  @relation(fields: [variant_id], references: [id])\n\n  @@map(\"production_components\")\n}\n"
 }
 
-config.runtimeDataModel = JSON.parse("{\"models\":{\"User\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"email\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"password\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"full_name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"role\",\"kind\":\"enum\",\"type\":\"UserRole\"},{\"name\":\"avatar_url\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"projects\",\"kind\":\"object\",\"type\":\"Project\",\"relationName\":\"ProjectToUser\"},{\"name\":\"project_files\",\"kind\":\"object\",\"type\":\"ProjectFile\",\"relationName\":\"ProjectFileToUser\"},{\"name\":\"project_updates\",\"kind\":\"object\",\"type\":\"ProjectUpdate\",\"relationName\":\"ProjectUpdateToUser\"},{\"name\":\"support_requests\",\"kind\":\"object\",\"type\":\"SupportRequest\",\"relationName\":\"SupportRequestToUser\"},{\"name\":\"support_messages\",\"kind\":\"object\",\"type\":\"SupportMessage\",\"relationName\":\"SupportMessageToUser\"},{\"name\":\"meeting_requests\",\"kind\":\"object\",\"type\":\"MeetingRequest\",\"relationName\":\"MeetingRequestToUser\"},{\"name\":\"invoices\",\"kind\":\"object\",\"type\":\"Invoice\",\"relationName\":\"InvoiceToUser\"},{\"name\":\"notifications\",\"kind\":\"object\",\"type\":\"Notification\",\"relationName\":\"NotificationToUser\"},{\"name\":\"transactions\",\"kind\":\"object\",\"type\":\"Transaction\",\"relationName\":\"TransactionToUser\"},{\"name\":\"inventory_logs\",\"kind\":\"object\",\"type\":\"InventoryTransaction\",\"relationName\":\"InventoryTransactionToUser\"},{\"name\":\"purchase_requests\",\"kind\":\"object\",\"type\":\"PurchaseRequest\",\"relationName\":\"PurchaseRequestToUser\"},{\"name\":\"purchase_orders\",\"kind\":\"object\",\"type\":\"PurchaseOrder\",\"relationName\":\"PurchaseOrderToUser\"},{\"name\":\"grns\",\"kind\":\"object\",\"type\":\"GRN\",\"relationName\":\"GRNToUser\"}],\"dbName\":\"users\"},\"Project\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"client_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"title\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"status\",\"kind\":\"enum\",\"type\":\"ProjectStatus\"},{\"name\":\"github_link\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"estimated_cost\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"actual_cost\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"deadline\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"test_asset_url\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"deployment_url\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"live_preview_type\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"live_preview_url\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"technical_config\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"tickets\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"notes\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"labour_data\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"inventory_data\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"resources_data\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"design_data\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"expenses_data\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"timeline_data\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"is_featured\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"client\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"ProjectToUser\"},{\"name\":\"files\",\"kind\":\"object\",\"type\":\"ProjectFile\",\"relationName\":\"ProjectToProjectFile\"},{\"name\":\"updates\",\"kind\":\"object\",\"type\":\"ProjectUpdate\",\"relationName\":\"ProjectToProjectUpdate\"},{\"name\":\"support_requests\",\"kind\":\"object\",\"type\":\"SupportRequest\",\"relationName\":\"ProjectToSupportRequest\"},{\"name\":\"meeting_requests\",\"kind\":\"object\",\"type\":\"MeetingRequest\",\"relationName\":\"MeetingRequestToProject\"},{\"name\":\"invoices\",\"kind\":\"object\",\"type\":\"Invoice\",\"relationName\":\"InvoiceToProject\"},{\"name\":\"inventory_logs\",\"kind\":\"object\",\"type\":\"InventoryTransaction\",\"relationName\":\"InventoryTransactionToProject\"},{\"name\":\"purchase_requests\",\"kind\":\"object\",\"type\":\"PurchaseRequest\",\"relationName\":\"ProjectToPurchaseRequest\"},{\"name\":\"attendance\",\"kind\":\"object\",\"type\":\"Attendance\",\"relationName\":\"AttendanceToProject\"},{\"name\":\"labour_allocations\",\"kind\":\"object\",\"type\":\"LabourAllocation\",\"relationName\":\"LabourAllocationToProject\"}],\"dbName\":\"projects\"},\"ProjectFile\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"project_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"file_name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"file_url\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"file_type\",\"kind\":\"enum\",\"type\":\"FileType\"},{\"name\":\"file_size\",\"kind\":\"scalar\",\"type\":\"BigInt\"},{\"name\":\"uploaded_by\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"project\",\"kind\":\"object\",\"type\":\"Project\",\"relationName\":\"ProjectToProjectFile\"},{\"name\":\"uploader\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"ProjectFileToUser\"}],\"dbName\":\"project_files\"},\"ProjectUpdate\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"project_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"update_text\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_by\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"project\",\"kind\":\"object\",\"type\":\"Project\",\"relationName\":\"ProjectToProjectUpdate\"},{\"name\":\"author\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"ProjectUpdateToUser\"}],\"dbName\":\"project_updates\"},\"SupportRequest\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"project_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"client_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"subject\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"status\",\"kind\":\"enum\",\"type\":\"SupportStatus\"},{\"name\":\"priority\",\"kind\":\"enum\",\"type\":\"PriorityLevel\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"project\",\"kind\":\"object\",\"type\":\"Project\",\"relationName\":\"ProjectToSupportRequest\"},{\"name\":\"client\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"SupportRequestToUser\"},{\"name\":\"messages\",\"kind\":\"object\",\"type\":\"SupportMessage\",\"relationName\":\"SupportMessageToSupportRequest\"}],\"dbName\":\"support_requests\"},\"SupportMessage\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"support_request_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"user_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"message\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"request\",\"kind\":\"object\",\"type\":\"SupportRequest\",\"relationName\":\"SupportMessageToSupportRequest\"},{\"name\":\"sender\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"SupportMessageToUser\"}],\"dbName\":\"support_messages\"},\"MeetingRequest\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"project_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"client_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"requested_date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"duration_minutes\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"purpose\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"status\",\"kind\":\"enum\",\"type\":\"MeetingStatus\"},{\"name\":\"meeting_link\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"admin_notes\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"project\",\"kind\":\"object\",\"type\":\"Project\",\"relationName\":\"MeetingRequestToProject\"},{\"name\":\"client\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"MeetingRequestToUser\"}],\"dbName\":\"meeting_requests\"},\"Invoice\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"project_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"client_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"invoice_number\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"due_date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"status\",\"kind\":\"enum\",\"type\":\"InvoiceStatus\"},{\"name\":\"payment_qr_url\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"bank_details\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"paid_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"project\",\"kind\":\"object\",\"type\":\"Project\",\"relationName\":\"InvoiceToProject\"},{\"name\":\"client\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"InvoiceToUser\"},{\"name\":\"payments\",\"kind\":\"object\",\"type\":\"Payment\",\"relationName\":\"InvoiceToPayment\"}],\"dbName\":\"invoices\"},\"Payment\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"invoice_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"payment_method\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"transaction_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"payment_date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"notes\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"invoice\",\"kind\":\"object\",\"type\":\"Invoice\",\"relationName\":\"InvoiceToPayment\"}],\"dbName\":\"payments\"},\"Employee\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"employee_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"role\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"skill_type\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"employment_type\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"department\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"joining_date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"basic_salary\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"overtime_rate\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"bank_details\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"status\",\"kind\":\"enum\",\"type\":\"MemberStatus\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"attendance\",\"kind\":\"object\",\"type\":\"Attendance\",\"relationName\":\"AttendanceToEmployee\"},{\"name\":\"allocations\",\"kind\":\"object\",\"type\":\"LabourAllocation\",\"relationName\":\"EmployeeToLabourAllocation\"},{\"name\":\"payroll_items\",\"kind\":\"object\",\"type\":\"PayrollLine\",\"relationName\":\"EmployeeToPayrollLine\"}],\"dbName\":\"employees\"},\"Attendance\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"employee_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"status\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"overtime_hours\",\"kind\":\"scalar\",\"type\":\"Float\"},{\"name\":\"project_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"check_in\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"check_out\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"employee\",\"kind\":\"object\",\"type\":\"Employee\",\"relationName\":\"AttendanceToEmployee\"},{\"name\":\"project\",\"kind\":\"object\",\"type\":\"Project\",\"relationName\":\"AttendanceToProject\"}],\"dbName\":\"attendance\"},\"LabourAllocation\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"employee_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"project_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"start_date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"end_date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"status\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"employee\",\"kind\":\"object\",\"type\":\"Employee\",\"relationName\":\"EmployeeToLabourAllocation\"},{\"name\":\"project\",\"kind\":\"object\",\"type\":\"Project\",\"relationName\":\"LabourAllocationToProject\"}],\"dbName\":\"labour_allocations\"},\"Payroll\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"month\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"status\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"total_amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"approved_by\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"lines\",\"kind\":\"object\",\"type\":\"PayrollLine\",\"relationName\":\"PayrollToPayrollLine\"}],\"dbName\":\"payrolls\"},\"PayrollLine\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"payroll_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"employee_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"basic_pay\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"overtime_pay\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"deductions\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"total_pay\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"status\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"payroll\",\"kind\":\"object\",\"type\":\"Payroll\",\"relationName\":\"PayrollToPayrollLine\"},{\"name\":\"employee\",\"kind\":\"object\",\"type\":\"Employee\",\"relationName\":\"EmployeeToPayrollLine\"}],\"dbName\":\"payroll_lines\"},\"Notification\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"user_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"title\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"message\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"type\",\"kind\":\"enum\",\"type\":\"NotificationType\"},{\"name\":\"link\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"read\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"user\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"NotificationToUser\"}],\"dbName\":\"notifications\"},\"SystemSettings\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"key\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"value\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":\"system_settings\"},\"Transaction\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"type\",\"kind\":\"enum\",\"type\":\"TransactionType\"},{\"name\":\"category\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"currency\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"exchange_rate\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"notes\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"payment_method\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"reference_number\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"attachment_url\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"tax_rate_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_by\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"creator\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"TransactionToUser\"}],\"dbName\":\"transactions\"},\"InventoryItem\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"code\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"category\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"unit\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"current_stock\",\"kind\":\"scalar\",\"type\":\"Float\"},{\"name\":\"min_stock\",\"kind\":\"scalar\",\"type\":\"Float\"},{\"name\":\"cost_price\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"transactions\",\"kind\":\"object\",\"type\":\"InventoryTransaction\",\"relationName\":\"InventoryItemToInventoryTransaction\"}],\"dbName\":\"inventory_items\"},\"InventoryTransaction\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"item_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"project_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"type\",\"kind\":\"enum\",\"type\":\"InventoryTransactionType\"},{\"name\":\"quantity\",\"kind\":\"scalar\",\"type\":\"Float\"},{\"name\":\"date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"reference_no\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"notes\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_by\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"item\",\"kind\":\"object\",\"type\":\"InventoryItem\",\"relationName\":\"InventoryItemToInventoryTransaction\"},{\"name\":\"project\",\"kind\":\"object\",\"type\":\"Project\",\"relationName\":\"InventoryTransactionToProject\"},{\"name\":\"user\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"InventoryTransactionToUser\"}],\"dbName\":\"inventory_transactions\"},\"PurchaseRequest\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"project_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"item_name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"quantity\",\"kind\":\"scalar\",\"type\":\"Float\"},{\"name\":\"unit\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"estimated_cost\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"priority\",\"kind\":\"enum\",\"type\":\"PriorityLevel\"},{\"name\":\"status\",\"kind\":\"enum\",\"type\":\"PurchaseStatus\"},{\"name\":\"requested_by\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"needed_by\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"notes\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"project\",\"kind\":\"object\",\"type\":\"Project\",\"relationName\":\"ProjectToPurchaseRequest\"},{\"name\":\"requester\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"PurchaseRequestToUser\"},{\"name\":\"purchase_orders\",\"kind\":\"object\",\"type\":\"PurchaseOrder\",\"relationName\":\"PurchaseOrderToPurchaseRequest\"}],\"dbName\":\"purchase_requests\"},\"Vendor\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"contact_person\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"email\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"phone\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"address\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"vat_no\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"purchase_orders\",\"kind\":\"object\",\"type\":\"PurchaseOrder\",\"relationName\":\"PurchaseOrderToVendor\"},{\"name\":\"vendor_bills\",\"kind\":\"object\",\"type\":\"VendorBill\",\"relationName\":\"VendorToVendorBill\"}],\"dbName\":\"vendors\"},\"PurchaseOrder\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"po_number\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"purchase_request_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"vendor_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"total_amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"status\",\"kind\":\"enum\",\"type\":\"PurchaseStatus\"},{\"name\":\"created_by\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"purchase_request\",\"kind\":\"object\",\"type\":\"PurchaseRequest\",\"relationName\":\"PurchaseOrderToPurchaseRequest\"},{\"name\":\"vendor\",\"kind\":\"object\",\"type\":\"Vendor\",\"relationName\":\"PurchaseOrderToVendor\"},{\"name\":\"creator\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"PurchaseOrderToUser\"},{\"name\":\"grns\",\"kind\":\"object\",\"type\":\"GRN\",\"relationName\":\"GRNToPurchaseOrder\"},{\"name\":\"vendor_bills\",\"kind\":\"object\",\"type\":\"VendorBill\",\"relationName\":\"PurchaseOrderToVendorBill\"}],\"dbName\":\"purchase_orders\"},\"GRN\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"grn_number\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"purchase_order_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"received_date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"received_by\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"notes\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"purchase_order\",\"kind\":\"object\",\"type\":\"PurchaseOrder\",\"relationName\":\"GRNToPurchaseOrder\"},{\"name\":\"receiver\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"GRNToUser\"}],\"dbName\":\"grns\"},\"VendorBill\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"bill_number\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"purchase_order_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"vendor_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"tax_amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"due_date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"status\",\"kind\":\"enum\",\"type\":\"InvoiceStatus\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"purchase_order\",\"kind\":\"object\",\"type\":\"PurchaseOrder\",\"relationName\":\"PurchaseOrderToVendorBill\"},{\"name\":\"vendor\",\"kind\":\"object\",\"type\":\"Vendor\",\"relationName\":\"VendorToVendorBill\"},{\"name\":\"vendor_payments\",\"kind\":\"object\",\"type\":\"VendorPayment\",\"relationName\":\"VendorBillToVendorPayment\"}],\"dbName\":\"vendor_bills\"},\"VendorPayment\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"vendor_bill_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"payment_date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"payment_method\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"reference_no\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"notes\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"vendor_bill\",\"kind\":\"object\",\"type\":\"VendorBill\",\"relationName\":\"VendorBillToVendorPayment\"}],\"dbName\":\"vendor_payments\"},\"BankAccount\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"account_number\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"bank_name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"currency\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"current_balance\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"type\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"transactions\",\"kind\":\"object\",\"type\":\"BankTransaction\",\"relationName\":\"BankAccountToBankTransaction\"}],\"dbName\":\"bank_accounts\"},\"BankTransaction\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"bank_account_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"reference\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"status\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"type\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"system_transaction_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"bank_account\",\"kind\":\"object\",\"type\":\"BankAccount\",\"relationName\":\"BankAccountToBankTransaction\"}],\"dbName\":\"bank_transactions\"}},\"enums\":{},\"types\":{}}")
+config.runtimeDataModel = JSON.parse("{\"models\":{\"Tenant\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"trade_license\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"business_type\",\"kind\":\"enum\",\"type\":\"BusinessType\"},{\"name\":\"industry\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"country\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"currency\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"tax_regime\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"timezone\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"financial_year_start\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"logo_url\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"setup_stage\",\"kind\":\"enum\",\"type\":\"SetupStage\"},{\"name\":\"company_setup_complete\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"finance_setup_complete\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"roles_setup_complete\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"module_finance\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"module_sales\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"module_operations\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"module_hr\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"users\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"TenantToUser\"},{\"name\":\"subscriptions\",\"kind\":\"object\",\"type\":\"Subscription\",\"relationName\":\"SubscriptionToTenant\"}],\"dbName\":\"tenants\"},\"SubscriptionPlan\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"code\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"price_monthly\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"price_yearly\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"trial_days\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"max_users\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"module_finance\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"module_sales\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"module_operations\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"module_hr\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"module_reports\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"is_active\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"sort_order\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"subscriptions\",\"kind\":\"object\",\"type\":\"Subscription\",\"relationName\":\"SubscriptionToSubscriptionPlan\"}],\"dbName\":\"subscription_plans\"},\"Subscription\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"tenant_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"plan_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"status\",\"kind\":\"enum\",\"type\":\"SubscriptionStatus\"},{\"name\":\"billing_interval\",\"kind\":\"enum\",\"type\":\"BillingInterval\"},{\"name\":\"trial_start\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"trial_end\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"current_period_start\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"current_period_end\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"cancelled_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"tenant\",\"kind\":\"object\",\"type\":\"Tenant\",\"relationName\":\"SubscriptionToTenant\"},{\"name\":\"plan\",\"kind\":\"object\",\"type\":\"SubscriptionPlan\",\"relationName\":\"SubscriptionToSubscriptionPlan\"}],\"dbName\":\"subscriptions\"},\"User\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"email\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"password\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"full_name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"role\",\"kind\":\"enum\",\"type\":\"UserRole\"},{\"name\":\"avatar_url\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"tenant_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"tenant\",\"kind\":\"object\",\"type\":\"Tenant\",\"relationName\":\"TenantToUser\"},{\"name\":\"erp_role\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"projects\",\"kind\":\"object\",\"type\":\"Project\",\"relationName\":\"ProjectToUser\"},{\"name\":\"project_files\",\"kind\":\"object\",\"type\":\"ProjectFile\",\"relationName\":\"ProjectFileToUser\"},{\"name\":\"project_updates\",\"kind\":\"object\",\"type\":\"ProjectUpdate\",\"relationName\":\"ProjectUpdateToUser\"},{\"name\":\"support_requests\",\"kind\":\"object\",\"type\":\"SupportRequest\",\"relationName\":\"SupportRequestToUser\"},{\"name\":\"support_messages\",\"kind\":\"object\",\"type\":\"SupportMessage\",\"relationName\":\"SupportMessageToUser\"},{\"name\":\"meeting_requests\",\"kind\":\"object\",\"type\":\"MeetingRequest\",\"relationName\":\"MeetingRequestToUser\"},{\"name\":\"invoices\",\"kind\":\"object\",\"type\":\"Invoice\",\"relationName\":\"InvoiceToUser\"},{\"name\":\"notifications\",\"kind\":\"object\",\"type\":\"Notification\",\"relationName\":\"NotificationToUser\"},{\"name\":\"transactions\",\"kind\":\"object\",\"type\":\"Transaction\",\"relationName\":\"TransactionToUser\"},{\"name\":\"inventory_logs\",\"kind\":\"object\",\"type\":\"InventoryTransaction\",\"relationName\":\"InventoryTransactionToUser\"},{\"name\":\"purchase_requests\",\"kind\":\"object\",\"type\":\"PurchaseRequest\",\"relationName\":\"PurchaseRequestToUser\"},{\"name\":\"purchase_orders\",\"kind\":\"object\",\"type\":\"PurchaseOrder\",\"relationName\":\"PurchaseOrderToUser\"},{\"name\":\"grns\",\"kind\":\"object\",\"type\":\"GRN\",\"relationName\":\"GRNToUser\"},{\"name\":\"journal_entries\",\"kind\":\"object\",\"type\":\"JournalEntry\",\"relationName\":\"JournalEntryToUser\"},{\"name\":\"stock_journals\",\"kind\":\"object\",\"type\":\"StockJournal\",\"relationName\":\"StockJournalToUser\"},{\"name\":\"leads_owned\",\"kind\":\"object\",\"type\":\"Lead\",\"relationName\":\"LeadOwner\"},{\"name\":\"customer_accounts_owned\",\"kind\":\"object\",\"type\":\"CustomerAccount\",\"relationName\":\"AccountOwner\"},{\"name\":\"opportunities_owned\",\"kind\":\"object\",\"type\":\"Opportunity\",\"relationName\":\"OpportunityOwner\"},{\"name\":\"activities\",\"kind\":\"object\",\"type\":\"Activity\",\"relationName\":\"ActivityToUser\"},{\"name\":\"approval_requests_made\",\"kind\":\"object\",\"type\":\"ApprovalRequest\",\"relationName\":\"RequestedApprovals\"},{\"name\":\"approval_requests_actioned\",\"kind\":\"object\",\"type\":\"ApprovalRequest\",\"relationName\":\"ActionedApprovals\"},{\"name\":\"created_quotes\",\"kind\":\"object\",\"type\":\"Quote\",\"relationName\":\"QuoteToUser\"},{\"name\":\"created_orders\",\"kind\":\"object\",\"type\":\"SalesOrder\",\"relationName\":\"SalesOrderToUser\"},{\"name\":\"timesheet_entries\",\"kind\":\"object\",\"type\":\"TimesheetEntry\",\"relationName\":\"TimesheetEntryToUser\"},{\"name\":\"expense_claims\",\"kind\":\"object\",\"type\":\"ExpenseClaim\",\"relationName\":\"ExpenseClaimToUser\"},{\"name\":\"timesheets_approved\",\"kind\":\"object\",\"type\":\"TimesheetEntry\",\"relationName\":\"TimesheetApprover\"},{\"name\":\"expenses_approved\",\"kind\":\"object\",\"type\":\"ExpenseClaim\",\"relationName\":\"ExpenseApprover\"},{\"name\":\"resource_bookings\",\"kind\":\"object\",\"type\":\"ResourceBooking\",\"relationName\":\"ResourceBookingToUser\"},{\"name\":\"performance_goals\",\"kind\":\"object\",\"type\":\"PerformanceGoal\",\"relationName\":\"PerformanceGoalToUser\"},{\"name\":\"reviews_received\",\"kind\":\"object\",\"type\":\"PerformanceReview\",\"relationName\":\"Reviewee\"},{\"name\":\"reviews_given\",\"kind\":\"object\",\"type\":\"PerformanceReview\",\"relationName\":\"Reviewer\"}],\"dbName\":\"users\"},\"Project\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"client_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"title\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"status\",\"kind\":\"enum\",\"type\":\"ProjectStatus\"},{\"name\":\"github_link\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"estimated_cost\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"actual_cost\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"deadline\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"test_asset_url\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"deployment_url\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"live_preview_type\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"live_preview_url\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"technical_config\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"tickets\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"notes\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"labour_data\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"inventory_data\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"resources_data\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"design_data\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"expenses_data\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"timeline_data\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"is_featured\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"client\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"ProjectToUser\"},{\"name\":\"files\",\"kind\":\"object\",\"type\":\"ProjectFile\",\"relationName\":\"ProjectToProjectFile\"},{\"name\":\"updates\",\"kind\":\"object\",\"type\":\"ProjectUpdate\",\"relationName\":\"ProjectToProjectUpdate\"},{\"name\":\"support_requests\",\"kind\":\"object\",\"type\":\"SupportRequest\",\"relationName\":\"ProjectToSupportRequest\"},{\"name\":\"meeting_requests\",\"kind\":\"object\",\"type\":\"MeetingRequest\",\"relationName\":\"MeetingRequestToProject\"},{\"name\":\"invoices\",\"kind\":\"object\",\"type\":\"Invoice\",\"relationName\":\"InvoiceToProject\"},{\"name\":\"inventory_logs\",\"kind\":\"object\",\"type\":\"InventoryTransaction\",\"relationName\":\"InventoryTransactionToProject\"},{\"name\":\"purchase_requests\",\"kind\":\"object\",\"type\":\"PurchaseRequest\",\"relationName\":\"ProjectToPurchaseRequest\"},{\"name\":\"attendance\",\"kind\":\"object\",\"type\":\"Attendance\",\"relationName\":\"AttendanceToProject\"},{\"name\":\"labour_allocations\",\"kind\":\"object\",\"type\":\"LabourAllocation\",\"relationName\":\"LabourAllocationToProject\"},{\"name\":\"quotes\",\"kind\":\"object\",\"type\":\"Quote\",\"relationName\":\"ProjectToQuote\"},{\"name\":\"sales_orders\",\"kind\":\"object\",\"type\":\"SalesOrder\",\"relationName\":\"ProjectToSalesOrder\"},{\"name\":\"timesheet_entries\",\"kind\":\"object\",\"type\":\"TimesheetEntry\",\"relationName\":\"ProjectToTimesheetEntry\"},{\"name\":\"expense_claims\",\"kind\":\"object\",\"type\":\"ExpenseClaim\",\"relationName\":\"ExpenseClaimToProject\"},{\"name\":\"resource_bookings\",\"kind\":\"object\",\"type\":\"ResourceBooking\",\"relationName\":\"ProjectToResourceBooking\"}],\"dbName\":\"projects\"},\"ProjectFile\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"project_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"file_name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"file_url\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"file_type\",\"kind\":\"enum\",\"type\":\"FileType\"},{\"name\":\"file_size\",\"kind\":\"scalar\",\"type\":\"BigInt\"},{\"name\":\"uploaded_by\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"project\",\"kind\":\"object\",\"type\":\"Project\",\"relationName\":\"ProjectToProjectFile\"},{\"name\":\"uploader\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"ProjectFileToUser\"}],\"dbName\":\"project_files\"},\"ProjectUpdate\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"project_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"update_text\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_by\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"project\",\"kind\":\"object\",\"type\":\"Project\",\"relationName\":\"ProjectToProjectUpdate\"},{\"name\":\"author\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"ProjectUpdateToUser\"}],\"dbName\":\"project_updates\"},\"SupportRequest\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"project_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"client_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"subject\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"status\",\"kind\":\"enum\",\"type\":\"SupportStatus\"},{\"name\":\"priority\",\"kind\":\"enum\",\"type\":\"PriorityLevel\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"project\",\"kind\":\"object\",\"type\":\"Project\",\"relationName\":\"ProjectToSupportRequest\"},{\"name\":\"client\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"SupportRequestToUser\"},{\"name\":\"messages\",\"kind\":\"object\",\"type\":\"SupportMessage\",\"relationName\":\"SupportMessageToSupportRequest\"}],\"dbName\":\"support_requests\"},\"SupportMessage\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"support_request_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"user_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"message\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"request\",\"kind\":\"object\",\"type\":\"SupportRequest\",\"relationName\":\"SupportMessageToSupportRequest\"},{\"name\":\"sender\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"SupportMessageToUser\"}],\"dbName\":\"support_messages\"},\"MeetingRequest\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"project_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"client_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"requested_date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"duration_minutes\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"purpose\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"status\",\"kind\":\"enum\",\"type\":\"MeetingStatus\"},{\"name\":\"meeting_link\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"admin_notes\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"project\",\"kind\":\"object\",\"type\":\"Project\",\"relationName\":\"MeetingRequestToProject\"},{\"name\":\"client\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"MeetingRequestToUser\"}],\"dbName\":\"meeting_requests\"},\"Invoice\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"project_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"client_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"customer_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"invoice_number\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"tax_amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"tax_breakdown\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"total_amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"currency\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"exchange_rate\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"due_date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"status\",\"kind\":\"enum\",\"type\":\"InvoiceStatus\"},{\"name\":\"posting_status\",\"kind\":\"enum\",\"type\":\"PostingStatus\"},{\"name\":\"payment_qr_url\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"bank_details\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"notes\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"terms\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"paid_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"project\",\"kind\":\"object\",\"type\":\"Project\",\"relationName\":\"InvoiceToProject\"},{\"name\":\"client\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"InvoiceToUser\"},{\"name\":\"customer\",\"kind\":\"object\",\"type\":\"CustomerAccount\",\"relationName\":\"CustomerAccountToInvoice\"},{\"name\":\"payments\",\"kind\":\"object\",\"type\":\"Payment\",\"relationName\":\"InvoiceToPayment\"},{\"name\":\"lines\",\"kind\":\"object\",\"type\":\"InvoiceLine\",\"relationName\":\"InvoiceToInvoiceLine\"},{\"name\":\"credit_notes\",\"kind\":\"object\",\"type\":\"CreditNote\",\"relationName\":\"CreditNoteToInvoice\"},{\"name\":\"credit_note_applications\",\"kind\":\"object\",\"type\":\"CreditNoteApplication\",\"relationName\":\"CreditNoteApplicationToInvoice\"}],\"dbName\":\"invoices\"},\"InvoiceLine\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"invoice_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"quantity\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"unit_price\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"tax_rate_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"tax_amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"total_amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"sort_order\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"invoice\",\"kind\":\"object\",\"type\":\"Invoice\",\"relationName\":\"InvoiceToInvoiceLine\"}],\"dbName\":\"invoice_lines\"},\"Payment\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"invoice_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"payment_method\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"transaction_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"payment_date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"notes\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"invoice\",\"kind\":\"object\",\"type\":\"Invoice\",\"relationName\":\"InvoiceToPayment\"}],\"dbName\":\"payments\"},\"Department\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"code\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"head_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"parent_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"is_active\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"parent\",\"kind\":\"object\",\"type\":\"Department\",\"relationName\":\"DeptHierarchy\"},{\"name\":\"children\",\"kind\":\"object\",\"type\":\"Department\",\"relationName\":\"DeptHierarchy\"},{\"name\":\"employees\",\"kind\":\"object\",\"type\":\"Employee\",\"relationName\":\"DepartmentToEmployee\"}],\"dbName\":\"departments\"},\"HRRole\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"code\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"title\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"grade\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"min_salary\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"max_salary\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"is_active\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"employees\",\"kind\":\"object\",\"type\":\"Employee\",\"relationName\":\"EmployeeToHRRole\"}],\"dbName\":\"hr_roles\"},\"Employee\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"employee_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"role\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"skill_type\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"employment_type\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"department\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"joining_date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"basic_salary\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"overtime_rate\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"bank_details\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"status\",\"kind\":\"enum\",\"type\":\"MemberStatus\"},{\"name\":\"email\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"phone\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"date_of_birth\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"gender\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"blood_group\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"marital_status\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"nationality\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"address\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"emergency_contact\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"photo_url\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"lifecycle_status\",\"kind\":\"enum\",\"type\":\"EmployeeLifecycleStatus\"},{\"name\":\"confirmation_date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"resignation_date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"exit_date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"exit_reason\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"pf_number\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"esi_number\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"uan_number\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"pan_number\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"aadhar_number\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"department_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"hr_role_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"dept\",\"kind\":\"object\",\"type\":\"Department\",\"relationName\":\"DepartmentToEmployee\"},{\"name\":\"hr_role\",\"kind\":\"object\",\"type\":\"HRRole\",\"relationName\":\"EmployeeToHRRole\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"attendance\",\"kind\":\"object\",\"type\":\"Attendance\",\"relationName\":\"AttendanceToEmployee\"},{\"name\":\"allocations\",\"kind\":\"object\",\"type\":\"LabourAllocation\",\"relationName\":\"EmployeeToLabourAllocation\"},{\"name\":\"payroll_items\",\"kind\":\"object\",\"type\":\"PayrollLine\",\"relationName\":\"EmployeeToPayrollLine\"},{\"name\":\"documents\",\"kind\":\"object\",\"type\":\"EmployeeDocument\",\"relationName\":\"EmployeeToEmployeeDocument\"},{\"name\":\"leaves\",\"kind\":\"object\",\"type\":\"Leave\",\"relationName\":\"EmployeeToLeave\"},{\"name\":\"salary_structures\",\"kind\":\"object\",\"type\":\"SalaryStructure\",\"relationName\":\"EmployeeToSalaryStructure\"},{\"name\":\"hr_events\",\"kind\":\"object\",\"type\":\"HREvent\",\"relationName\":\"EmployeeToHREvent\"}],\"dbName\":\"employees\"},\"EmployeeDocument\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"employee_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"doc_type\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"file_url\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"file_name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"expiry_date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"notes\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"employee\",\"kind\":\"object\",\"type\":\"Employee\",\"relationName\":\"EmployeeToEmployeeDocument\"}],\"dbName\":\"employee_documents\"},\"Attendance\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"employee_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"status\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"overtime_hours\",\"kind\":\"scalar\",\"type\":\"Float\"},{\"name\":\"project_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"check_in\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"check_out\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"notes\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"employee\",\"kind\":\"object\",\"type\":\"Employee\",\"relationName\":\"AttendanceToEmployee\"},{\"name\":\"project\",\"kind\":\"object\",\"type\":\"Project\",\"relationName\":\"AttendanceToProject\"}],\"dbName\":\"attendance\"},\"LeaveType\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"code\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"days_per_year\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"is_paid\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"carry_forward\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"max_carry\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"is_active\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"leaves\",\"kind\":\"object\",\"type\":\"Leave\",\"relationName\":\"LeaveToLeaveType\"}],\"dbName\":\"leave_types\"},\"Leave\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"employee_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"leave_type_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"from_date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"to_date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"days\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"reason\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"status\",\"kind\":\"enum\",\"type\":\"LeaveStatus\"},{\"name\":\"approved_by\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"approved_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"remarks\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"employee\",\"kind\":\"object\",\"type\":\"Employee\",\"relationName\":\"EmployeeToLeave\"},{\"name\":\"leave_type\",\"kind\":\"object\",\"type\":\"LeaveType\",\"relationName\":\"LeaveToLeaveType\"}],\"dbName\":\"leaves\"},\"Holiday\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"type\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"is_active\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":\"holidays\"},\"SalaryStructure\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"employee_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"effective_from\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"basic\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"hra\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"da\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"ta\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"special_allowance\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"pf_employee\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"pf_employer\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"esi_employee\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"esi_employer\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"professional_tax\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"tds\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"gross_salary\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"net_salary\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"is_current\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"notes\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"employee\",\"kind\":\"object\",\"type\":\"Employee\",\"relationName\":\"EmployeeToSalaryStructure\"}],\"dbName\":\"salary_structures\"},\"LabourAllocation\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"employee_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"project_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"start_date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"end_date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"status\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"employee\",\"kind\":\"object\",\"type\":\"Employee\",\"relationName\":\"EmployeeToLabourAllocation\"},{\"name\":\"project\",\"kind\":\"object\",\"type\":\"Project\",\"relationName\":\"LabourAllocationToProject\"}],\"dbName\":\"labour_allocations\"},\"Payroll\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"month\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"status\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"total_amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"total_deductions\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"total_employer_cost\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"approved_by\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"posted_to_finance\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"finance_journal_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"lines\",\"kind\":\"object\",\"type\":\"PayrollLine\",\"relationName\":\"PayrollToPayrollLine\"}],\"dbName\":\"payrolls\"},\"PayrollLine\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"payroll_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"employee_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"basic_pay\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"hra\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"da\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"ta\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"special_allowance\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"overtime_pay\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"gross_pay\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"pf_deduction\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"esi_deduction\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"professional_tax\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"tds\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"deductions\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"net_pay\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"total_pay\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"status\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"payroll\",\"kind\":\"object\",\"type\":\"Payroll\",\"relationName\":\"PayrollToPayrollLine\"},{\"name\":\"employee\",\"kind\":\"object\",\"type\":\"Employee\",\"relationName\":\"EmployeeToPayrollLine\"}],\"dbName\":\"payroll_lines\"},\"HREvent\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"employee_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"type\",\"kind\":\"enum\",\"type\":\"HREventType\"},{\"name\":\"title\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"event_date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"effective_date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"metadata\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"created_by\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"employee\",\"kind\":\"object\",\"type\":\"Employee\",\"relationName\":\"EmployeeToHREvent\"}],\"dbName\":\"hr_events\"},\"Notification\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"user_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"title\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"message\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"type\",\"kind\":\"enum\",\"type\":\"NotificationType\"},{\"name\":\"link\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"read\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"user\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"NotificationToUser\"}],\"dbName\":\"notifications\"},\"SystemSettings\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"key\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"value\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":\"system_settings\"},\"TaxRate\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"code\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"rate\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"type\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"country_code\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"region\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"category\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"is_compound\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"is_active\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"valid_from\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"valid_until\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":\"tax_rates\"},\"Transaction\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"type\",\"kind\":\"enum\",\"type\":\"TransactionType\"},{\"name\":\"category\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"currency\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"exchange_rate\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"notes\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"payment_method\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"reference_number\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"attachment_url\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"tax_rate_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_by\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"creator\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"TransactionToUser\"}],\"dbName\":\"transactions\"},\"PurchaseRequest\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"project_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"item_name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"quantity\",\"kind\":\"scalar\",\"type\":\"Float\"},{\"name\":\"unit\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"estimated_cost\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"priority\",\"kind\":\"enum\",\"type\":\"PriorityLevel\"},{\"name\":\"status\",\"kind\":\"enum\",\"type\":\"PurchaseStatus\"},{\"name\":\"requested_by\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"needed_by\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"notes\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"project\",\"kind\":\"object\",\"type\":\"Project\",\"relationName\":\"ProjectToPurchaseRequest\"},{\"name\":\"requester\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"PurchaseRequestToUser\"},{\"name\":\"purchase_orders\",\"kind\":\"object\",\"type\":\"PurchaseOrder\",\"relationName\":\"PurchaseOrderToPurchaseRequest\"}],\"dbName\":\"purchase_requests\"},\"Vendor\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"contact_person\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"email\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"phone\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"address\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"country_code\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"tax_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"tax_exempt\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"vat_no\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"purchase_orders\",\"kind\":\"object\",\"type\":\"PurchaseOrder\",\"relationName\":\"PurchaseOrderToVendor\"},{\"name\":\"vendor_bills\",\"kind\":\"object\",\"type\":\"VendorBill\",\"relationName\":\"VendorToVendorBill\"},{\"name\":\"debit_notes\",\"kind\":\"object\",\"type\":\"DebitNote\",\"relationName\":\"DebitNoteToVendor\"}],\"dbName\":\"vendors\"},\"PurchaseOrder\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"po_number\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"purchase_request_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"vendor_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"total_amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"status\",\"kind\":\"enum\",\"type\":\"PurchaseStatus\"},{\"name\":\"created_by\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"purchase_request\",\"kind\":\"object\",\"type\":\"PurchaseRequest\",\"relationName\":\"PurchaseOrderToPurchaseRequest\"},{\"name\":\"vendor\",\"kind\":\"object\",\"type\":\"Vendor\",\"relationName\":\"PurchaseOrderToVendor\"},{\"name\":\"creator\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"PurchaseOrderToUser\"},{\"name\":\"grns\",\"kind\":\"object\",\"type\":\"GRN\",\"relationName\":\"GRNToPurchaseOrder\"},{\"name\":\"vendor_bills\",\"kind\":\"object\",\"type\":\"VendorBill\",\"relationName\":\"PurchaseOrderToVendorBill\"},{\"name\":\"lines\",\"kind\":\"object\",\"type\":\"PurchaseOrderLine\",\"relationName\":\"PurchaseOrderToPurchaseOrderLine\"}],\"dbName\":\"purchase_orders\"},\"PurchaseOrderLine\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"purchase_order_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"quantity\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"unit_price\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"tax_rate_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"tax_amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"total_amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"sort_order\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"purchase_order\",\"kind\":\"object\",\"type\":\"PurchaseOrder\",\"relationName\":\"PurchaseOrderToPurchaseOrderLine\"}],\"dbName\":\"purchase_order_lines\"},\"GRN\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"grn_number\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"purchase_order_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"received_date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"received_by\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"notes\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"purchase_order\",\"kind\":\"object\",\"type\":\"PurchaseOrder\",\"relationName\":\"GRNToPurchaseOrder\"},{\"name\":\"receiver\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"GRNToUser\"}],\"dbName\":\"grns\"},\"VendorBill\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"bill_number\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"purchase_order_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"vendor_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"tax_amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"tax_breakdown\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"total_amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"currency\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"due_date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"status\",\"kind\":\"enum\",\"type\":\"InvoiceStatus\"},{\"name\":\"posting_status\",\"kind\":\"enum\",\"type\":\"PostingStatus\"},{\"name\":\"notes\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"purchase_order\",\"kind\":\"object\",\"type\":\"PurchaseOrder\",\"relationName\":\"PurchaseOrderToVendorBill\"},{\"name\":\"vendor\",\"kind\":\"object\",\"type\":\"Vendor\",\"relationName\":\"VendorToVendorBill\"},{\"name\":\"vendor_payments\",\"kind\":\"object\",\"type\":\"VendorPayment\",\"relationName\":\"VendorBillToVendorPayment\"},{\"name\":\"lines\",\"kind\":\"object\",\"type\":\"VendorBillLine\",\"relationName\":\"VendorBillToVendorBillLine\"},{\"name\":\"debit_notes\",\"kind\":\"object\",\"type\":\"DebitNote\",\"relationName\":\"DebitNoteToVendorBill\"},{\"name\":\"debit_note_applications\",\"kind\":\"object\",\"type\":\"DebitNoteApplication\",\"relationName\":\"DebitNoteApplicationToVendorBill\"}],\"dbName\":\"vendor_bills\"},\"VendorBillLine\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"vendor_bill_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"quantity\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"unit_price\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"tax_rate_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"tax_amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"total_amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"sort_order\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"vendor_bill\",\"kind\":\"object\",\"type\":\"VendorBill\",\"relationName\":\"VendorBillToVendorBillLine\"}],\"dbName\":\"vendor_bill_lines\"},\"VendorPayment\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"vendor_bill_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"payment_date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"payment_method\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"reference_no\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"notes\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"vendor_bill\",\"kind\":\"object\",\"type\":\"VendorBill\",\"relationName\":\"VendorBillToVendorPayment\"}],\"dbName\":\"vendor_payments\"},\"CreditNote\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"number\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"customer_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"invoice_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"tax_amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"total_amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"currency\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"reason\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"status\",\"kind\":\"enum\",\"type\":\"CreditNoteStatus\"},{\"name\":\"posting_status\",\"kind\":\"enum\",\"type\":\"PostingStatus\"},{\"name\":\"notes\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"customer\",\"kind\":\"object\",\"type\":\"CustomerAccount\",\"relationName\":\"CreditNoteToCustomerAccount\"},{\"name\":\"invoice\",\"kind\":\"object\",\"type\":\"Invoice\",\"relationName\":\"CreditNoteToInvoice\"},{\"name\":\"lines\",\"kind\":\"object\",\"type\":\"CreditNoteLine\",\"relationName\":\"CreditNoteToCreditNoteLine\"},{\"name\":\"applications\",\"kind\":\"object\",\"type\":\"CreditNoteApplication\",\"relationName\":\"CreditNoteToCreditNoteApplication\"}],\"dbName\":\"credit_notes\"},\"CreditNoteLine\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"credit_note_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"quantity\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"unit_price\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"tax_rate_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"tax_amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"total_amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"sort_order\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"credit_note\",\"kind\":\"object\",\"type\":\"CreditNote\",\"relationName\":\"CreditNoteToCreditNoteLine\"}],\"dbName\":\"credit_note_lines\"},\"CreditNoteApplication\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"credit_note_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"invoice_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"credit_note\",\"kind\":\"object\",\"type\":\"CreditNote\",\"relationName\":\"CreditNoteToCreditNoteApplication\"},{\"name\":\"invoice\",\"kind\":\"object\",\"type\":\"Invoice\",\"relationName\":\"CreditNoteApplicationToInvoice\"}],\"dbName\":\"credit_note_applications\"},\"DebitNote\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"number\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"vendor_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"vendor_bill_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"tax_amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"total_amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"currency\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"reason\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"status\",\"kind\":\"enum\",\"type\":\"DebitNoteStatus\"},{\"name\":\"posting_status\",\"kind\":\"enum\",\"type\":\"PostingStatus\"},{\"name\":\"notes\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"vendor\",\"kind\":\"object\",\"type\":\"Vendor\",\"relationName\":\"DebitNoteToVendor\"},{\"name\":\"vendor_bill\",\"kind\":\"object\",\"type\":\"VendorBill\",\"relationName\":\"DebitNoteToVendorBill\"},{\"name\":\"lines\",\"kind\":\"object\",\"type\":\"DebitNoteLine\",\"relationName\":\"DebitNoteToDebitNoteLine\"},{\"name\":\"applications\",\"kind\":\"object\",\"type\":\"DebitNoteApplication\",\"relationName\":\"DebitNoteToDebitNoteApplication\"}],\"dbName\":\"debit_notes\"},\"DebitNoteLine\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"debit_note_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"quantity\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"unit_price\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"tax_rate_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"tax_amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"total_amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"sort_order\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"debit_note\",\"kind\":\"object\",\"type\":\"DebitNote\",\"relationName\":\"DebitNoteToDebitNoteLine\"}],\"dbName\":\"debit_note_lines\"},\"DebitNoteApplication\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"debit_note_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"vendor_bill_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"debit_note\",\"kind\":\"object\",\"type\":\"DebitNote\",\"relationName\":\"DebitNoteToDebitNoteApplication\"},{\"name\":\"vendor_bill\",\"kind\":\"object\",\"type\":\"VendorBill\",\"relationName\":\"DebitNoteApplicationToVendorBill\"}],\"dbName\":\"debit_note_applications\"},\"StockJournal\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"number\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"type\",\"kind\":\"enum\",\"type\":\"StockJournalType\"},{\"name\":\"reference\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"reason\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"posting_status\",\"kind\":\"enum\",\"type\":\"PostingStatus\"},{\"name\":\"total_value\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"valuation_method\",\"kind\":\"enum\",\"type\":\"ValuationMethod\"},{\"name\":\"notes\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_by\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"creator\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"StockJournalToUser\"},{\"name\":\"lines\",\"kind\":\"object\",\"type\":\"StockJournalLine\",\"relationName\":\"StockJournalToStockJournalLine\"},{\"name\":\"gl_entries\",\"kind\":\"object\",\"type\":\"StockJournalGLEntry\",\"relationName\":\"StockJournalToStockJournalGLEntry\"}],\"dbName\":\"stock_journals\"},\"StockJournalLine\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"stock_journal_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"variant_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"from_location_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"to_location_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"quantity\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"unit_cost\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"total_cost\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"lot_number\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"expiry_date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"notes\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"sort_order\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"stock_journal\",\"kind\":\"object\",\"type\":\"StockJournal\",\"relationName\":\"StockJournalToStockJournalLine\"},{\"name\":\"variant\",\"kind\":\"object\",\"type\":\"ProductVariant\",\"relationName\":\"ProductVariantToStockJournalLine\"}],\"dbName\":\"stock_journal_lines\"},\"StockJournalGLEntry\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"stock_journal_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"account_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"debit\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"credit\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"stock_journal\",\"kind\":\"object\",\"type\":\"StockJournal\",\"relationName\":\"StockJournalToStockJournalGLEntry\"},{\"name\":\"account\",\"kind\":\"object\",\"type\":\"Account\",\"relationName\":\"AccountToStockJournalGLEntry\"}],\"dbName\":\"stock_journal_gl_entries\"},\"BankAccount\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"account_number\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"bank_name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"currency\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"current_balance\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"type\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"transactions\",\"kind\":\"object\",\"type\":\"BankTransaction\",\"relationName\":\"BankAccountToBankTransaction\"}],\"dbName\":\"bank_accounts\"},\"BankTransaction\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"bank_account_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"reference\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"status\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"type\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"system_transaction_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"bank_account\",\"kind\":\"object\",\"type\":\"BankAccount\",\"relationName\":\"BankAccountToBankTransaction\"}],\"dbName\":\"bank_transactions\"},\"Account\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"code\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"type\",\"kind\":\"enum\",\"type\":\"AccountType\"},{\"name\":\"parent_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"balance\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"is_system\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"parent\",\"kind\":\"object\",\"type\":\"Account\",\"relationName\":\"AccountHierarchy\"},{\"name\":\"children\",\"kind\":\"object\",\"type\":\"Account\",\"relationName\":\"AccountHierarchy\"},{\"name\":\"journal_lines\",\"kind\":\"object\",\"type\":\"JournalLine\",\"relationName\":\"AccountToJournalLine\"},{\"name\":\"budget_lines\",\"kind\":\"object\",\"type\":\"Budget\",\"relationName\":\"AccountToBudget\"},{\"name\":\"budget_controls\",\"kind\":\"object\",\"type\":\"BudgetControl\",\"relationName\":\"AccountToBudgetControl\"},{\"name\":\"stock_journal_entries\",\"kind\":\"object\",\"type\":\"StockJournalGLEntry\",\"relationName\":\"AccountToStockJournalGLEntry\"}],\"dbName\":\"accounts\"},\"JournalEntry\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"reference\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"status\",\"kind\":\"enum\",\"type\":\"JournalStatus\"},{\"name\":\"created_by\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"creator\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"JournalEntryToUser\"},{\"name\":\"lines\",\"kind\":\"object\",\"type\":\"JournalLine\",\"relationName\":\"JournalEntryToJournalLine\"}],\"dbName\":\"journal_entries\"},\"JournalLine\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"journal_entry_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"account_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"debit\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"credit\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"journal_entry\",\"kind\":\"object\",\"type\":\"JournalEntry\",\"relationName\":\"JournalEntryToJournalLine\"},{\"name\":\"account\",\"kind\":\"object\",\"type\":\"Account\",\"relationName\":\"AccountToJournalLine\"}],\"dbName\":\"journal_lines\"},\"Budget\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"account_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"period\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"account\",\"kind\":\"object\",\"type\":\"Account\",\"relationName\":\"AccountToBudget\"}],\"dbName\":\"budgets\"},\"Lead\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"first_name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"last_name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"email\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"phone\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"company\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"title\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"status\",\"kind\":\"enum\",\"type\":\"LeadStatus\"},{\"name\":\"source\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"score\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"owner_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"owner\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"LeadOwner\"},{\"name\":\"activities\",\"kind\":\"object\",\"type\":\"Activity\",\"relationName\":\"ActivityToLead\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":null},\"CustomerAccount\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"industry\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"website\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"phone\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"address\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"country_code\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"tax_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"tax_exempt\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"tax_exempt_reason\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"owner_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"owner\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"AccountOwner\"},{\"name\":\"contacts\",\"kind\":\"object\",\"type\":\"Contact\",\"relationName\":\"ContactToCustomerAccount\"},{\"name\":\"opportunities\",\"kind\":\"object\",\"type\":\"Opportunity\",\"relationName\":\"CustomerAccountToOpportunity\"},{\"name\":\"activities\",\"kind\":\"object\",\"type\":\"Activity\",\"relationName\":\"ActivityToCustomerAccount\"},{\"name\":\"invoices\",\"kind\":\"object\",\"type\":\"Invoice\",\"relationName\":\"CustomerAccountToInvoice\"},{\"name\":\"quotes\",\"kind\":\"object\",\"type\":\"Quote\",\"relationName\":\"CustomerAccountToQuote\"},{\"name\":\"sales_orders\",\"kind\":\"object\",\"type\":\"SalesOrder\",\"relationName\":\"CustomerAccountToSalesOrder\"},{\"name\":\"credit_notes\",\"kind\":\"object\",\"type\":\"CreditNote\",\"relationName\":\"CreditNoteToCustomerAccount\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":null},\"Contact\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"account_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"account\",\"kind\":\"object\",\"type\":\"CustomerAccount\",\"relationName\":\"ContactToCustomerAccount\"},{\"name\":\"first_name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"last_name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"email\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"phone\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"title\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"activities\",\"kind\":\"object\",\"type\":\"Activity\",\"relationName\":\"ActivityToContact\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":null},\"Opportunity\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"account_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"account\",\"kind\":\"object\",\"type\":\"CustomerAccount\",\"relationName\":\"CustomerAccountToOpportunity\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"stage\",\"kind\":\"enum\",\"type\":\"OpportunityStage\"},{\"name\":\"probability\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"close_date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"owner_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"owner\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"OpportunityOwner\"},{\"name\":\"activities\",\"kind\":\"object\",\"type\":\"Activity\",\"relationName\":\"ActivityToOpportunity\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":null},\"Activity\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"type\",\"kind\":\"enum\",\"type\":\"ActivityType\"},{\"name\":\"subject\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"due_date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"completed\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"lead_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"lead\",\"kind\":\"object\",\"type\":\"Lead\",\"relationName\":\"ActivityToLead\"},{\"name\":\"account_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"account\",\"kind\":\"object\",\"type\":\"CustomerAccount\",\"relationName\":\"ActivityToCustomerAccount\"},{\"name\":\"contact_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"contact\",\"kind\":\"object\",\"type\":\"Contact\",\"relationName\":\"ActivityToContact\"},{\"name\":\"opportunity_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"opportunity\",\"kind\":\"object\",\"type\":\"Opportunity\",\"relationName\":\"ActivityToOpportunity\"},{\"name\":\"user_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"user\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"ActivityToUser\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":null},\"Product\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"type\",\"kind\":\"enum\",\"type\":\"ProductType\"},{\"name\":\"category\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"uom\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"variants\",\"kind\":\"object\",\"type\":\"ProductVariant\",\"relationName\":\"ProductToProductVariant\"},{\"name\":\"attributes\",\"kind\":\"object\",\"type\":\"ProductAttribute\",\"relationName\":\"ProductToProductAttribute\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":null},\"ProductVariant\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"product_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"product\",\"kind\":\"object\",\"type\":\"Product\",\"relationName\":\"ProductToProductVariant\"},{\"name\":\"sku\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"price\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"cost\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"reorder_point\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"reorder_quantity\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"inventory\",\"kind\":\"object\",\"type\":\"InventoryItem\",\"relationName\":\"InventoryItemToProductVariant\"},{\"name\":\"transactions\",\"kind\":\"object\",\"type\":\"InventoryTransaction\",\"relationName\":\"InventoryTransactionToProductVariant\"},{\"name\":\"price_list_items\",\"kind\":\"object\",\"type\":\"PriceListItem\",\"relationName\":\"PriceListItemToProductVariant\"},{\"name\":\"bundle_items\",\"kind\":\"object\",\"type\":\"ProductBundleItem\",\"relationName\":\"ProductBundleItemToProductVariant\"},{\"name\":\"boms_as_finished_good\",\"kind\":\"object\",\"type\":\"BillOfMaterial\",\"relationName\":\"BillOfMaterialToProductVariant\"},{\"name\":\"boms_as_component\",\"kind\":\"object\",\"type\":\"BomComponent\",\"relationName\":\"BomComponentToProductVariant\"},{\"name\":\"production_orders\",\"kind\":\"object\",\"type\":\"ProductionOrder\",\"relationName\":\"ProductVariantToProductionOrder\"},{\"name\":\"production_components\",\"kind\":\"object\",\"type\":\"ProductionComponent\",\"relationName\":\"ProductVariantToProductionComponent\"},{\"name\":\"stock_journal_lines\",\"kind\":\"object\",\"type\":\"StockJournalLine\",\"relationName\":\"ProductVariantToStockJournalLine\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":null},\"ProductAttribute\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"product_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"product\",\"kind\":\"object\",\"type\":\"Product\",\"relationName\":\"ProductToProductAttribute\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"value\",\"kind\":\"scalar\",\"type\":\"String\"}],\"dbName\":null},\"Warehouse\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"code\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"address\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"locations\",\"kind\":\"object\",\"type\":\"Location\",\"relationName\":\"LocationToWarehouse\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":null},\"Location\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"warehouse_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"warehouse\",\"kind\":\"object\",\"type\":\"Warehouse\",\"relationName\":\"LocationToWarehouse\"},{\"name\":\"code\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"type\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"inventory\",\"kind\":\"object\",\"type\":\"InventoryItem\",\"relationName\":\"InventoryItemToLocation\"}],\"dbName\":null},\"InventoryItem\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"variant_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"variant\",\"kind\":\"object\",\"type\":\"ProductVariant\",\"relationName\":\"InventoryItemToProductVariant\"},{\"name\":\"location_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"location\",\"kind\":\"object\",\"type\":\"Location\",\"relationName\":\"InventoryItemToLocation\"},{\"name\":\"quantity\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":null},\"InventoryTransaction\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"type\",\"kind\":\"enum\",\"type\":\"InventoryMovementType\"},{\"name\":\"variant_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"variant\",\"kind\":\"object\",\"type\":\"ProductVariant\",\"relationName\":\"InventoryTransactionToProductVariant\"},{\"name\":\"from_location_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"to_location_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"quantity\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"reference\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"created_by\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"user\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"InventoryTransactionToUser\"},{\"name\":\"project_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"project\",\"kind\":\"object\",\"type\":\"Project\",\"relationName\":\"InventoryTransactionToProject\"}],\"dbName\":null},\"FixedAsset\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"asset_number\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"purchase_date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"purchase_cost\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"salvage_value\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"useful_life_years\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"accumulated_depreciation\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"current_book_value\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"last_depreciation_date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"status\",\"kind\":\"enum\",\"type\":\"AssetStatus\"},{\"name\":\"location\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"serial_number\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"asset_account_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"depreciation_account_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"expense_account_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"depreciation_schedule\",\"kind\":\"object\",\"type\":\"DepreciationSchedule\",\"relationName\":\"DepreciationScheduleToFixedAsset\"}],\"dbName\":\"fixed_assets\"},\"DepreciationSchedule\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"fixed_asset_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"is_posted\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"journal_entry_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"fixed_asset\",\"kind\":\"object\",\"type\":\"FixedAsset\",\"relationName\":\"DepreciationScheduleToFixedAsset\"}],\"dbName\":\"depreciation_schedules\"},\"ApprovalWorkflow\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"entity_type\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"min_amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"approver_role\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"approver_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"is_active\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":\"approval_workflows\"},\"ApprovalRequest\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"entity_type\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"entity_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"status\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"requested_by\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"requester\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"RequestedApprovals\"},{\"name\":\"approved_by\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"approver\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"ActionedApprovals\"},{\"name\":\"comments\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":\"approval_requests\"},\"BudgetControl\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"account_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"account\",\"kind\":\"object\",\"type\":\"Account\",\"relationName\":\"AccountToBudgetControl\"},{\"name\":\"period\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"limit_amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"consumed_amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"action\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":\"budget_controls\"},\"Quote\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"number\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"account_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"project_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"issue_date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"valid_until\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"status\",\"kind\":\"enum\",\"type\":\"QuoteStatus\"},{\"name\":\"total_amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"notes\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"terms\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_by\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"account\",\"kind\":\"object\",\"type\":\"CustomerAccount\",\"relationName\":\"CustomerAccountToQuote\"},{\"name\":\"project\",\"kind\":\"object\",\"type\":\"Project\",\"relationName\":\"ProjectToQuote\"},{\"name\":\"creator\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"QuoteToUser\"},{\"name\":\"lines\",\"kind\":\"object\",\"type\":\"QuoteLine\",\"relationName\":\"QuoteToQuoteLine\"},{\"name\":\"orders\",\"kind\":\"object\",\"type\":\"SalesOrder\",\"relationName\":\"QuoteToSalesOrder\"}],\"dbName\":\"quotes\"},\"QuoteLine\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"quote_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"quantity\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"unit_price\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"total_price\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"quote\",\"kind\":\"object\",\"type\":\"Quote\",\"relationName\":\"QuoteToQuoteLine\"}],\"dbName\":\"quote_lines\"},\"SalesOrder\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"number\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"quote_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"account_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"project_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"order_date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"status\",\"kind\":\"enum\",\"type\":\"OrderStatus\"},{\"name\":\"total_amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"created_by\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"quote\",\"kind\":\"object\",\"type\":\"Quote\",\"relationName\":\"QuoteToSalesOrder\"},{\"name\":\"account\",\"kind\":\"object\",\"type\":\"CustomerAccount\",\"relationName\":\"CustomerAccountToSalesOrder\"},{\"name\":\"project\",\"kind\":\"object\",\"type\":\"Project\",\"relationName\":\"ProjectToSalesOrder\"},{\"name\":\"creator\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"SalesOrderToUser\"},{\"name\":\"lines\",\"kind\":\"object\",\"type\":\"SalesOrderLine\",\"relationName\":\"SalesOrderToSalesOrderLine\"}],\"dbName\":\"sales_orders\"},\"SalesOrderLine\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"sales_order_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"quantity\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"unit_price\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"total_price\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"sales_order\",\"kind\":\"object\",\"type\":\"SalesOrder\",\"relationName\":\"SalesOrderToSalesOrderLine\"}],\"dbName\":\"sales_order_lines\"},\"TimesheetEntry\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"project_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"user_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"hours\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"billable\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"status\",\"kind\":\"enum\",\"type\":\"TimesheetStatus\"},{\"name\":\"approver_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"project\",\"kind\":\"object\",\"type\":\"Project\",\"relationName\":\"ProjectToTimesheetEntry\"},{\"name\":\"user\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"TimesheetEntryToUser\"},{\"name\":\"approver\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"TimesheetApprover\"}],\"dbName\":\"timesheet_entries\"},\"ExpenseClaim\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"project_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"user_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"category\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"receipt_url\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"billable\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"status\",\"kind\":\"enum\",\"type\":\"ExpenseStatus\"},{\"name\":\"approver_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"project\",\"kind\":\"object\",\"type\":\"Project\",\"relationName\":\"ExpenseClaimToProject\"},{\"name\":\"user\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"ExpenseClaimToUser\"},{\"name\":\"approver\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"ExpenseApprover\"}],\"dbName\":\"expense_claims\"},\"PriceList\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"currency\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"start_date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"end_date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"active\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"items\",\"kind\":\"object\",\"type\":\"PriceListItem\",\"relationName\":\"PriceListToPriceListItem\"}],\"dbName\":\"price_lists\"},\"PriceListItem\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"price_list_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"variant_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"price\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"min_quantity\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"price_list\",\"kind\":\"object\",\"type\":\"PriceList\",\"relationName\":\"PriceListToPriceListItem\"},{\"name\":\"variant\",\"kind\":\"object\",\"type\":\"ProductVariant\",\"relationName\":\"PriceListItemToProductVariant\"}],\"dbName\":\"price_list_items\"},\"ProductBundle\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"sku\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"price\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"active\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"items\",\"kind\":\"object\",\"type\":\"ProductBundleItem\",\"relationName\":\"ProductBundleToProductBundleItem\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":\"product_bundles\"},\"ProductBundleItem\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"bundle_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"variant_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"quantity\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"bundle\",\"kind\":\"object\",\"type\":\"ProductBundle\",\"relationName\":\"ProductBundleToProductBundleItem\"},{\"name\":\"variant\",\"kind\":\"object\",\"type\":\"ProductVariant\",\"relationName\":\"ProductBundleItemToProductVariant\"}],\"dbName\":\"product_bundle_items\"},\"ResourceBooking\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"project_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"user_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"start_date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"end_date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"hours\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"status\",\"kind\":\"enum\",\"type\":\"BookingStatus\"},{\"name\":\"notes\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"project\",\"kind\":\"object\",\"type\":\"Project\",\"relationName\":\"ProjectToResourceBooking\"},{\"name\":\"user\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"ResourceBookingToUser\"}],\"dbName\":\"resource_bookings\"},\"PerformanceGoal\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"user_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"title\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"status\",\"kind\":\"enum\",\"type\":\"GoalStatus\"},{\"name\":\"due_date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"user\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"PerformanceGoalToUser\"}],\"dbName\":\"performance_goals\"},\"PerformanceReview\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"user_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"reviewer_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"cycle\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"status\",\"kind\":\"enum\",\"type\":\"ReviewStatus\"},{\"name\":\"rating\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"feedback\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"review_date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"user\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"Reviewee\"},{\"name\":\"reviewer\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"Reviewer\"}],\"dbName\":\"performance_reviews\"},\"BillOfMaterial\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"variant_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"quantity\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"active\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"components\",\"kind\":\"object\",\"type\":\"BomComponent\",\"relationName\":\"BillOfMaterialToBomComponent\"},{\"name\":\"production_orders\",\"kind\":\"object\",\"type\":\"ProductionOrder\",\"relationName\":\"BillOfMaterialToProductionOrder\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"variant\",\"kind\":\"object\",\"type\":\"ProductVariant\",\"relationName\":\"BillOfMaterialToProductVariant\"}],\"dbName\":\"bill_of_materials\"},\"BomComponent\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"bom_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"variant_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"quantity\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"bom\",\"kind\":\"object\",\"type\":\"BillOfMaterial\",\"relationName\":\"BillOfMaterialToBomComponent\"},{\"name\":\"variant\",\"kind\":\"object\",\"type\":\"ProductVariant\",\"relationName\":\"BomComponentToProductVariant\"}],\"dbName\":\"bom_components\"},\"ProductionOrder\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"number\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"bom_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"variant_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"quantity\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"status\",\"kind\":\"enum\",\"type\":\"ProductionStatus\"},{\"name\":\"start_date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"end_date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"components\",\"kind\":\"object\",\"type\":\"ProductionComponent\",\"relationName\":\"ProductionComponentToProductionOrder\"},{\"name\":\"created_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updated_at\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"bom\",\"kind\":\"object\",\"type\":\"BillOfMaterial\",\"relationName\":\"BillOfMaterialToProductionOrder\"},{\"name\":\"variant\",\"kind\":\"object\",\"type\":\"ProductVariant\",\"relationName\":\"ProductVariantToProductionOrder\"}],\"dbName\":\"production_orders\"},\"ProductionComponent\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"production_order_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"variant_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"expected_qty\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"actual_qty\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"production_order\",\"kind\":\"object\",\"type\":\"ProductionOrder\",\"relationName\":\"ProductionComponentToProductionOrder\"},{\"name\":\"variant\",\"kind\":\"object\",\"type\":\"ProductVariant\",\"relationName\":\"ProductVariantToProductionComponent\"}],\"dbName\":\"production_components\"}},\"enums\":{},\"types\":{}}")
 defineDmmfProperty(exports.Prisma, config.runtimeDataModel)
 config.compilerWasm = {
   getRuntime: async () => require('./query_compiler_fast_bg.js'),

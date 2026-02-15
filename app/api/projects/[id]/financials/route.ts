@@ -67,13 +67,17 @@ export async function GET(request: Request, { params }: { params: { id: string }
     // 3. INVENTORY COSTS
     const inventoryTransactions = await prisma.inventoryTransaction.findMany({
       where: { project_id: projectId },
-      include: { item: { select: { cost_price: true } } }
+      include: { variant: { select: { cost: true } } }
     });
 
     let inventoryCost = 0;
     inventoryTransactions.forEach(inv => {
-      if (['issue_to_project', 'scrap', 'wastage'].includes(inv.type)) {
-        inventoryCost += (Number(inv.item.cost_price || 0) * inv.quantity);
+      // 'out' means issued to project (cost increases)
+      // 'in' implies return from project (cost decreases)
+      if (inv.type === 'out') {
+        inventoryCost += (Number(inv.variant.cost || 0) * Number(inv.quantity));
+      } else if (inv.type === 'in') {
+        inventoryCost -= (Number(inv.variant.cost || 0) * Number(inv.quantity));
       }
     });
 

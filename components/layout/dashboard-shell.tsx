@@ -50,17 +50,19 @@ export function DashboardShell({
   }
 
   return (
-    <div className="min-h-screen">
-      <Header />
-      <div className="flex">
-        <Sidebar isCollapsed={isCollapsed} toggleCollapse={() => setIsCollapsed(!isCollapsed)} />
-        <main className={cn(
-          "flex-1 p-4 md:p-8 pt-6 transition-all duration-300 ease-in-out",
-          isCollapsed ? "ml-0 md:ml-[80px]" : "ml-0 md:ml-64"
-        )}>
+    <div className="min-h-screen bg-background flex font-sans text-foreground selection:bg-primary/20">
+      <Sidebar isCollapsed={isCollapsed} toggleCollapse={() => setIsCollapsed(!isCollapsed)} />
+
+      {/* Main Container */}
+      <main className={cn(
+        "flex-1 bg-card m-4 rounded-[48px] shadow-sm flex flex-col overflow-hidden border border-border relative transition-all duration-300 ease-in-out",
+        isCollapsed ? "ml-[80px]" : "ml-0 md:ml-64"
+      )}>
+        <Header />
+        <div className="flex-1 overflow-y-auto px-4 md:px-10 py-8 scrollbar-hide">
           {children}
-        </main>
-      </div>
+        </div>
+      </main>
     </div>
   );
 }

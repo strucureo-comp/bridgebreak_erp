@@ -76,7 +76,7 @@ export function ProjectStats({ projects }: ProjectStatsProps) {
 
             <Card className="col-span-1 border-none shadow-none bg-transparent p-0 flex items-center justify-center">
                 <div className="h-full w-full max-w-[120px] aspect-square">
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer width="100%" height="100%" minHeight={80} minWidth={80}>
                         <PieChart>
                             <Pie
                                 data={chartData}

@@ -159,14 +159,22 @@ export interface MeetingRequest {
   updated_at: string;
 }
 
+export type PostingStatus = 'draft' | 'posted' | 'voided';
+
 export interface Invoice {
   id: string;
-  project_id: string;
-  client_id: string;
+  project_id?: string; // Made optional
+  client_id?: string;  // Made optional
+  customer_id?: string; // New
   invoice_number: string;
   amount: number;
+  tax_amount?: number;
+  total_amount?: number;
+  currency?: string;
+  exchange_rate?: number;
   due_date: string;
   status: InvoiceStatus;
+  posting_status: PostingStatus; // New
   description?: string;
   notes?: string;
   payment_qr_url?: string;
@@ -175,6 +183,23 @@ export interface Invoice {
   created_at: string;
   updated_at: string;
   project?: { title?: string };
+  customer?: CustomerAccount; // New
+  lines?: InvoiceLine[];
+  tax_breakdown?: any;
+  terms?: string;
+}
+
+export interface InvoiceLine {
+  id: string;
+  invoice_id: string;
+  description: string;
+  quantity: number;
+  unit_price: number;
+  amount: number;
+  tax_rate_id?: string;
+  tax_amount?: number;
+  total_amount: number;
+  sort_order: number;
 }
 
 export interface Payment {
@@ -288,45 +313,113 @@ export interface Enquiry {
   updated_at: string;
 }
 
-export interface InventoryItem {
+// --- SCM Types (Dynamics 365 Parity) ---
+
+export type ProductType = 'service' | 'goods' | 'digital';
+
+export interface ProductAttribute {
+  id: string;
+  name: string;
+  value: string;
+}
+
+export interface ProductVariant {
+  id: string;
+  product_id: string;
+  sku: string;
+  name: string;
+  price: number;
+  cost: number;
+  inventory?: InventoryItem[];
+  attributes?: ProductAttribute[];
+}
+
+export interface Product {
+  id: string;
+  name: string;
+  description?: string;
+  type: ProductType;
+  category?: string;
+  uom: string;
+  variants?: ProductVariant[];
+  attributes?: ProductAttribute[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Warehouse {
   id: string;
   code: string;
   name: string;
-  category: string;
-  unit: string;
-  current_stock: number;
-  min_stock?: number;
-  cost_price?: number;
-  created_at: string;
-  updated_at: string;
-  sku?: string;
-  quantity?: number;
-  min_stock_level?: number;
+  address?: string;
+  locations?: Location[];
 }
 
-export type InventoryTransactionType = 
-  | 'stock_in' 
-  | 'stock_out' 
-  | 'issue_to_project' 
-  | 'return_from_project' 
-  | 'scrap' 
-  | 'wastage';
+export interface Location {
+  id: string;
+  warehouse_id: string;
+  code: string;
+  name?: string;
+  type?: string;
+  warehouse?: Warehouse;
+}
+
+export interface InventoryItem {
+  id: string;
+  variant_id: string;
+  location_id: string;
+  quantity: number;
+  variant?: ProductVariant;
+  location?: Location;
+  updated_at: string;
+}
+
+export type InventoryMovementType = 'in' | 'out' | 'transfer' | 'adjustment' | 'count';
 
 export interface InventoryTransaction {
   id: string;
-  item_id: string;
-  project_id?: string;
-  type: InventoryTransactionType;
+  type: InventoryMovementType;
+  variant_id: string;
+  from_location_id?: string;
+  to_location_id?: string;
   quantity: number;
+  reference?: string;
   date: string;
-  reference_no?: string;
-  notes?: string;
   created_by: string;
-  created_at: string;
-  
-  item?: InventoryItem;
-  project?: { title: string };
+
+  variant?: ProductVariant;
   user?: { full_name: string };
+  project?: { title: string };
+}
+
+export type EmployeeLifecycleStatus = 'probation' | 'confirmed' | 'notice_period' | 'resigned' | 'terminated' | 'retired';
+export type LeaveStatusType = 'pending' | 'approved' | 'rejected' | 'cancelled';
+export type HREventType = 'hiring' | 'appraisal' | 'promotion' | 'transfer' | 'warning' | 'layoff' | 'exit';
+
+export interface HRDepartment {
+  id: string;
+  code: string;
+  name: string;
+  head_id?: string;
+  parent_id?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  employees?: Employee[];
+  _count?: { employees: number };
+}
+
+export interface HRRole {
+  id: string;
+  code: string;
+  title: string;
+  grade?: string;
+  min_salary?: number;
+  max_salary?: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  _count?: { employees: number };
 }
 
 export interface Employee {
@@ -342,6 +435,44 @@ export interface Employee {
   overtime_rate: number;
   bank_details?: any;
   status: 'active' | 'inactive';
+  // Extended
+  email?: string;
+  phone?: string;
+  date_of_birth?: string;
+  gender?: string;
+  blood_group?: string;
+  marital_status?: string;
+  nationality?: string;
+  address?: string;
+  emergency_contact?: { name: string; phone: string; relation: string };
+  photo_url?: string;
+  lifecycle_status?: EmployeeLifecycleStatus;
+  confirmation_date?: string;
+  resignation_date?: string;
+  exit_date?: string;
+  exit_reason?: string;
+  pf_number?: string;
+  esi_number?: string;
+  uan_number?: string;
+  pan_number?: string;
+  aadhar_number?: string;
+  department_id?: string;
+  hr_role_id?: string;
+  dept?: HRDepartment;
+  hr_role?: HRRole;
+}
+
+export interface EmployeeDocument {
+  id: string;
+  employee_id: string;
+  name: string;
+  doc_type: string;
+  file_url?: string;
+  file_name?: string;
+  expiry_date?: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Attendance {
@@ -351,8 +482,69 @@ export interface Attendance {
   status: string;
   overtime_hours: number;
   project_id?: string;
+  check_in?: string;
+  check_out?: string;
+  notes?: string;
   employee?: Employee;
   project?: { title: string };
+}
+
+export interface LeaveType {
+  id: string;
+  code: string;
+  name: string;
+  days_per_year: number;
+  is_paid: boolean;
+  carry_forward: boolean;
+  max_carry: number;
+  is_active: boolean;
+}
+
+export interface Leave {
+  id: string;
+  employee_id: string;
+  leave_type_id: string;
+  from_date: string;
+  to_date: string;
+  days: number;
+  reason?: string;
+  status: LeaveStatusType;
+  approved_by?: string;
+  approved_at?: string;
+  remarks?: string;
+  created_at: string;
+  employee?: Employee;
+  leave_type?: LeaveType;
+}
+
+export interface Holiday {
+  id: string;
+  name: string;
+  date: string;
+  type: string;
+  is_active: boolean;
+}
+
+export interface SalaryStructure {
+  id: string;
+  employee_id: string;
+  effective_from: string;
+  basic: number;
+  hra: number;
+  da: number;
+  ta: number;
+  special_allowance: number;
+  pf_employee: number;
+  pf_employer: number;
+  esi_employee: number;
+  esi_employer: number;
+  professional_tax: number;
+  tds: number;
+  gross_salary: number;
+  net_salary: number;
+  is_current: boolean;
+  notes?: string;
+  employee?: Employee;
 }
 
 export interface LabourAllocation {
@@ -371,6 +563,10 @@ export interface Payroll {
   month: string;
   status: string;
   total_amount: number;
+  total_deductions?: number;
+  total_employer_cost?: number;
+  posted_to_finance?: boolean;
+  finance_journal_id?: string;
   lines?: PayrollLine[];
 }
 
@@ -379,9 +575,34 @@ export interface PayrollLine {
   payroll_id: string;
   employee_id: string;
   basic_pay: number;
+  hra?: number;
+  da?: number;
+  ta?: number;
+  special_allowance?: number;
   overtime_pay: number;
+  gross_pay?: number;
+  pf_deduction?: number;
+  esi_deduction?: number;
+  professional_tax?: number;
+  tds?: number;
+  deductions?: number;
+  net_pay?: number;
   total_pay: number;
   status: string;
+  employee?: Employee;
+}
+
+export interface HREvent {
+  id: string;
+  employee_id: string;
+  type: HREventType;
+  title: string;
+  description?: string;
+  event_date: string;
+  effective_date?: string;
+  metadata?: any;
+  created_by?: string;
+  created_at: string;
   employee?: Employee;
 }
 
@@ -408,11 +629,12 @@ export interface BankTransaction {
   bank_account?: BankAccount;
 }
 
-export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'proposal' | 'negotiation' | 'won' | 'lost';
+export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'lost' | 'converted';
 
 export interface Lead {
   id: string;
-  name: string;
+  first_name: string;
+  last_name: string;
   email: string;
   company?: string;
   phone?: string;
@@ -424,6 +646,7 @@ export interface Lead {
   last_contacted?: string;
   next_follow_up?: string;
   follow_up_notes?: string;
+  owner?: { full_name: string; email?: string }; // Added owner
   created_at: string;
   updated_at: string;
 }
@@ -456,6 +679,7 @@ export interface Vendor {
   phone?: string;
   address?: string;
   vat_no?: string;
+  tax_id?: string; // Alias for vat_no
   created_at: string;
   updated_at: string;
 }
@@ -473,6 +697,20 @@ export interface PurchaseOrder {
   vendor?: Vendor;
   creator?: { full_name: string };
   purchase_request?: PurchaseRequest;
+  lines?: PurchaseOrderLine[];
+}
+
+export interface PurchaseOrderLine {
+  id: string;
+  purchase_order_id: string;
+  description: string;
+  quantity: number;
+  unit_price: number;
+  amount: number;
+  tax_rate_id?: string;
+  tax_amount?: number;
+  total_amount: number;
+  sort_order: number;
 }
 
 export interface GRN {
@@ -490,16 +728,35 @@ export interface GRN {
 export interface VendorBill {
   id: string;
   bill_number: string;
-  purchase_order_id: string;
+  purchase_order_id?: string;
   vendor_id: string;
   amount: number;
   tax_amount?: number;
+  total_amount?: number;
+  currency?: string;
   due_date: string;
   status: InvoiceStatus;
+  posting_status: PostingStatus;
+  notes?: string;
   created_at: string;
   updated_at: string;
   vendor?: Vendor;
   purchase_order?: PurchaseOrder;
+  lines?: VendorBillLine[];
+  tax_breakdown?: any;
+}
+
+export interface VendorBillLine {
+  id: string;
+  vendor_bill_id: string;
+  description: string;
+  quantity: number;
+  unit_price: number;
+  amount: number;
+  tax_rate_id?: string;
+  tax_amount?: number;
+  total_amount: number;
+  sort_order: number;
 }
 
 export interface VendorPayment {
@@ -513,3 +770,257 @@ export interface VendorPayment {
   created_at: string;
   vendor_bill?: VendorBill;
 }
+
+// --- CRM Types (Dynamics 365 Parity) ---
+
+export type OpportunityStage = 'prospecting' | 'qualification' | 'proposal' | 'negotiation' | 'closed_won' | 'closed_lost';
+
+export type ActivityType = 'call' | 'email' | 'meeting' | 'task' | 'note';
+
+export interface CustomerAccount {
+  id: string;
+  name: string;
+  industry?: string;
+  website?: string;
+  phone?: string;
+  address?: string;
+  tax_id?: string;
+  owner?: { full_name: string };
+  contacts?: Contact[];
+  opportunities?: Opportunity[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Contact {
+  id: string;
+  account_id?: string;
+  first_name: string;
+  last_name: string;
+  email?: string;
+  phone?: string;
+  title?: string;
+  account?: CustomerAccount;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Opportunity {
+  id: string;
+  account_id: string;
+  name: string;
+  amount: number;
+  stage: OpportunityStage;
+  probability: number;
+  close_date?: string;
+  owner?: { full_name: string };
+  account?: CustomerAccount;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Activity {
+  id: string;
+  type: ActivityType;
+  subject: string;
+  description?: string;
+  due_date?: string;
+  completed: boolean;
+  lead_id?: string;
+  account_id?: string;
+  contact_id?: string;
+  opportunity_id?: string;
+  user?: { full_name: string };
+  created_at: string;
+}
+
+// --- Fixed Assets Types ---
+
+export type AssetStatus = 'active' | 'disposed' | 'written_off';
+
+export interface FixedAsset {
+  id: string;
+  name: string;
+  asset_number: string;
+  purchase_date: string;
+  purchase_cost: number;
+  salvage_value: number;
+  useful_life_years: number;
+  accumulated_depreciation: number;
+  current_book_value: number;
+  last_depreciation_date?: string;
+  status: AssetStatus;
+  location?: string;
+  serial_number?: string;
+  asset_account_id: string;
+  depreciation_account_id: string;
+  expense_account_id: string;
+  created_at: string;
+  updated_at: string;
+  depreciation_schedule?: DepreciationSchedule[];
+}
+
+export interface DepreciationSchedule {
+  id: string;
+  fixed_asset_id: string;
+  date: string;
+  amount: number;
+  is_posted: boolean;
+  journal_entry_id?: string;
+}
+
+// --- Credit Notes Types ---
+
+export type CreditNoteStatus = 'draft' | 'posted' | 'applied' | 'refunded' | 'voided';
+
+export interface CreditNote {
+  id: string;
+  number: string;
+  customer_id: string;
+  invoice_id?: string;
+  date: string;
+  amount: number;
+  tax_amount: number;
+  total_amount: number;
+  currency: string;
+  reason?: string;
+  status: CreditNoteStatus;
+  posting_status: PostingStatus;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+  customer?: { id: string; name: string; tax_id?: string };
+  invoice?: { id: string; invoice_number: string; total_amount: number };
+  lines?: CreditNoteLine[];
+  applications?: CreditNoteApplication[];
+  remaining_amount?: number;
+  applied_amount?: number;
+}
+
+export interface CreditNoteLine {
+  id: string;
+  credit_note_id: string;
+  description: string;
+  quantity: number;
+  unit_price: number;
+  amount: number;
+  tax_rate_id?: string;
+  tax_amount: number;
+  total_amount: number;
+  sort_order: number;
+}
+
+export interface CreditNoteApplication {
+  id: string;
+  credit_note_id: string;
+  invoice_id: string;
+  amount: number;
+  date: string;
+  invoice?: { id: string; invoice_number: string };
+}
+
+// --- Debit Notes Types ---
+
+export type DebitNoteStatus = 'draft' | 'posted' | 'applied' | 'refunded' | 'voided';
+
+export interface DebitNote {
+  id: string;
+  number: string;
+  vendor_id: string;
+  vendor_bill_id?: string;
+  date: string;
+  amount: number;
+  tax_amount: number;
+  total_amount: number;
+  currency: string;
+  reason?: string;
+  status: DebitNoteStatus;
+  posting_status: PostingStatus;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+  vendor?: { id: string; name: string; tax_id?: string };
+  vendor_bill?: { id: string; bill_number: string; total_amount: number };
+  lines?: DebitNoteLine[];
+  applications?: DebitNoteApplication[];
+  remaining_amount?: number;
+  applied_amount?: number;
+}
+
+export interface DebitNoteLine {
+  id: string;
+  debit_note_id: string;
+  description: string;
+  quantity: number;
+  unit_price: number;
+  amount: number;
+  tax_rate_id?: string;
+  tax_amount: number;
+  total_amount: number;
+  sort_order: number;
+}
+
+export interface DebitNoteApplication {
+  id: string;
+  debit_note_id: string;
+  vendor_bill_id: string;
+  amount: number;
+  date: string;
+  vendor_bill?: { id: string; bill_number: string };
+}
+
+// --- Stock Journal Types ---
+
+export type StockJournalType = 'adjustment' | 'transfer' | 'count' | 'damage' | 'obsolete' | 'revaluation';
+export type ValuationMethod = 'fifo' | 'lifo' | 'weighted_average' | 'standard_cost';
+
+export interface StockJournal {
+  id: string;
+  number: string;
+  date: string;
+  type: StockJournalType;
+  reference?: string;
+  reason?: string;
+  posting_status: PostingStatus;
+  total_value: number;
+  valuation_method: ValuationMethod;
+  notes?: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  creator?: { id: string; full_name: string };
+  lines?: StockJournalLine[];
+  gl_entries?: StockJournalGLEntry[];
+}
+
+export interface StockJournalLine {
+  id: string;
+  stock_journal_id: string;
+  variant_id: string;
+  from_location_id?: string;
+  to_location_id?: string;
+  quantity: number;
+  unit_cost: number;
+  total_cost: number;
+  lot_number?: string;
+  expiry_date?: string;
+  notes?: string;
+  sort_order: number;
+  variant?: {
+    id: string;
+    sku: string;
+    product?: { id: string; name: string };
+  };
+}
+
+export interface StockJournalGLEntry {
+  id: string;
+  stock_journal_id: string;
+  account_id: string;
+  debit: number;
+  credit: number;
+  description?: string;
+  created_at: string;
+  account?: { id: string; code: string; name: string; type: string };
+}
+

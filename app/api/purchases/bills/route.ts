@@ -31,24 +31,62 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const bill = await prisma.vendorBill.create({
-      data: {
-        bill_number: body.bill_number,
-        purchase_order_id: body.purchase_order_id,
-        vendor_id: body.vendor_id,
-        amount: parseFloat(body.amount),
-        tax_amount: body.tax_amount ? parseFloat(body.tax_amount) : null,
-        due_date: new Date(body.due_date),
-        status: body.status || 'pending'
-      }
+    const { bill_number, purchase_order_id, vendor_id, amount, tax_amount, due_date, status, lines, total_amount } = body;
+
+    const result = await prisma.$transaction(async (tx) => {
+        const bill = await tx.vendorBill.create({
+            data: {
+                bill_number,
+                purchase_order_id: purchase_order_id === 'none' ? null : purchase_order_id,
+                vendor_id,
+                amount: parseFloat(amount),
+                tax_amount: tax_amount ? parseFloat(tax_amount) : 0,
+                total_amount: parseFloat(total_amount || amount),
+                due_date: new Date(due_date),
+                status: status || 'pending',
+                posting_status: 'draft',
+                lines: {
+                    create: lines?.map((line: any, index: number) => ({
+                        description: line.description,
+                        quantity: parseFloat(line.quantity),
+                        unit_price: parseFloat(line.unit_price),
+                        amount: parseFloat(line.amount),
+                        tax_amount: parseFloat(line.tax_amount || 0),
+                        total_amount: parseFloat(line.total_amount),
+                        sort_order: index
+                    }))
+                }
+            },
+            include: { lines: true }
+        });
+
+        // Update PO status if linked
+        if (purchase_order_id && purchase_order_id !== 'none') {
+            await tx.purchaseOrder.update({
+                where: { id: purchase_order_id },
+                data: { status: 'billed' }
+            });
+        }
+
+        return bill;
     });
+
     return NextResponse.json({
-      ...bill,
-      amount: Number(bill.amount),
-      tax_amount: bill.tax_amount ? Number(bill.tax_amount) : null
+      ...result,
+      amount: Number(result.amount),
+      tax_amount: result.tax_amount ? Number(result.tax_amount) : 0,
+      total_amount: Number(result.total_amount),
+      lines: result.lines.map(l => ({
+          ...l,
+          quantity: Number(l.quantity),
+          unit_price: Number(l.unit_price),
+          amount: Number(l.amount),
+          tax_amount: Number(l.tax_amount),
+          total_amount: Number(l.total_amount)
+      }))
     });
   } catch (error) {
-    console.error(error);
+    console.error('Vendor Bill POST Error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

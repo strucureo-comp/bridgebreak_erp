@@ -84,7 +84,7 @@ export function FinanceCharts({ invoices, transactions }: FinanceChartsProps) {
                             <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#f0f0f0" />
                             <Tooltip
                                 contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                                formatter={(value: number) => [`$${value.toLocaleString()}`, '']}
+                                formatter={(value?: number) => [`$${(value || 0).toLocaleString()}`, '']}
                             />
                             <Legend verticalAlign="top" height={36} />
                             <Area type="monotone" dataKey="income" name="Income" stroke="#22c55e" strokeWidth={3} fillOpacity={1} fill="url(#colorIncome)" />
@@ -118,7 +118,7 @@ export function FinanceCharts({ invoices, transactions }: FinanceChartsProps) {
                                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                     ))}
                                 </Pie>
-                                <Tooltip formatter={(value: number) => `$${value.toLocaleString()}`} />
+                                <Tooltip formatter={(value: any) => `$${Number(value || 0).toLocaleString()}`} />
                                 <Legend layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: '12px' }} />
                             </PieChart>
                         </ResponsiveContainer>

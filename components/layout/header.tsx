@@ -31,8 +31,8 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="flex h-16 items-center justify-between px-4 md:px-6">
+    <header className="px-6 md:px-10 py-6 border-b border-border/40 flex justify-between items-center bg-card/80 backdrop-blur-xl sticky top-0 z-30">
+      <div className="flex h-10 items-center justify-between w-full">
         <div className="flex items-center gap-4">
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>

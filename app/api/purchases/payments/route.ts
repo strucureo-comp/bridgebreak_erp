@@ -35,22 +35,75 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const payment = await prisma.vendorPayment.create({
-      data: {
-        vendor_bill_id: body.vendor_bill_id,
-        amount: parseFloat(body.amount),
-        payment_date: body.payment_date ? new Date(body.payment_date) : new Date(),
-        payment_method: body.payment_method,
-        reference_no: body.reference_no,
-        notes: body.notes
-      }
+    const { vendor_bill_id, amount, payment_date, payment_method, reference_no, notes } = body;
+
+    const result = await prisma.$transaction(async (tx) => {
+        // 1. Create Payment Record
+        const payment = await tx.vendorPayment.create({
+            data: {
+                vendor_bill_id,
+                amount: parseFloat(amount),
+                payment_date: payment_date ? new Date(payment_date) : new Date(),
+                payment_method,
+                reference_no,
+                notes
+            }
+        });
+
+        // 2. Check Bill Status
+        const bill = await tx.vendorBill.findUnique({
+            where: { id: vendor_bill_id },
+            include: { vendor_payments: true }
+        });
+
+        if (bill) {
+            const totalPaid = bill.vendor_payments.reduce((sum, p) => sum + Number(p.amount), 0) + parseFloat(amount); // + current payment (actually already created above so it might be included if fetched after? No, in transaction context it depends on isolation level, safer to add manually or refetch carefully. Prisma transaction sees its own writes.)
+            // Actually, findUnique inside tx AFTER create will see the new payment.
+            // Let's re-calculate cleanly.
+            
+            // Re-fetch payments to be sure
+            const payments = await tx.vendorPayment.findMany({ where: { vendor_bill_id } });
+            const actualTotalPaid = payments.reduce((sum, p) => sum + Number(p.amount), 0);
+
+            if (actualTotalPaid >= Number(bill.total_amount)) {
+                await tx.vendorBill.update({
+                    where: { id: vendor_bill_id },
+                    data: { status: 'paid' }
+                });
+                
+                // If linked to PO, check if PO should be 'paid'
+                if (bill.purchase_order_id) {
+                    await tx.purchaseOrder.update({
+                        where: { id: bill.purchase_order_id },
+                        data: { status: 'paid' }
+                    });
+                }
+            }
+        }
+
+        // 3. Create GL Transaction (Cash Flow)
+        await tx.transaction.create({
+            data: {
+                type: 'expense',
+                category: 'Vendor Payment',
+                amount: parseFloat(amount),
+                date: payment_date ? new Date(payment_date) : new Date(),
+                description: `Payment for Bill #${bill?.bill_number}`,
+                payment_method,
+                reference_number: reference_no,
+                created_by: user.id
+            }
+        });
+
+        return payment;
     });
+
     return NextResponse.json({
-      ...payment,
-      amount: Number(payment.amount)
+      ...result,
+      amount: Number(result.amount)
     });
   } catch (error) {
-    console.error(error);
+    console.error('Payment Recording Error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

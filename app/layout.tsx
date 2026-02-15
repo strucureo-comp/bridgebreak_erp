@@ -2,6 +2,7 @@ import './globals.css';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { AuthProvider } from '@/lib/auth/context';
+import { TenantProvider } from '@/lib/tenant-context';
 import { Toaster } from '@/components/ui/sonner';
 import { TaxCollectionInitializer } from '@/components/tax-collection-initializer';
 
@@ -37,9 +38,11 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
         <AuthProvider>
-          <TaxCollectionInitializer />
-          {children}
-          <Toaster />
+          <TenantProvider>
+            <TaxCollectionInitializer />
+            {children}
+            <Toaster />
+          </TenantProvider>
         </AuthProvider>
       </body>
     </html>
