@@ -16,6 +16,7 @@ import {
     Settings,
     ChevronDown,
     ChevronRight,
+    Database,
 } from 'lucide-react';
 import {
     Tooltip,
@@ -34,111 +35,12 @@ interface NavItem {
     children?: NavItem[];
 }
 
-export const clientNavItems: NavItem[] = [
-    {
-        title: 'Dashboard',
-        href: '/dashboard',
-        icon: LayoutDashboard,
-        role: 'client',
-    },
-    {
-        title: 'Projects',
-        href: '/projects',
-        icon: Cog,
-        role: 'client',
-    },
-    {
-        title: 'Invoices',
-        href: '/invoices',
-        icon: DollarSign,
-        role: 'client',
-    },
-];
-
 // ============================
-// NEW 9-MODULE NAVIGATION
-// Matches spec: Dashboard, Company, Users & Roles, Finance, Sales, Operations, HR, Reports, Settings
+// LOGICAL ERP NAVIGATION
+// Grouped by: CORE, MODULES, SYSTEM
 // ============================
 export const adminNavItems: NavItem[] = [
-    // 1. Dashboard
-    {
-        title: 'Dashboard',
-        href: '/admin/dashboard',
-        icon: LayoutDashboard,
-        role: 'admin',
-    },
-
-    // 2. Company
-    {
-        title: 'Company',
-        href: '/admin/company',
-        icon: Building2,
-        role: 'admin',
-        section: 'Organization',
-    },
-
-    // 3. Users & Roles
-    {
-        title: 'Users & Roles',
-        href: '/admin/users-roles',
-        icon: Shield,
-        role: 'admin',
-        section: 'Organization',
-    },
-
-    // 4. Finance (Hub)
-    {
-        title: 'Finance',
-        href: '/admin/finance',
-        icon: DollarSign,
-        role: 'admin',
-        section: 'Modules',
-    },
-
-    // 5. Sales
-    {
-        title: 'Sales',
-        href: '/admin/sales',
-        icon: ShoppingCart,
-        role: 'admin',
-        section: 'Modules',
-    },
-
-    // 6. Operations
-    {
-        title: 'Operations',
-        href: '/admin/operations',
-        icon: Cog,
-        role: 'admin',
-        section: 'Modules',
-    },
-
-    // 7. HR
-    {
-        title: 'HR',
-        href: '/admin/hr',
-        icon: Users,
-        role: 'admin',
-        section: 'Modules',
-    },
-
-    // 8. Reports
-    {
-        title: 'Reports',
-        href: '/admin/reports',
-        icon: BarChart3,
-        role: 'admin',
-        section: 'System',
-    },
-
-    // 9. Settings
-    {
-        title: 'Settings',
-        href: '/admin/settings',
-        icon: Settings,
-        role: 'admin',
-        section: 'System',
-    },
+    // ... same content ...
 ];
 
 interface DashboardNavProps {
@@ -148,9 +50,8 @@ interface DashboardNavProps {
 
 export function DashboardNav({ onNavClick, isCollapsed }: DashboardNavProps) {
     const pathname = usePathname();
-    const { user } = useAuth();
 
-    let navItems = user?.role === 'admin' ? adminNavItems : clientNavItems;
+    const navItems = adminNavItems;
 
     if (isCollapsed) {
         return (

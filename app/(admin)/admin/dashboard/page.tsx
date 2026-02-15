@@ -12,7 +12,7 @@ import {
     RefreshCcw, Calendar, Banknote, Receipt, ShoppingCart,
     Package, Clock, AlertCircle, CheckCircle2, Zap,
     Building2, Target, PieChart, Activity, CreditCard,
-    Loader2
+    Loader2, Settings, Database
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -489,12 +489,12 @@ export default function AdminDashboard() {
                     <CardContent>
                         <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
                             {[
-                                { label: 'Company', icon: Building2, href: '/admin/company', color: 'bg-slate-100 text-slate-600' },
+                                { label: 'System Hub', icon: Settings, href: '/admin/settings', color: 'bg-slate-100 text-slate-600' },
                                 { label: 'Finance', icon: DollarSign, href: '/admin/finance', color: 'bg-emerald-50 text-emerald-600' },
                                 { label: 'Sales', icon: ShoppingCart, href: '/admin/sales', color: 'bg-violet-50 text-violet-600' },
                                 { label: 'Operations', icon: Package, href: '/admin/operations', color: 'bg-blue-50 text-blue-600' },
                                 { label: 'HR', icon: Users, href: '/admin/hr', color: 'bg-orange-50 text-orange-600' },
-                                { label: 'Reports', icon: BarChart3, href: '/admin/reports', color: 'bg-cyan-50 text-cyan-600' },
+                                { label: 'Masters', icon: Database, href: '/admin/masters', color: 'bg-cyan-50 text-cyan-600' },
                             ].map(item => (
                                 <Link key={item.label} href={item.href} className="flex flex-col items-center gap-2.5 p-4 rounded-2xl hover:shadow-md transition-all duration-200 group cursor-pointer border border-border/30 hover:border-primary/30">
                                     <div className={cn("h-11 w-11 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform", item.color)}>

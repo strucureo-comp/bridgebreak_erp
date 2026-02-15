@@ -39,9 +39,8 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
 }
 
 // --- Projects ---
-export async function getProjects(clientId?: string, options?: RequestInit): Promise<Project[]> {
-  const query = clientId ? `?clientId=${clientId}` : '';
-  return fetchApi<Project[]>(`/projects${query}`, options);
+export async function getProjects(options?: RequestInit): Promise<Project[]> {
+  return fetchApi<Project[]>('/projects', options);
 }
 
 export async function getProject(id: string, options?: RequestInit): Promise<Project | null> {
@@ -83,9 +82,8 @@ export async function getUser(id: string, options?: RequestInit): Promise<User |
 }
 
 // --- Invoices ---
-export async function getInvoices(clientId?: string, options?: RequestInit): Promise<Invoice[]> {
-  const query = clientId ? `?clientId=${clientId}` : '';
-  return fetchApi<Invoice[]>(`/invoices${query}`, options);
+export async function getInvoices(options?: RequestInit): Promise<Invoice[]> {
+  return fetchApi<Invoice[]>('/invoices', options);
 }
 
 export async function getInvoice(id: string, options?: RequestInit): Promise<Invoice | null> {
@@ -120,9 +118,8 @@ export async function deleteInvoice(id: string, options?: RequestInit): Promise<
 }
 
 // --- Support ---
-export async function getSupportRequests(clientId?: string, options?: RequestInit): Promise<SupportRequest[]> {
-  const query = clientId ? `?clientId=${clientId}` : '';
-  return fetchApi<SupportRequest[]>(`/support${query}`, options);
+export async function getSupportRequests(options?: RequestInit): Promise<SupportRequest[]> {
+  return fetchApi<SupportRequest[]>('/support', options);
 }
 
 export async function getSupportRequest(id: string, options?: RequestInit): Promise<SupportRequest | null> {
@@ -152,9 +149,8 @@ export async function updateSupportRequest(id: string, data: any, options?: Requ
 }
 
 // --- Meetings ---
-export async function getMeetings(clientId?: string, options?: RequestInit): Promise<MeetingRequest[]> {
-  const query = clientId ? `?clientId=${clientId}` : '';
-  return fetchApi<MeetingRequest[]>(`/meetings${query}`, options);
+export async function getMeetings(options?: RequestInit): Promise<MeetingRequest[]> {
+  return fetchApi<MeetingRequest[]>('/meetings', options);
 }
 
 export async function getMeeting(id: string, options?: RequestInit): Promise<MeetingRequest | null> {
@@ -693,7 +689,7 @@ export async function createVendorPayment(data: any, options?: RequestInit): Pro
 }
 
 // --- Placeholders for unimplemented ---
-export async function getQuotations(clientId?: string, options?: RequestInit): Promise<Quotation[]> { return []; }
+export async function getQuotations(options?: RequestInit): Promise<Quotation[]> { return []; }
 export async function getQuotation(id: string, options?: RequestInit): Promise<Quotation | null> { return null; }
 export async function createQuotation(data: any, options?: RequestInit): Promise<string> { return 'id'; }
 export async function updateQuotation(id: string, data: any, options?: RequestInit): Promise<boolean> { return true; }

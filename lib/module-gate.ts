@@ -15,6 +15,7 @@ export type ModuleKey = 'dashboard' | 'company' | 'users_roles' | 'finance' | 's
 
 export interface TenantSetupStatus {
     setup_stage: SetupStage;
+    business_type?: 'service' | 'trading' | 'manufacturing' | 'hybrid';
     company_setup_complete: boolean;
     finance_setup_complete: boolean;
     roles_setup_complete: boolean;
@@ -81,7 +82,7 @@ export function checkModuleAccess(
                     accessible: false,
                     reason: 'Complete Company Setup first to manage users and roles.',
                     required_stage: 'company_profile',
-                    redirect_to: '/admin/company',
+                    redirect_to: '/admin/settings',
                 };
             }
             return { accessible: true };
@@ -92,7 +93,7 @@ export function checkModuleAccess(
                     accessible: false,
                     reason: 'Complete Company Setup first to access Finance.',
                     required_stage: 'company_profile',
-                    redirect_to: '/admin/company',
+                    redirect_to: '/admin/settings',
                 };
             }
             return { accessible: true }; // Finance is always enabled (core module)
@@ -223,11 +224,11 @@ export function getNextSetupStep(status: TenantSetupStatus | null): {
     percentage: number;
 } {
     if (!status) {
-        return { step: 1, total: 4, label: 'Set Up Organization', path: '/admin/company', percentage: 0 };
+        return { step: 1, total: 4, label: 'Set Up Organization', path: '/admin/settings', percentage: 0 };
     }
 
     if (!status.company_setup_complete) {
-        return { step: 1, total: 4, label: 'Complete Company Profile', path: '/admin/company', percentage: 25 };
+        return { step: 1, total: 4, label: 'Complete Company Profile', path: '/admin/settings', percentage: 25 };
     }
 
     if (!status.finance_setup_complete) {
@@ -235,7 +236,7 @@ export function getNextSetupStep(status: TenantSetupStatus | null): {
     }
 
     if (!status.roles_setup_complete) {
-        return { step: 3, total: 4, label: 'Set Up User Roles', path: '/admin/users-roles', percentage: 75 };
+        return { step: 3, total: 4, label: 'Set Up User Roles', path: '/admin/settings', percentage: 75 };
     }
 
     return { step: 4, total: 4, label: 'Setup Complete', path: '/admin/dashboard', percentage: 100 };

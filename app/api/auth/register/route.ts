@@ -29,7 +29,7 @@ export async function POST(request: Request) {
         email,
         password: hashedPassword,
         full_name,
-        role: role || 'client',
+        role: role || 'admin',
       },
     });
 

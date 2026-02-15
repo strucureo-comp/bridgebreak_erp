@@ -20,6 +20,7 @@ export async function GET() {
         // Change these flags to test the module gate behavior:
         const tenantStatus = {
             setup_stage: 'completed',
+            business_type: 'manufacturing', // Default for dev
             company_setup_complete: true,
             finance_setup_complete: true,
             roles_setup_complete: true,

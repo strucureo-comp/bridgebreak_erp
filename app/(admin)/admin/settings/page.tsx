@@ -20,12 +20,15 @@ import {
     ChevronRight, CheckCircle2, AlertCircle,
     Mail, FileText, Zap, RefreshCcw, Activity,
     Package, ShoppingCart, UserCheck, LayoutGrid,
-    CreditCard
+    CreditCard, GitBranch, Banknote, Landmark,
+    Sparkles, Clock, Crown, Briefcase, Eye,
+    MoreHorizontal, UserPlus, Pencil, XCircle
 } from 'lucide-react';
 
 import { ModuleGuard } from '@/components/layout/module-guard';
 import Link from 'next/link';
 
+// Import local logic components (defined below)
 export default function AdminSettingsPage() {
     const router = useRouter();
     const { user } = useAuth();
@@ -44,191 +47,43 @@ export default function AdminSettingsPage() {
                             <div>
                                 <h1 className="text-3xl font-bold tracking-tight text-slate-900">System Hub</h1>
                                 <p className="text-sm text-slate-500 font-medium">
-                                    Global Configuration, Identity Management & Master Data
+                                    Infrastructure Control: Company, Identity & Global Config
                                 </p>
                             </div>
                         </div>
                         <div className="flex gap-2">
                             <Badge className="bg-emerald-50 text-emerald-600 border-none rounded-full text-[10px] font-semibold px-3 py-1.5">
-                                <CheckCircle2 className="h-3 w-3 mr-1" /> SYSTEM STABLE
+                                <CheckCircle2 className="h-3 w-3 mr-1" /> CORE SERVICES ACTIVE
                             </Badge>
                         </div>
                     </div>
 
-                    {/* Main Tabs - Logical Lifecycle */}
-                    <Tabs defaultValue="organization" className="space-y-6">
+                    {/* Unified Tabs */}
+                    <Tabs defaultValue="company" className="space-y-6">
                         <TabsList className="rounded-2xl bg-white border shadow-sm p-1 h-auto flex flex-wrap gap-1">
-                            <TabsTrigger value="organization" className="rounded-xl text-xs gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-4 py-2.5">
-                                <Building2 className="h-3.5 w-3.5" /> 1. Organization
+                            <TabsTrigger value="company" className="rounded-xl text-xs gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-4 py-2.5">
+                                <Building2 className="h-3.5 w-3.5" /> 1. Company Profile
                             </TabsTrigger>
                             <TabsTrigger value="identity" className="rounded-xl text-xs gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-4 py-2.5">
-                                <Shield className="h-3.5 w-3.5" /> 2. Identity & Roles
+                                <Shield className="h-3.5 w-3.5" /> 2. Users & Roles
                             </TabsTrigger>
-                            <TabsTrigger value="masters" className="rounded-xl text-xs gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-4 py-2.5">
-                                <Database className="h-3.5 w-3.5" /> 3. Master Data
+                            <TabsTrigger value="notifications" className="rounded-xl text-xs gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-4 py-2.5">
+                                <Bell className="h-3.5 w-3.5" /> 3. Notifications
                             </TabsTrigger>
-                            <TabsTrigger value="config" className="rounded-xl text-xs gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-4 py-2.5">
+                            <TabsTrigger value="integrations" className="rounded-xl text-xs gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-4 py-2.5">
                                 <Zap className="h-3.5 w-3.5" /> 4. Integrations
                             </TabsTrigger>
                             <TabsTrigger value="maintenance" className="rounded-xl text-xs gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-4 py-2.5">
-                                <Activity className="h-3.5 w-3.5" /> 5. System Health
+                                <Activity className="h-3.5 w-3.5" /> 5. Health & Audit
                             </TabsTrigger>
                         </TabsList>
 
-                        {/* 1. Organization Content */}
-                        <TabsContent value="organization" className="space-y-6">
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                <Card className="lg:col-span-2 rounded-3xl border-border/50">
-                                    <CardHeader>
-                                        <CardTitle className="text-base font-bold flex items-center gap-2">
-                                            <Building2 className="h-4 w-4 text-primary" />
-                                            Legal Entity Information
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="space-y-5">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div className="space-y-2">
-                                                <Label className="text-xs font-semibold">Legal Name</Label>
-                                                <Input defaultValue="System Steel Engineering LLC" className="rounded-xl h-11" />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label className="text-xs font-semibold">Tax/License No.</Label>
-                                                <Input defaultValue="TRD-2024-001" className="rounded-xl h-11" />
-                                            </div>
-                                        </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div className="space-y-2">
-                                                <Label className="text-xs font-semibold">Primary Industry</Label>
-                                                <Select defaultValue="engineering">
-                                                    <SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger>
-                                                    <SelectContent className="rounded-xl">
-                                                        <SelectItem value="engineering">Engineering & Construction</SelectItem>
-                                                        <SelectItem value="manufacturing">Manufacturing</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label className="text-xs font-semibold">Base Currency</Label>
-                                                <Select defaultValue="usd">
-                                                    <SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger>
-                                                    <SelectContent className="rounded-xl">
-                                                        <SelectItem value="usd">USD - US Dollar</SelectItem>
-                                                        <SelectItem value="aed">AED - UAE Dirham</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                        </div>
-                                        <div className="flex justify-end pt-4">
-                                            <Button className="rounded-xl font-bold px-8 shadow-lg shadow-primary/20">Update Profile</Button>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                                <div className="space-y-4">
-                                    <Card className="rounded-3xl border-border/50">
-                                        <CardHeader><CardTitle className="text-base font-bold">Localization</CardTitle></CardHeader>
-                                        <CardContent className="space-y-4">
-                                            <div className="space-y-2">
-                                                <Label className="text-xs font-semibold">Timezone</Label>
-                                                <Select defaultValue="gst"><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="gst">GST (Dubai)</SelectItem></SelectContent></Select>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label className="text-xs font-semibold">Date Format</Label>
-                                                <Select defaultValue="dd-mm-yyyy"><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="dd-mm-yyyy">DD/MM/YYYY</SelectItem></SelectContent></Select>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                </div>
-                            </div>
-                        </TabsContent>
-
-                        {/* 2. Identity Content */}
-                        <TabsContent value="identity" className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <Card className="rounded-3xl border-border/50 hover:shadow-md transition-all cursor-pointer group" onClick={() => router.push('/admin/users-roles')}>
-                                    <CardContent className="p-6 text-center">
-                                        <div className="h-14 w-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                                            <Users className="h-7 w-7" />
-                                        </div>
-                                        <h3 className="font-bold text-slate-900">Users & Access</h3>
-                                        <p className="text-xs text-slate-500 mt-1">Manage system logins and permissions</p>
-                                    </CardContent>
-                                </Card>
-                                <Card className="rounded-3xl border-border/50 hover:shadow-md transition-all cursor-pointer group" onClick={() => router.push('/admin/users-roles')}>
-                                    <CardContent className="p-6 text-center">
-                                        <div className="h-14 w-14 rounded-2xl bg-violet-50 text-violet-600 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                                            <Shield className="h-7 w-7" />
-                                        </div>
-                                        <h3 className="font-bold text-slate-900">Roles & Security</h3>
-                                        <p className="text-xs text-slate-500 mt-1">Define module-level access controls</p>
-                                    </CardContent>
-                                </Card>
-                                <Card className="rounded-3xl border-border/50 hover:shadow-md transition-all cursor-pointer group">
-                                    <CardContent className="p-6 text-center">
-                                        <div className="h-14 w-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                                            <Lock className="h-7 w-7" />
-                                        </div>
-                                        <h3 className="font-bold text-slate-900">2FA & Auth</h3>
-                                        <p className="text-xs text-slate-500 mt-1">Configure multi-factor authentication</p>
-                                    </CardContent>
-                                </Card>
-                            </div>
-                        </TabsContent>
-
-                        {/* 3. Master Data Content */}
-                        <TabsContent value="masters" className="space-y-6">
-                            <Card className="rounded-3xl border-border/50">
-                                <CardHeader>
-                                    <CardTitle className="text-base font-bold">Core Business Records</CardTitle>
-                                    <CardDescription className="text-xs font-medium">Manage the centralized data used across all modules</CardDescription>
-                                </CardHeader>
-                                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                    <MasterLinkCard title="Products" desc="Items & Materials" icon={Package} href="/admin/inventory" color="blue" />
-                                    <MasterLinkCard title="Vendors" desc="Suppliers & Sub-cons" icon={ShoppingCart} href="/admin/purchases" color="orange" />
-                                    <MasterLinkCard title="Customers" desc="Clients & Accounts" icon={UserCheck} href="/admin/sales" color="emerald" />
-                                    <MasterLinkCard title="Employees" desc="Staff Directory" icon={Users} href="/admin/hr" color="violet" />
-                                </CardContent>
-                            </Card>
-                        </TabsContent>
-
-                        {/* 4. Integrations Content */}
-                        <TabsContent value="config" className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <OpsLinkCard title="Email (SMTP)" desc="Transactional alerts" icon={Mail} connected={true} />
-                                <OpsLinkCard title="Payments" desc="Stripe / Bank Feeds" icon={CreditCard} connected={false} />
-                                <OpsLinkCard title="Tally / ERP" desc="Data synchronization" icon={RefreshCcw} connected={false} />
-                            </div>
-                        </TabsContent>
-
-                        {/* 5. System Health Content */}
-                        <TabsContent value="maintenance" className="space-y-6">
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                <Card className="lg:col-span-2 rounded-3xl border-border/50">
-                                    <CardHeader><CardTitle className="text-base font-bold">Audit Log</CardTitle></CardHeader>
-                                    <CardContent className="space-y-2">
-                                        {[
-                                            { action: 'Config Change', user: 'Admin', time: '10m ago' },
-                                            { action: 'User Created', user: 'Admin', time: '1h ago' },
-                                        ].map((log, i) => (
-                                            <div key={i} className="flex justify-between p-3 rounded-xl bg-muted/20 text-xs font-medium">
-                                                <span>{log.action} by <b>{log.user}</b></span>
-                                                <span className="text-muted-foreground">{log.time}</span>
-                                            </div>
-                                        ))}
-                                    </CardContent>
-                                </Card>
-                                <Card className="rounded-3xl border-border/50">
-                                    <CardHeader><CardTitle className="text-base font-bold">Maintenance</CardTitle></CardHeader>
-                                    <CardContent className="space-y-3">
-                                        <Button variant="outline" className="w-full rounded-xl text-xs font-bold gap-2">
-                                            <Database className="h-4 w-4" /> Re-index Database
-                                        </Button>
-                                        <Button variant="outline" className="w-full rounded-xl text-xs font-bold gap-2">
-                                            <Monitor className="h-4 w-4" /> Purge Cache
-                                        </Button>
-                                    </CardContent>
-                                </Card>
-                            </div>
-                        </TabsContent>
+                        {/* --- Tab Contents --- */}
+                        <TabsContent value="company"><CompanyTabContent /></TabsContent>
+                        <TabsContent value="identity"><IdentityTabContent /></TabsContent>
+                        <TabsContent value="notifications"><NotificationsTabContent /></TabsContent>
+                        <TabsContent value="integrations"><IntegrationsTabContent /></TabsContent>
+                        <TabsContent value="maintenance"><MaintenanceTabContent /></TabsContent>
                     </Tabs>
                 </div>
             </ModuleGuard>
@@ -236,27 +91,185 @@ export default function AdminSettingsPage() {
     );
 }
 
-function MasterLinkCard({ title, desc, icon: Icon, href, color }: any) {
-    const variants: any = {
-        blue: 'bg-blue-50 text-blue-600',
-        orange: 'bg-orange-50 text-orange-600',
-        emerald: 'bg-emerald-50 text-emerald-600',
-        violet: 'bg-violet-50 text-violet-600',
-    };
+// ════════════════════════════════════════════════════════════════════════════
+// 1. COMPANY TAB CONTENT (Unified from previous company page)
+// ════════════════════════════════════════════════════════════════════════════
+function CompanyTabContent() {
     return (
-        <Link href={href}>
-            <Card className="rounded-2xl border-none bg-slate-50 hover:bg-white hover:shadow-md transition-all group cursor-pointer">
-                <CardContent className="p-5 flex items-center gap-4">
-                    <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform", variants[color])}>
-                        <Icon className="h-5 w-5" />
-                    </div>
-                    <div>
-                        <h4 className="text-sm font-bold text-slate-900">{title}</h4>
-                        <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">{desc}</p>
-                    </div>
+        <div className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <Card className="lg:col-span-2 rounded-3xl border-border/50">
+                    <CardHeader>
+                        <CardTitle className="text-base font-bold flex items-center gap-2">
+                            <Sparkles className="h-4 w-4 text-primary" />
+                            Entity Identity
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        <div className="grid md:grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                                <Label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Trading Name</Label>
+                                <Input defaultValue="System Steel Engineering LLC" className="rounded-xl h-11" />
+                            </div>
+                            <div className="space-y-2">
+                                <Label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Legal Name</Label>
+                                <Input defaultValue="System Steel Engineering LLC" className="rounded-xl h-11" />
+                            </div>
+                        </div>
+                        <div className="border-t pt-6">
+                            <h4 className="text-sm font-bold mb-4 flex items-center gap-2 text-slate-900"> Regional Configuration</h4>
+                            <div className="grid md:grid-cols-3 gap-6">
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Base Currency</Label>
+                                    <Input defaultValue="USD" className="rounded-xl h-11" />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Tax ID / TRN</Label>
+                                    <Input defaultValue="TRN-100-234-567" className="rounded-xl h-11" />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Timezone</Label>
+                                    <Input defaultValue="GST (Dubai)" className="rounded-xl h-11" disabled />
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex justify-end pt-4">
+                            <Button className="rounded-xl font-bold px-8 shadow-lg shadow-primary/20">Save Profile</Button>
+                        </div>
+                    </CardContent>
+                </Card>
+                <div className="space-y-4">
+                    <Card className="rounded-3xl border-border/50 bg-primary/5 border-primary/10">
+                        <CardHeader><CardTitle className="text-base font-bold text-primary">Regional Active Status</CardTitle></CardHeader>
+                        <CardContent className="space-y-4">
+                            <Badge className="bg-emerald-500 text-white rounded-lg px-3 py-1 font-black text-[10px] tracking-widest">ENABLED</Badge>
+                            <p className="text-xs font-medium text-slate-500 leading-relaxed">
+                                Your regional settings affect financial year closing, tax reporting periods, and invoice formatting.
+                            </p>
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// 2. IDENTITY TAB CONTENT (Unified from previous users-roles page)
+// ════════════════════════════════════════════════════════════════════════════
+function IdentityTabContent() {
+    const router = useRouter();
+    return (
+        <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <Link href="/admin/users-roles" className="block">
+                    <Card className="rounded-3xl border-border/50 hover:shadow-md transition-all cursor-pointer group">
+                        <CardContent className="p-6 text-center">
+                            <div className="h-14 w-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform shadow-sm">
+                                <Users className="h-7 w-7" />
+                            </div>
+                            <h3 className="font-black text-slate-900">User Management</h3>
+                            <p className="text-xs text-slate-500 mt-1">Manage system logins</p>
+                        </CardContent>
+                    </Card>
+                </Link>
+                <Link href="/admin/users-roles" className="block">
+                    <Card className="rounded-3xl border-border/50 hover:shadow-md transition-all cursor-pointer group">
+                        <CardContent className="p-6 text-center">
+                            <div className="h-14 w-14 rounded-2xl bg-violet-50 text-violet-600 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform shadow-sm">
+                                <Shield className="h-7 w-7" />
+                            </div>
+                            <h3 className="font-black text-slate-900">Access Roles</h3>
+                            <p className="text-xs text-slate-500 mt-1">Define permissions</p>
+                        </CardContent>
+                    </Card>
+                </Link>
+                <Card className="rounded-3xl border-border/50 hover:shadow-md transition-all cursor-pointer group">
+                    <CardContent className="p-6 text-center">
+                        <div className="h-14 w-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform shadow-sm">
+                            <Lock className="h-7 w-7" />
+                        </div>
+                        <h3 className="font-black text-slate-900">Authentication</h3>
+                        <p className="text-xs text-slate-500 mt-1">2FA & Security Policies</p>
+                    </CardContent>
+                </Card>
+            </div>
+        </div>
+    );
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// 3. NOTIFICATIONS TAB CONTENT
+// ════════════════════════════════════════════════════════════════════════════
+function NotificationsTabContent() {
+    return (
+        <Card className="rounded-3xl border-border/50">
+            <CardHeader><CardTitle className="text-base font-bold">Alert Preferences</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+                <SettingToggle label="Invoice Reminders" description="Auto-send to customers" defaultChecked={true} />
+                <SettingToggle label="Low Stock Alerts" description="Notify warehouse managers" defaultChecked={true} />
+                <SettingToggle label="Approval Triggers" description="Notify when action is needed" defaultChecked={true} />
+            </CardContent>
+        </Card>
+    );
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// 4. INTEGRATIONS TAB CONTENT
+// ════════════════════════════════════════════════════════════════════════════
+function IntegrationsTabContent() {
+    return (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <OpsLinkCard title="Email (SMTP)" desc="Transactional alerts" icon={Mail} connected={true} />
+            <OpsLinkCard title="Bank Feeds" desc="Automatic reconciliation" icon={Landmark} connected={false} />
+            <OpsLinkCard title="Cloud Backup" desc="Secure data archiving" icon={Database} connected={true} />
+        </div>
+    );
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// 5. MAINTENANCE TAB CONTENT
+// ════════════════════════════════════════════════════════════════════════════
+function MaintenanceTabContent() {
+    return (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <Card className="lg:col-span-2 rounded-3xl border-border/50">
+                <CardHeader><CardTitle className="text-base font-bold">System Audit Log</CardTitle></CardHeader>
+                <CardContent className="space-y-2">
+                    {[
+                        { action: 'Config Updated', user: 'Admin', time: '15m ago' },
+                        { action: 'Role Modified', user: 'Admin', time: '2h ago' },
+                    ].map((log, i) => (
+                        <div key={i} className="flex justify-between p-3 rounded-xl bg-muted/20 text-xs font-bold text-slate-600">
+                            <span>{log.action} by {log.user}</span>
+                            <span className="text-muted-foreground">{log.time}</span>
+                        </div>
+                    ))}
                 </CardContent>
             </Card>
-        </Link>
+            <div className="space-y-4">
+                <Button variant="outline" className="w-full h-14 rounded-2xl font-black text-xs gap-3 justify-start px-6">
+                    <RefreshCcw className="h-5 w-5 text-blue-500" /> RE-INDEX DATABASE
+                </Button>
+                <Button variant="outline" className="w-full h-14 rounded-2xl font-black text-xs gap-3 justify-start px-6">
+                    <Database className="h-5 w-5 text-orange-500" /> EXPORT SYSTEM DATA
+                </Button>
+            </div>
+        </div>
+    );
+}
+
+// Helper UI Components
+function SettingToggle({ label, description, defaultChecked }: any) {
+    const [checked, setChecked] = useState(defaultChecked);
+    return (
+        <div className="flex items-center justify-between py-2">
+            <div className="space-y-0.5">
+                <Label className="text-sm font-bold text-slate-900">{label}</Label>
+                <p className="text-xs text-slate-500">{description}</p>
+            </div>
+            <Switch checked={checked} onCheckedChange={setChecked} />
+        </div>
     );
 }
 
@@ -265,16 +278,16 @@ function OpsLinkCard({ title, desc, icon: Icon, connected }: any) {
         <Card className="rounded-3xl border-border/50 group">
             <CardContent className="p-6">
                 <div className="flex items-start justify-between mb-4">
-                    <div className="h-12 w-12 rounded-2xl bg-slate-100 flex items-center justify-center group-hover:bg-primary group-hover:text-primary-foreground transition-all">
+                    <div className="h-12 w-12 rounded-2xl bg-slate-100 flex items-center justify-center group-hover:bg-primary group-hover:text-primary-foreground transition-all shadow-sm">
                         <Icon className="h-6 w-6" />
                     </div>
-                    <Badge variant={connected ? "default" : "outline"} className="rounded-full text-[9px] font-bold">
-                        {connected ? 'ACTIVE' : 'INACTIVE'}
+                    <Badge variant={connected ? "default" : "outline"} className="rounded-full text-[10px] font-black border-none bg-emerald-50 text-emerald-600">
+                        {connected ? 'ACTIVE' : 'READY'}
                     </Badge>
                 </div>
-                <h4 className="font-bold text-slate-900">{title}</h4>
-                <p className="text-xs text-slate-500 mt-1 mb-4">{desc}</p>
-                <Button variant="outline" size="sm" className="w-full rounded-xl text-xs font-bold">Config</Button>
+                <h4 className="font-black text-slate-900">{title}</h4>
+                <p className="text-xs text-slate-500 mt-1 mb-4 font-medium">{desc}</p>
+                <Button variant="outline" size="sm" className="w-full rounded-xl text-xs font-bold h-10">Manage</Button>
             </CardContent>
         </Card>
     );
