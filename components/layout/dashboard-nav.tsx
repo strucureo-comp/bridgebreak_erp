@@ -37,10 +37,79 @@ interface NavItem {
 
 // ============================
 // LOGICAL ERP NAVIGATION
-// Grouped by: CORE, MODULES, SYSTEM
+// Grouped by: CORE, OPERATIONS, FINANCE, SYSTEM
 // ============================
 export const adminNavItems: NavItem[] = [
-    // ... same content ...
+    // --- CORE ---
+    {
+        title: 'Dashboard',
+        href: '/admin/dashboard',
+        icon: LayoutDashboard,
+        role: 'admin',
+        section: 'Core',
+    },
+    {
+        title: 'Master Data',
+        href: '/admin/masters',
+        icon: Database,
+        role: 'admin',
+        section: 'Core',
+    },
+
+    // --- OPERATIONS ---
+    {
+        title: 'Sales Hub',
+        href: '/admin/sales',
+        icon: ShoppingCart,
+        role: 'admin',
+        section: 'Operations',
+    },
+    {
+        title: 'Operations Hub',
+        href: '/admin/operations',
+        icon: Cog,
+        role: 'admin',
+        section: 'Operations',
+    },
+    {
+        title: 'Procurement',
+        href: '/admin/purchases',
+        icon: Building2,
+        role: 'admin',
+        section: 'Operations',
+    },
+    {
+        title: 'HR & Teams',
+        href: '/admin/hr',
+        icon: Users,
+        role: 'admin',
+        section: 'Operations',
+    },
+
+    // --- FINANCE ---
+    {
+        title: 'Finance Hub',
+        href: '/admin/finance',
+        icon: DollarSign,
+        role: 'admin',
+        section: 'Finance',
+    },
+
+    // --- SYSTEM ---
+    {
+        title: 'Reports',
+        href: '/admin/reports',
+        icon: BarChart3,
+        role: 'admin',
+        section: 'System',
+    },
+    {
+        title: 'Settings',
+        href: '/admin/settings',
+        icon: Settings,
+        role: 'admin',
+        section: 'System',
+    },
 ];
 
 interface DashboardNavProps {
