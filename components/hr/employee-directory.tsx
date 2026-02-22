@@ -1,17 +1,34 @@
 'use client';
 
 import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Search, UserCircle2 } from 'lucide-react';
+import { 
+    Plus, 
+    Search, 
+    Mail, 
+    Phone, 
+    MapPin, 
+    Briefcase, 
+    Calendar, 
+    ChevronRight, 
+    ShieldCheck, 
+    DollarSign, 
+    Users,
+    Fingerprint,
+    LayoutTemplate
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { createEmployee } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import type { Employee, HRDepartment, HRRole } from '@/lib/db/types';
+import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface EmployeeDirectoryProps {
     employees: Employee[];
@@ -23,13 +40,12 @@ interface EmployeeDirectoryProps {
 export function EmployeeDirectory({ employees, departments, roles, onRefresh }: EmployeeDirectoryProps) {
     const [search, setSearch] = useState('');
     const [deptFilter, setDeptFilter] = useState('all');
-    const [statusFilter, setStatusFilter] = useState('all');
     const [open, setOpen] = useState(false);
+    const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
 
     const filtered = employees.filter(e => {
         if (search && !e.name.toLowerCase().includes(search.toLowerCase()) && !e.employee_id.toLowerCase().includes(search.toLowerCase())) return false;
         if (deptFilter !== 'all' && (e.dept?.name || e.department) !== deptFilter) return false;
-        if (statusFilter !== 'all' && e.status !== statusFilter) return false;
         return true;
     });
 
@@ -38,124 +54,240 @@ export function EmployeeDirectory({ employees, departments, roles, onRefresh }: 
         const fd = new FormData(e.currentTarget);
         try {
             await createEmployee({
-                employee_id: fd.get('employee_id'),
-                name: fd.get('name'),
-                role: fd.get('role'),
-                skill_type: fd.get('skill_type') || 'General',
-                employment_type: fd.get('employment_type'),
-                department: fd.get('department'),
-                department_id: fd.get('department_id') || undefined,
-                joining_date: fd.get('joining_date'),
-                basic_salary: fd.get('basic_salary'),
-                email: fd.get('email'),
-                phone: fd.get('phone'),
+                employee_id: fd.get('employee_id') as string,
+                name: fd.get('name') as string,
+                role: fd.get('role') as string, // This will now come from the dropdown
+                employment_type: fd.get('employment_type') as string,
+                department_id: (fd.get('department_id') as string) || undefined,
+                joining_date: fd.get('joining_date') as string,
+                basic_salary: fd.get('basic_salary') as string,
+                email: fd.get('email') as string,
+                phone: fd.get('phone') as string,
             });
-            toast.success('Employee created');
+            toast.success('Employee onboarded');
             setOpen(false);
             onRefresh();
-        } catch { toast.error('Failed to create employee'); }
-    };
-
-    const lifecycleColors: Record<string, string> = {
-        probation: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-        confirmed: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-        notice_period: 'bg-orange-50 text-orange-700 border-orange-200',
-        resigned: 'bg-slate-50 text-slate-500 border-slate-200',
-        terminated: 'bg-red-50 text-red-700 border-red-200',
+        } catch { toast.error('Onboarding failed'); }
     };
 
     return (
         <div className="space-y-6">
-            {/* Toolbar */}
-            <div className="flex flex-wrap gap-3 items-center justify-between">
-                <div className="flex gap-3 flex-1 flex-wrap">
-                    <div className="relative flex-1 min-w-[200px] max-w-md">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                        <Input placeholder="Search employees..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 rounded-xl h-10 bg-white border-slate-200" />
+            <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+                <div className="flex flex-wrap gap-2 flex-1 w-full md:w-auto">
+                    <div className="relative flex-1 min-w-[240px]">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input 
+                            placeholder="Find staff member..." 
+                            value={search} 
+                            onChange={e => setSearch(e.target.value)} 
+                            className="pl-9 h-10 border-border text-sm" 
+                        />
                     </div>
                     <Select value={deptFilter} onValueChange={setDeptFilter}>
-                        <SelectTrigger className="w-40 rounded-xl h-10 bg-white"><SelectValue placeholder="Department" /></SelectTrigger>
+                        <SelectTrigger className="w-full md:w-44 h-10 border-border text-xs font-bold uppercase">
+                            <SelectValue placeholder="All Depts" />
+                        </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">All Departments</SelectItem>
                             {departments.map(d => <SelectItem key={d.id} value={d.name}>{d.name}</SelectItem>)}
                         </SelectContent>
                     </Select>
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                        <SelectTrigger className="w-32 rounded-xl h-10 bg-white"><SelectValue placeholder="Status" /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Status</SelectItem>
-                            <SelectItem value="active">Active</SelectItem>
-                            <SelectItem value="inactive">Inactive</SelectItem>
-                        </SelectContent>
-                    </Select>
                 </div>
+
                 <Dialog open={open} onOpenChange={setOpen}>
                     <DialogTrigger asChild>
-                        <Button className="rounded-xl gap-2 bg-indigo-600 hover:bg-indigo-700"><Plus className="h-4 w-4" /> Add Employee</Button>
+                        <Button className="h-10 px-6 gap-2 bg-primary hover:bg-primary/90 font-bold uppercase text-[10px] tracking-widest shadow-lg shadow-primary/20">
+                            <Plus className="h-4 w-4" /> Onboard Personnel
+                        </Button>
                     </DialogTrigger>
-                    <DialogContent className="max-w-lg rounded-3xl">
-                        <DialogHeader><DialogTitle>New Employee</DialogTitle><DialogDescription>Enter employee details below</DialogDescription></DialogHeader>
-                        <form onSubmit={handleSubmit} className="space-y-4 mt-2">
-                            <div className="grid grid-cols-2 gap-3">
-                                <Input name="employee_id" placeholder="EMP-001" required className="rounded-xl" />
-                                <Input name="name" placeholder="Full Name" required className="rounded-xl" />
-                                <Input name="email" placeholder="Email" type="email" className="rounded-xl" />
-                                <Input name="phone" placeholder="Phone" className="rounded-xl" />
-                                <Input name="role" placeholder="Designation" required className="rounded-xl" />
-                                <select name="employment_type" required className="h-10 rounded-xl border border-slate-200 px-3 text-sm bg-white">
-                                    <option value="">Type</option>
-                                    <option value="Permanent">Permanent</option>
-                                    <option value="Contract">Contract</option>
-                                    <option value="Daily">Daily</option>
-                                </select>
-                                <select name="department_id" className="h-10 rounded-xl border border-slate-200 px-3 text-sm bg-white">
-                                    <option value="">Department</option>
-                                    {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                                </select>
-                                <Input name="joining_date" type="date" required className="rounded-xl" />
-                                <Input name="basic_salary" type="number" placeholder="Basic Salary" className="rounded-xl" />
-                                <Input name="skill_type" placeholder="Skill Type" className="rounded-xl" />
+                    <DialogContent className="max-w-2xl">
+                        <DialogHeader>
+                            <DialogTitle className="uppercase tracking-widest text-foreground">New Staff Entry</DialogTitle>
+                            <DialogDescription className="text-[10px] uppercase font-bold text-muted-foreground">Initialize Identity & Core Role</DialogDescription>
+                        </DialogHeader>
+                        <form onSubmit={handleSubmit} className="space-y-8 pt-4">
+                            <div className="space-y-4">
+                                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">1. Personal Identity</Label>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-1.5">
+                                        <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Employee ID</Label>
+                                        <Input name="employee_id" placeholder="SSE-000" required />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Full Legal Name</Label>
+                                        <Input name="name" required />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Corporate Email</Label>
+                                        <Input name="email" type="email" />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Joining Date</Label>
+                                        <Input name="joining_date" type="date" required />
+                                    </div>
+                                </div>
                             </div>
-                            <Button type="submit" className="w-full rounded-xl bg-indigo-600 hover:bg-indigo-700">Create Employee</Button>
+
+                            <div className="space-y-4">
+                                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">2. Role & Compensation</Label>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-1.5">
+                                        <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Designation (Role)</Label>
+                                        <select 
+                                            name="role" 
+                                            required 
+                                            className="flex h-10 w-full rounded-md border border-border bg-card px-3 py-2 text-xs font-bold uppercase tracking-wide outline-none focus:ring-1 focus:ring-primary/20"
+                                        >
+                                            <option value="">Select Role...</option>
+                                            {roles.map(r => <option key={r.id} value={r.title}>{r.title}</option>)}
+                                            {roles.length === 0 && <option value="Architect">Architect (Default)</option>}
+                                        </select>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Base Salary (AED)</Label>
+                                        <Input name="basic_salary" type="number" required placeholder="0.00" className="font-bold" />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Work Unit</Label>
+                                        <select 
+                                            name="department_id" 
+                                            className="flex h-10 w-full rounded-md border border-border bg-card px-3 py-2 text-xs font-bold uppercase tracking-wide outline-none focus:ring-1 focus:ring-primary/20"
+                                        >
+                                            <option value="">Select Dept...</option>
+                                            {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Employment Type</Label>
+                                        <select 
+                                            name="employment_type" 
+                                            required
+                                            className="flex h-10 w-full rounded-md border border-border bg-card px-3 py-2 text-xs font-bold uppercase tracking-wide outline-none focus:ring-1 focus:ring-primary/20"
+                                        >
+                                            <option value="Permanent">Permanent</option>
+                                            <option value="Contract">Contract</option>
+                                            <option value="Intern">Intern</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <Button type="submit" className="w-full bg-primary h-12 font-bold uppercase tracking-widest text-xs">Commit Personnel Record</Button>
                         </form>
                     </DialogContent>
                 </Dialog>
             </div>
 
-            {/* Employee Grid */}
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {filtered.map(emp => (
-                    <Card key={emp.id} className="rounded-2xl border-none shadow-sm bg-white hover:shadow-lg transition-all duration-300 cursor-pointer group">
-                        <CardContent className="p-5">
-                            <div className="flex items-start gap-3">
-                                <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shrink-0 group-hover:scale-105 transition-transform">
-                                    {emp.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                    <Card 
+                        key={emp.id} 
+                        onClick={() => setSelectedEmployee(emp)}
+                        className="border shadow-sm rounded-md hover:border-primary/50 transition-colors cursor-pointer group bg-card"
+                    >
+                        <CardContent className="p-4">
+                            <div className="flex items-start justify-between mb-4">
+                                <div className="h-10 w-10 rounded-lg bg-foreground text-card-foreground flex items-center justify-center font-bold text-xs uppercase shadow-lg">
+                                    {emp.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                                 </div>
-                                <div className="min-w-0">
-                                    <h4 className="font-bold text-sm text-slate-800 truncate">{emp.name}</h4>
-                                    <p className="text-[11px] text-slate-400 font-medium">{emp.employee_id}</p>
-                                </div>
-                                <Badge variant="outline" className={cn('ml-auto text-[9px] shrink-0', emp.status === 'active' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-slate-50 text-slate-400')}>
+                                <Badge variant="outline" className={cn(
+                                    "text-[8px] font-black uppercase tracking-widest",
+                                    emp.status === 'active' ? "border-emerald-100 text-emerald-700 bg-emerald-50" : "text-muted-foreground"
+                                )}>
                                     {emp.status}
                                 </Badge>
                             </div>
-                            <div className="mt-4 space-y-1.5 text-[11px]">
-                                <div className="flex justify-between text-slate-500"><span>Role</span><span className="font-semibold text-slate-700">{emp.role}</span></div>
-                                <div className="flex justify-between text-slate-500"><span>Dept</span><span className="font-semibold text-slate-700">{emp.dept?.name || emp.department || '—'}</span></div>
-                                <div className="flex justify-between text-slate-500"><span>Type</span><span className="font-semibold text-slate-700">{emp.employment_type}</span></div>
-                                {emp.lifecycle_status && (
-                                    <div className="flex justify-between text-slate-500"><span>Stage</span>
-                                        <Badge variant="outline" className={cn('text-[9px]', lifecycleColors[emp.lifecycle_status] || '')}>
-                                            {emp.lifecycle_status?.replace('_', ' ')}
-                                        </Badge>
-                                    </div>
-                                )}
+                            
+                            <div className="space-y-0.5 mb-4">
+                                <h3 className="text-sm font-bold text-foreground truncate uppercase tracking-tight">{emp.name}</h3>
+                                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{emp.role}</p>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2 pt-3 border-t">
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                    <Fingerprint className="h-3 w-3 text-primary" />
+                                    <span className="text-[9px] font-bold tracking-tight uppercase">{emp.employee_id}</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-muted-foreground justify-end">
+                                    <DollarSign className="h-3 w-3 text-emerald-500" />
+                                    <span className="text-[9px] font-black text-foreground">{Number(emp.basic_salary).toLocaleString()}</span>
+                                </div>
                             </div>
                         </CardContent>
                     </Card>
                 ))}
             </div>
-            {filtered.length === 0 && <p className="text-center text-slate-400 py-12 text-sm">No employees found</p>}
+
+            <Sheet open={!!selectedEmployee} onOpenChange={() => setSelectedEmployee(null)}>
+                <SheetContent className="sm:max-w-xl p-0">
+                    {selectedEmployee && (
+                        <div className="flex flex-col h-full bg-card">
+                            <div className="p-6 bg-foreground text-card-foreground">
+                                <div className="flex items-start justify-between mb-8">
+                                    <div className="h-12 w-12 rounded-lg bg-white/10 flex items-center justify-center border border-white/10">
+                                        <Users className="h-6 w-6 text-primary" />
+                                    </div>
+                                    <Badge className="bg-primary text-card-foreground border-none font-bold text-[10px] px-3 py-1 uppercase">{selectedEmployee.status}</Badge>
+                                </div>
+                                
+                                <div className="space-y-1">
+                                    <p className="text-primary text-[10px] font-bold uppercase tracking-[0.2em]">{selectedEmployee.employee_id}</p>
+                                    <h2 className="text-3xl font-bold tracking-tight uppercase">{selectedEmployee.name}</h2>
+                                    <p className="text-muted-foreground font-medium text-sm uppercase tracking-widest">{selectedEmployee.role} · {selectedEmployee.dept?.name || selectedEmployee.department}</p>
+                                </div>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto p-6">
+                                <Tabs defaultValue="profile" className="space-y-6">
+                                    <TabsList className="bg-muted/50 border h-10 p-0.5 w-full">
+                                        <TabsTrigger value="profile" className="flex-1 text-xs font-bold h-full data-[state=active]:bg-white">Identity</TabsTrigger>
+                                        <TabsTrigger value="compensation" className="flex-1 text-xs font-bold h-full data-[state=active]:bg-white">Compensation</TabsTrigger>
+                                    </TabsList>
+
+                                    <TabsContent value="profile" className="space-y-6 animate-in fade-in duration-300">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <DetailBox icon={Mail} label="Email" value={selectedEmployee.email || '—'} />
+                                            <DetailBox icon={Phone} label="Phone" value={selectedEmployee.phone || '—'} />
+                                            <DetailBox icon={Calendar} label="Joined" value={new Date(selectedEmployee.joining_date).toLocaleDateString('en-AE')} />
+                                            <DetailBox icon={Briefcase} label="Type" value={selectedEmployee.employment_type} />
+                                        </div>
+                                    </TabsContent>
+
+                                    <TabsContent value="compensation" className="space-y-6 animate-in fade-in duration-300">
+                                        <Card className="border-border shadow-none bg-muted border-dashed">
+                                            <CardContent className="p-6 space-y-6">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="h-10 w-10 rounded-md bg-foreground text-card-foreground flex items-center justify-center shadow-sm">
+                                                            <DollarSign className="h-5 w-5" />
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Base Rate</p>
+                                                            <p className="text-xl font-black text-foreground uppercase">AED {Number(selectedEmployee.basic_salary || 0).toLocaleString()}</p>
+                                                        </div>
+                                                    </div>
+                                                    <Button size="sm" className="bg-primary hover:bg-primary/90 h-8 text-[9px] font-bold uppercase tracking-widest">Adjust</Button>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    </TabsContent>
+                                </Tabs>
+                            </div>
+                        </div>
+                    )}
+                </SheetContent>
+            </Sheet>
+        </div>
+    );
+}
+
+function DetailBox({ icon: Icon, label, value }: any) {
+    return (
+        <div className="space-y-1.5 p-3 rounded-md border border-border bg-muted/50">
+            <div className="flex items-center gap-2 text-muted-foreground">
+                <Icon size={12} className="text-primary" />
+                <span className="text-[9px] font-black uppercase tracking-widest">{label}</span>
+            </div>
+            <p className="text-xs font-bold text-foreground uppercase truncate">{value}</p>
         </div>
     );
 }

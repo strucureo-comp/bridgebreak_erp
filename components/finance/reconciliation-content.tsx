@@ -65,16 +65,16 @@ export function ReconciliationContent() {
                 {/* Bank Side */}
                 <Card className="flex-1 flex flex-col rounded-[2rem] border-none shadow-sm bg-slate-50/50">
                     <CardHeader className="pb-4">
-                        <CardTitle className="text-lg font-black text-slate-900 flex items-center justify-between">
+                        <CardTitle className="text-lg font-black text-foreground flex items-center justify-between">
                             <span>Bank Statement</span>
-                            <Badge variant="outline" className="rounded-full bg-white">{bankTransactions.length} Unmatched</Badge>
+                            <Badge variant="outline" className="rounded-full bg-card">{bankTransactions.length} Unmatched</Badge>
                         </CardTitle>
                         <CardDescription>Transactions from your bank feed</CardDescription>
                     </CardHeader>
                     <CardContent className="flex-1 p-4 pt-0 min-h-0">
                         <ScrollArea className="h-full pr-4">
                             {bankTransactions.length === 0 ? (
-                                <div className="text-center py-12 text-slate-400">
+                                <div className="text-center py-12 text-muted-foreground">
                                     <Check className="h-12 w-12 mx-auto mb-3 text-emerald-200" />
                                     <p>All cleared!</p>
                                 </div>
@@ -99,7 +99,7 @@ export function ReconciliationContent() {
                         size="icon"
                         className={cn(
                             "h-14 w-14 rounded-full shadow-lg transition-all",
-                            selectedBankTx && selectedSystemTx ? "bg-blue-600 hover:bg-blue-700 scale-110 animate-pulse" : "bg-slate-200 cursor-not-allowed text-slate-400"
+                            selectedBankTx && selectedSystemTx ? "bg-blue-600 hover:bg-blue-700 scale-110 animate-pulse" : "bg-slate-200 cursor-not-allowed text-muted-foreground"
                         )}
                         disabled={!selectedBankTx || !selectedSystemTx}
                         onClick={handleMatch}
@@ -116,16 +116,16 @@ export function ReconciliationContent() {
                 {/* System Side */}
                 <Card className="flex-1 flex flex-col rounded-[2rem] border-none shadow-sm bg-slate-50/50">
                     <CardHeader className="pb-4">
-                        <CardTitle className="text-lg font-black text-slate-900 flex items-center justify-center justify-between">
+                        <CardTitle className="text-lg font-black text-foreground flex items-center justify-center justify-between">
                             <span>System Ledger</span>
-                            <Badge variant="outline" className="rounded-full bg-white">{systemTransactions.length} Unmatched</Badge>
+                            <Badge variant="outline" className="rounded-full bg-card">{systemTransactions.length} Unmatched</Badge>
                         </CardTitle>
                         <CardDescription>Invoices and payments in ERP</CardDescription>
                     </CardHeader>
                     <CardContent className="flex-1 p-4 pt-0 min-h-0">
                         <ScrollArea className="h-full pr-4">
                             {systemTransactions.length === 0 ? (
-                                <div className="text-center py-12 text-slate-400">
+                                <div className="text-center py-12 text-muted-foreground">
                                     <Check className="h-12 w-12 mx-auto mb-3 text-emerald-200" />
                                     <p>All cleared!</p>
                                 </div>
@@ -155,15 +155,15 @@ const TransactionCard = ({ tx, isSelected, onSelect, side }: { tx: Transaction, 
             "p-4 rounded-xl border-2 transition-all cursor-pointer mb-3 hover:shadow-md",
             isSelected
                 ? "border-blue-500 bg-blue-50/50 shadow-blue-100"
-                : "border-slate-100 bg-white hover:border-slate-200"
+                : "border-border bg-card hover:border-slate-200"
         )}
     >
         <div className="flex justify-between items-start mb-2">
-            <span className="text-xs font-semibold text-slate-400">{format(new Date(tx.date), 'MMM dd')}</span>
-            <Badge variant={tx.amount > 0 ? "default" : "secondary"} className={cn("rounded-full h-5 text-[10px]", tx.amount > 0 ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" : "bg-slate-100 text-slate-600")}>
+            <span className="text-xs font-semibold text-muted-foreground">{format(new Date(tx.date), 'MMM dd')}</span>
+            <Badge variant={tx.amount > 0 ? "default" : "secondary"} className={cn("rounded-full h-5 text-[10px]", tx.amount > 0 ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" : "bg-muted text-muted-foreground")}>
                 {tx.amount > 0 ? '+' : ''}${Math.abs(tx.amount).toLocaleString()}
             </Badge>
         </div>
-        <p className="font-medium text-sm text-slate-900 line-clamp-2">{tx.description}</p>
+        <p className="font-medium text-sm text-foreground line-clamp-2">{tx.description}</p>
     </div>
 );

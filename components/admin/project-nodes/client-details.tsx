@@ -17,10 +17,11 @@ interface ProjectFileItem {
 export function ClientDetails({ project }: { project: any }) {
   const client = project.client || { full_name: 'Unknown Client', email: 'no-email@example.com' };
   const [files, setFiles] = useState<ProjectFileItem[]>([]);
+  const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || '/api';
 
   const loadFiles = async () => {
     if (!project?.id) return;
-    const res = await fetch(`/api/projects/upload-files?project_id=${project.id}&module_type=client`);
+    const res = await fetch(`${apiBase}/projects/upload-files?project_id=${project.id}&module_type=client`, { credentials: 'include' });
     if (!res.ok) return;
     const data = await res.json();
     setFiles(data.files || []);
@@ -75,9 +76,10 @@ export function ClientDetails({ project }: { project: any }) {
         accepts=".pdf,.doc,.docx,.xlsx,.png,.jpg,.jpeg"
         onUploadComplete={async (url, fileName, meta) => {
           if (!fileName) return;
-          await fetch('/api/projects/upload-files', {
+          await fetch(`${apiBase}/projects/upload-files`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
             body: JSON.stringify({
               project_id: project.id,
               module_type: 'client',

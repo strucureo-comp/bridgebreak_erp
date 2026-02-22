@@ -124,10 +124,24 @@ export class TallyAdapter implements IAccountingEngine {
       entry.reference_type as any || 'manual'
     );
 
+    // Update internal engine state with more details if provided
+    if (entry.voucher_type || entry.cost_center_id || entry.project_id) {
+      // In a more robust implementation, we'd have a specific method for this
+      const lastEntry = (this.engine as any).ledger[(this.engine as any).ledger.length - 1];
+      if (lastEntry) {
+        lastEntry.voucher_type = entry.voucher_type;
+        lastEntry.cost_center_id = entry.cost_center_id;
+        lastEntry.project_id = entry.project_id;
+      }
+    }
+
     return {
       id: `${ledgerEntry.account_id}-${ledgerEntry.date}-${ledgerEntry.created_at}`,
       ...ledgerEntry,
       balance: ledgerEntry.running_balance,
+      voucher_type: entry.voucher_type,
+      cost_center_id: entry.cost_center_id,
+      project_id: entry.project_id,
     };
   }
 
@@ -148,6 +162,9 @@ export class TallyAdapter implements IAccountingEngine {
       balance: entry.running_balance,
       reference_id: entry.reference_id,
       reference_type: entry.reference_type,
+      voucher_type: entry.voucher_type,
+      cost_center_id: entry.cost_center_id,
+      project_id: entry.project_id,
       created_at: entry.created_at,
     }));
   }

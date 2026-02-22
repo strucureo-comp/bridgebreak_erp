@@ -105,7 +105,7 @@ export default function SalesOpportunitiesPage() {
             <DashboardShell requireAdmin>
                 <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
                     <RefreshCcw className="h-12 w-12 animate-spin text-primary" />
-                    <p className="font-bold text-slate-900">Syncing Pipeline Data...</p>
+                    <p className="font-bold text-foreground">Syncing Pipeline Data...</p>
                 </div>
             </DashboardShell>
         );
@@ -116,8 +116,8 @@ export default function SalesOpportunitiesPage() {
             <div className="space-y-8 pb-12 w-full overflow-x-auto">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 min-w-[300px]">
                     <div className="space-y-1">
-                        <h1 className="text-4xl font-black tracking-tight text-slate-900">Opportunities</h1>
-                        <p className="text-slate-500 font-medium flex items-center gap-2">
+                        <h1 className="text-4xl font-black tracking-tight text-foreground">Opportunities</h1>
+                        <p className="text-muted-foreground font-medium flex items-center gap-2">
                             <Briefcase className="h-4 w-4 text-primary" />
                             Manage your sales pipeline and forecast revenue.
                         </p>
@@ -183,22 +183,22 @@ export default function SalesOpportunitiesPage() {
                                 <div className="flex items-center justify-between px-2">
                                     <div className="flex items-center gap-2">
                                         <div className={cn("h-3 w-3 rounded-full", stage.color)} />
-                                        <span className="font-bold text-sm text-slate-900 uppercase tracking-wide">{stage.label}</span>
+                                        <span className="font-bold text-sm text-foreground uppercase tracking-wide">{stage.label}</span>
                                     </div>
-                                    <span className="text-xs font-black text-slate-400">{stageOpps.length}</span>
+                                    <span className="text-xs font-black text-muted-foreground">{stageOpps.length}</span>
                                 </div>
-                                <div className="px-2 pb-2 border-b-2 border-slate-100 flex justify-between items-end">
+                                <div className="px-2 pb-2 border-b-2 border-border flex justify-between items-end">
                                     <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Total Value</span>
                                     <span className="text-sm font-black text-slate-700">${totalValue.toLocaleString()}</span>
                                 </div>
 
                                 <div className="flex flex-col gap-3">
                                     {stageOpps.map(opp => (
-                                        <Card key={opp.id} className="rounded-[1.5rem] border-none shadow-sm bg-white hover:shadow-md transition-shadow cursor-pointer group">
+                                        <Card key={opp.id} className="rounded-[1.5rem] border-none shadow-sm bg-card hover:shadow-md transition-shadow cursor-pointer group">
                                             <CardContent className="p-5 space-y-3">
                                                 <div className="space-y-1">
-                                                    <h4 className="font-bold text-slate-900 group-hover:text-primary transition-colors">{opp.name}</h4>
-                                                    <p className="text-xs font-medium text-slate-500 flex items-center gap-1">
+                                                    <h4 className="font-bold text-foreground group-hover:text-primary transition-colors">{opp.name}</h4>
+                                                    <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
                                                         <Briefcase size={10} />
                                                         {opp.account?.name}
                                                     </p>
@@ -208,7 +208,7 @@ export default function SalesOpportunitiesPage() {
                                                         <DollarSign size={12} strokeWidth={3} />
                                                         <span className="text-xs font-black">{Number(opp.amount).toLocaleString()}</span>
                                                     </div>
-                                                    <div className="flex items-center gap-1 text-slate-400">
+                                                    <div className="flex items-center gap-1 text-muted-foreground">
                                                         <Target size={12} />
                                                         <span className="text-xs font-bold">{opp.probability}%</span>
                                                     </div>
@@ -217,7 +217,7 @@ export default function SalesOpportunitiesPage() {
                                         </Card>
                                     ))}
                                     {stageOpps.length === 0 && (
-                                        <div className="h-24 border-2 border-dashed border-slate-100 rounded-2xl flex items-center justify-center">
+                                        <div className="h-24 border-2 border-dashed border-border rounded-2xl flex items-center justify-center">
                                             <span className="text-xs font-bold text-slate-300 uppercase">No Deals</span>
                                         </div>
                                     )}

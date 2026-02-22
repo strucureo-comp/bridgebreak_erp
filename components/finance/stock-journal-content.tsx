@@ -276,7 +276,7 @@ export function StockJournalContent() {
             revaluation: 'bg-amber-100 text-amber-800'
         };
         return (
-            <span className={`px-2 py-1 rounded-lg text-xs font-medium ${colors[type] || 'bg-slate-100'}`}>
+            <span className={`px-2 py-1 rounded-lg text-xs font-medium ${colors[type] || 'bg-muted'}`}>
                 {type.replace('_', ' ').toUpperCase()}
             </span>
         );
@@ -290,8 +290,8 @@ export function StockJournalContent() {
                     <CardContent className="p-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-slate-500 font-medium">Total Value</p>
-                                <p className="text-2xl font-bold text-slate-900 mt-1">
+                                <p className="text-sm text-muted-foreground font-medium">Total Value</p>
+                                <p className="text-2xl font-bold text-foreground mt-1">
                                     ${stats.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                 </p>
                             </div>
@@ -305,8 +305,8 @@ export function StockJournalContent() {
                     <CardContent className="p-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-slate-500 font-medium">Posted</p>
-                                <p className="text-2xl font-bold text-slate-900 mt-1">{stats.posted}</p>
+                                <p className="text-sm text-muted-foreground font-medium">Posted</p>
+                                <p className="text-2xl font-bold text-foreground mt-1">{stats.posted}</p>
                             </div>
                             <div className="p-3 bg-blue-100 rounded-xl">
                                 <CheckCircle2 className="w-6 h-6 text-blue-600" />
@@ -318,8 +318,8 @@ export function StockJournalContent() {
                     <CardContent className="p-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-slate-500 font-medium">Draft</p>
-                                <p className="text-2xl font-bold text-slate-900 mt-1">{stats.draft}</p>
+                                <p className="text-sm text-muted-foreground font-medium">Draft</p>
+                                <p className="text-2xl font-bold text-foreground mt-1">{stats.draft}</p>
                             </div>
                             <div className="p-3 bg-amber-100 rounded-xl">
                                 <ClipboardCheck className="w-6 h-6 text-amber-600" />
@@ -331,8 +331,8 @@ export function StockJournalContent() {
                     <CardContent className="p-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-slate-500 font-medium">Adjustments</p>
-                                <p className="text-2xl font-bold text-slate-900 mt-1">{stats.adjustments}</p>
+                                <p className="text-sm text-muted-foreground font-medium">Adjustments</p>
+                                <p className="text-2xl font-bold text-foreground mt-1">{stats.adjustments}</p>
                             </div>
                             <div className="p-3 bg-purple-100 rounded-xl">
                                 <TrendingUp className="w-6 h-6 text-purple-600" />
@@ -347,8 +347,8 @@ export function StockJournalContent() {
                 <CardHeader className="pb-4">
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                         <div>
-                            <CardTitle className="text-2xl font-bold text-slate-900">Stock Journal</CardTitle>
-                            <p className="text-slate-500 mt-1">Inventory adjustments with GL integration</p>
+                            <CardTitle className="text-2xl font-bold text-foreground">Stock Journal</CardTitle>
+                            <p className="text-muted-foreground mt-1">Inventory adjustments with GL integration</p>
                         </div>
                         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
                             <DialogTrigger asChild>
@@ -444,7 +444,7 @@ export function StockJournalContent() {
                                             </Button>
                                         </div>
                                         {lineItems.map((item, index) => (
-                                            <div key={item.id} className="grid grid-cols-12 gap-2 items-end p-3 bg-slate-50 rounded-xl">
+                                            <div key={item.id} className="grid grid-cols-12 gap-2 items-end p-3 bg-muted rounded-xl">
                                                 <div className="col-span-4">
                                                     <Label className="text-xs">Product *</Label>
                                                     <Select
@@ -541,7 +541,7 @@ export function StockJournalContent() {
                                     {/* Totals */}
                                     <div className="space-y-2 text-right">
                                         <div className="flex justify-between text-sm">
-                                            <span className="text-slate-500">Total Quantity:</span>
+                                            <span className="text-muted-foreground">Total Quantity:</span>
                                             <span className="font-medium">{totals.totalQty}</span>
                                         </div>
                                         <div className="flex justify-between text-lg font-bold">
@@ -570,7 +570,7 @@ export function StockJournalContent() {
                 </CardHeader>
                 <CardContent>
                     <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-                        <TabsList className="rounded-xl bg-slate-100 p-1 flex flex-wrap">
+                        <TabsList className="rounded-xl bg-muted p-1 flex flex-wrap">
                             <TabsTrigger value="all" className="rounded-lg">All</TabsTrigger>
                             <TabsTrigger value="draft" className="rounded-lg">Draft</TabsTrigger>
                             <TabsTrigger value="posted" className="rounded-lg">Posted</TabsTrigger>
@@ -581,7 +581,7 @@ export function StockJournalContent() {
 
                         <div className="border rounded-2xl overflow-hidden">
                             <Table>
-                                <TableHeader className="bg-slate-50">
+                                <TableHeader className="bg-muted">
                                     <TableRow>
                                         <TableHead className="font-semibold">Journal #</TableHead>
                                         <TableHead className="font-semibold">Type</TableHead>
@@ -595,11 +595,11 @@ export function StockJournalContent() {
                                 <TableBody>
                                     {loading ? (
                                         <TableRow>
-                                            <TableCell colSpan={7} className="text-center py-8 text-slate-500">Loading...</TableCell>
+                                            <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Loading...</TableCell>
                                         </TableRow>
                                     ) : filteredJournals.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={7} className="text-center py-8 text-slate-500">No stock journals found</TableCell>
+                                            <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No stock journals found</TableCell>
                                         </TableRow>
                                     ) : (
                                         filteredJournals.map((journal) => (

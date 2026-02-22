@@ -71,7 +71,7 @@ export default function AdminClientsPage() {
       <DashboardShell requireAdmin>
         <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
           <RefreshCcw className="h-12 w-12 animate-spin text-primary" />
-          <p className="font-bold text-slate-900">Syncing Client Database...</p>
+          <p className="font-bold text-foreground">Syncing Client Database...</p>
         </div>
       </DashboardShell>
     );
@@ -83,8 +83,8 @@ export default function AdminClientsPage() {
         {/* Visual Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-1">
-            <h1 className="text-4xl font-black tracking-tight text-slate-900">Client Desk</h1>
-            <p className="text-slate-500 font-medium flex items-center gap-2">
+            <h1 className="text-4xl font-black tracking-tight text-foreground">Client Desk</h1>
+            <p className="text-muted-foreground font-medium flex items-center gap-2">
               <Users className="h-4 w-4 text-primary" />
               Manage your verified clients and enterprise partners.
             </p>
@@ -103,12 +103,12 @@ export default function AdminClientsPage() {
 
         <div className="space-y-6">
             <div className="flex items-center justify-between px-2">
-                <h2 className="text-2xl font-black text-slate-900">Partner Directory</h2>
+                <h2 className="text-2xl font-black text-foreground">Partner Directory</h2>
                 <div className="relative">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input 
                         placeholder="Search by name or email..." 
-                        className="pl-10 rounded-2xl border-none bg-white shadow-sm w-[350px] h-11 font-medium"
+                        className="pl-10 rounded-2xl border-none bg-card shadow-sm w-[350px] h-11 font-medium"
                         value={searchQuery}
                         onChange={e => setSearchQuery(e.target.value)}
                     />
@@ -117,11 +117,11 @@ export default function AdminClientsPage() {
 
             <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
                 {filteredClients.map(client => (
-                    <Card key={client.id} className="rounded-[3rem] border-none shadow-sm bg-white overflow-hidden group hover:shadow-2xl transition-all duration-500 cursor-pointer">
+                    <Card key={client.id} className="rounded-[3rem] border-none shadow-sm bg-card overflow-hidden group hover:shadow-2xl transition-all duration-500 cursor-pointer">
                         <CardContent className="p-10">
                             <div className="flex items-start justify-between mb-8">
                                 <Avatar className="h-20 w-20 rounded-[2rem] border-4 border-slate-50 shadow-inner group-hover:scale-110 transition-transform duration-500">
-                                    <AvatarFallback className="bg-slate-900 text-white font-black text-xl">
+                                    <AvatarFallback className="bg-slate-900 text-card-foreground font-black text-xl">
                                         {client.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
                                     </AvatarFallback>
                                 </Avatar>
@@ -129,19 +129,19 @@ export default function AdminClientsPage() {
                             </div>
                             <div className="space-y-4">
                                 <div className="space-y-1">
-                                    <h3 className="text-2xl font-black text-slate-900 line-clamp-1">{client.full_name}</h3>
-                                    <div className="flex items-center gap-2 text-sm font-bold text-slate-400">
+                                    <h3 className="text-2xl font-black text-foreground line-clamp-1">{client.full_name}</h3>
+                                    <div className="flex items-center gap-2 text-sm font-bold text-muted-foreground">
                                         <Mail size={14} className="text-primary" />
                                         <span className="truncate">{client.email}</span>
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-2 gap-4 pt-6 border-t border-slate-50">
                                     <div className="space-y-1">
-                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Joined</p>
-                                        <p className="text-xs font-black text-slate-900">{new Date(client.created_at).toLocaleDateString()}</p>
+                                        <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Joined</p>
+                                        <p className="text-xs font-black text-foreground">{new Date(client.created_at).toLocaleDateString()}</p>
                                     </div>
                                     <div className="text-right">
-                                        <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-slate-50 text-slate-300 group-hover:bg-slate-900 group-hover:text-white transition-all">
+                                        <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-muted text-slate-300 group-hover:bg-slate-900 group-hover:text-white transition-all">
                                             <ChevronRight size={20} />
                                         </Button>
                                     </div>
@@ -151,7 +151,7 @@ export default function AdminClientsPage() {
                     </Card>
                 ))}
                 {filteredClients.length === 0 && (
-                    <div className="col-span-full py-24 text-center bg-white rounded-[3rem] shadow-sm">
+                    <div className="col-span-full py-24 text-center bg-card rounded-[3rem] shadow-sm">
                         <Users size={48} className="mx-auto text-slate-100 mb-4" />
                         <p className="font-black text-slate-300 uppercase tracking-widest text-xs">No partners identified</p>
                     </div>
@@ -170,15 +170,15 @@ function ClientKPI({ title, value, icon: Icon, color, trend }: { title: string; 
         indigo: "bg-indigo-50 text-indigo-600 shadow-indigo-100/50",
     };
     return (
-        <Card className="rounded-[2.5rem] border-none shadow-sm bg-white p-8 group hover:shadow-xl transition-all duration-500">
+        <Card className="rounded-[2.5rem] border-none shadow-sm bg-card p-8 group hover:shadow-xl transition-all duration-500">
             <div className="flex items-center justify-between mb-4">
                 <div className={cn("h-12 w-12 rounded-2xl flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform", variants[color])}>
                     <Icon size={24} strokeWidth={2.5} />
                 </div>
                 <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{trend}</span>
             </div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{title}</p>
-            <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{value}</h3>
+            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">{title}</p>
+            <h3 className="text-3xl font-black text-foreground tracking-tighter">{value}</h3>
         </Card>
     );
 }

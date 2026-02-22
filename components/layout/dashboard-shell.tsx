@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/context';
 import { Header } from './header';
 import { Sidebar } from './sidebar';
+import { MobileNav } from './mobile-nav';
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -21,7 +22,7 @@ export function DashboardShell({
 }: DashboardShellProps) {
   const router = useRouter();
   const { user, loading } = useAuth();
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true); // Default to collapsed for autohide
 
   useEffect(() => {
     if (!loading && requireAuth) {
@@ -35,34 +36,38 @@ export function DashboardShell({
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="min-h-screen flex items-center justify-center bg-muted dark:bg-black">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
-  if (requireAuth && !user) {
-    return null;
-  }
-
-  if (requireAdmin && user?.role !== 'admin') {
-    return null;
-  }
+  if (requireAuth && !user) return null;
+  if (requireAdmin && user?.role !== 'admin') return null;
 
   return (
-    <div className="min-h-screen bg-background flex font-sans text-foreground selection:bg-primary/20">
-      <Sidebar isCollapsed={isCollapsed} toggleCollapse={() => setIsCollapsed(!isCollapsed)} />
+    <div className="min-h-screen bg-muted/20 flex font-sans text-foreground selection:bg-primary/20">
+      {/* Sidebar - Desktop Only with Hover Autohide */}
+      <Sidebar
+        isCollapsed={isCollapsed}
+        toggleCollapse={() => setIsCollapsed((v) => !v)}
+      />
 
       {/* Main Container */}
       <main className={cn(
-        "flex-1 bg-card m-4 rounded-[48px] shadow-sm flex flex-col overflow-hidden border border-border relative transition-all duration-300 ease-in-out",
-        isCollapsed ? "ml-[80px]" : "ml-0 md:ml-64"
+        "flex-1 flex flex-col min-h-screen transition-all duration-300 ease-in-out",
+        "md:pl-[80px]" // Content stays at 80px offset while sidebar overlays
       )}>
         <Header />
-        <div className="flex-1 overflow-y-auto px-4 md:px-10 py-8 scrollbar-hide">
-          {children}
+        <div className="flex-1 p-4 md:p-8 overflow-y-auto pb-24 md:pb-8">
+          <div className="mx-auto max-w-7xl w-full animate-in fade-in slide-in-from-bottom-2 duration-500">
+            {children}
+          </div>
         </div>
       </main>
+
+      {/* Mobile Bottom Navigation */}
+      <MobileNav />
     </div>
   );
 }

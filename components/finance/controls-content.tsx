@@ -80,7 +80,7 @@ export function ControlsContent() {
             </div>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6">
-                <TabsList className="bg-white p-1 rounded-xl border border-slate-100 w-fit">
+                <TabsList className="bg-card p-1 rounded-xl border border-border w-fit">
                     <TabsTrigger value="approvals" className="rounded-lg data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700">
                         Approval Workflows
                     </TabsTrigger>
@@ -151,7 +151,7 @@ function ApprovalWorkflowsList() {
                 </div>
                 <Dialog open={isOpen} onOpenChange={setIsOpen}>
                     <DialogTrigger asChild>
-                        <Button className="bg-slate-900 text-white hover:bg-slate-800">
+                        <Button className="bg-slate-900 text-card-foreground hover:bg-slate-800">
                             <Plus className="mr-2 h-4 w-4" /> New Rule
                         </Button>
                     </DialogTrigger>
@@ -218,7 +218,7 @@ function ApprovalWorkflowsList() {
                         ))}
                         {workflows.length === 0 && (
                             <TableRow>
-                                <TableCell colSpan={4} className="text-center text-slate-500 h-24">
+                                <TableCell colSpan={4} className="text-center text-muted-foreground h-24">
                                     No approval rules defined. All transactions will auto-approve if logic allows.
                                 </TableCell>
                             </TableRow>
@@ -284,7 +284,7 @@ function BudgetControlsList() {
                 </div>
                 <Dialog open={isOpen} onOpenChange={setIsOpen}>
                     <DialogTrigger asChild>
-                        <Button className="bg-slate-900 text-white hover:bg-slate-800">
+                        <Button className="bg-slate-900 text-card-foreground hover:bg-slate-800">
                             <Plus className="mr-2 h-4 w-4" /> Set Budget
                         </Button>
                     </DialogTrigger>
@@ -357,7 +357,7 @@ function BudgetControlsList() {
                     <TableBody>
                         {controls.map((c: any) => (
                             <TableRow key={c.id}>
-                                <TableCell className="font-bold">{c.account?.name} <span className="text-xs text-slate-400 font-normal">({c.account?.code})</span></TableCell>
+                                <TableCell className="font-bold">{c.account?.name} <span className="text-xs text-muted-foreground font-normal">({c.account?.code})</span></TableCell>
                                 <TableCell className="capitalize">{c.period}</TableCell>
                                 <TableCell>${Number(c.limit_amount).toLocaleString()}</TableCell>
                                 <TableCell>
@@ -367,16 +367,16 @@ function BudgetControlsList() {
                                 </TableCell>
                                 <TableCell>
                                     {/* Placeholder for actual usage calc */}
-                                    <div className="w-24 h-2 bg-slate-100 rounded-full overflow-hidden">
+                                    <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
                                         <div className="h-full bg-emerald-500 w-[0%]" />
                                     </div>
-                                    <span className="text-xs text-slate-400">0% Used</span>
+                                    <span className="text-xs text-muted-foreground">0% Used</span>
                                 </TableCell>
                             </TableRow>
                         ))}
                         {controls.length === 0 && (
                             <TableRow>
-                                <TableCell colSpan={5} className="text-center text-slate-500 h-24">
+                                <TableCell colSpan={5} className="text-center text-muted-foreground h-24">
                                     No budget limits set.
                                 </TableCell>
                             </TableRow>

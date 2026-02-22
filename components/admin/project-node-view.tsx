@@ -61,37 +61,37 @@ export function ProjectNodeView({ project, onRefresh }: { project: Project, onRe
     <div className="min-h-screen w-full bg-[#f1f5f9]/50 rounded-[2.5rem] border border-slate-200/60 overflow-hidden flex flex-col shadow-2xl shadow-slate-200/50">
       
       {/* 1. GLOBAL COMMAND STRIP */}
-      <header className="bg-white border-b border-slate-200 px-10 py-6 sticky top-0 z-20">
+      <header className="bg-card border-b border-border px-10 py-6 sticky top-0 z-20">
         <div className="max-w-[1600px] mx-auto flex flex-col xl:flex-row justify-between items-start xl:items-center gap-8">
           <div className="flex items-center gap-6">
             <div className="h-14 w-14 rounded-2xl bg-slate-900 flex items-center justify-center shadow-xl shadow-slate-200 ring-4 ring-slate-50">
-              <Briefcase className="h-7 w-7 text-white" />
+              <Briefcase className="h-7 w-7 text-card-foreground" />
             </div>
             <div className="space-y-1">
               <div className="flex items-center gap-3">
                 <Badge className="bg-blue-50 text-blue-600 border-blue-100 font-black text-[9px] uppercase tracking-widest px-2 py-0.5 rounded-md">
                   {businessType} OPERATION
                 </Badge>
-                <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
+                <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-tighter">
                     <Activity size={12} className="text-emerald-500" />
                     Live System Sync
                 </div>
               </div>
-              <h1 className="text-3xl font-black text-slate-900 tracking-tight leading-none">{project.title}</h1>
+              <h1 className="text-3xl font-black text-foreground tracking-tight leading-none">{project.title}</h1>
             </div>
           </div>
 
           <div className="flex items-center gap-4 flex-wrap">
             <KPIItem label="Health Score" value="94/100" trend="Stable" icon={Zap} color="text-amber-500" />
-            <div className="h-10 w-[1px] bg-slate-100 hidden md:block" />
+            <div className="h-10 w-[1px] bg-muted hidden md:block" />
             <KPIItem label="Budget" value={`$${(Number(project.estimated_cost)/1000).toFixed(1)}k`} trend="-2.4%" icon={DollarSign} color="text-emerald-500" />
-            <div className="h-10 w-[1px] bg-slate-100 hidden md:block" />
+            <div className="h-10 w-[1px] bg-muted hidden md:block" />
             <KPIItem label="Completion" value="78.2%" trend="+5.0%" icon={Target} color="text-blue-500" />
             <div className="flex gap-2 ml-4">
                 <Button variant="outline" className="rounded-xl border-2 font-bold h-12 px-4 hover:bg-slate-50">
-                    <Share2 size={18} className="text-slate-400" />
+                    <Share2 size={18} className="text-muted-foreground" />
                 </Button>
-                <Button className="rounded-xl font-black h-12 px-8 bg-slate-900 hover:bg-slate-800 text-white shadow-lg shadow-slate-200">
+                <Button className="rounded-xl font-black h-12 px-8 bg-slate-900 hover:bg-slate-800 text-card-foreground shadow-lg shadow-slate-200">
                     Generate Report
                 </Button>
             </div>
@@ -122,7 +122,7 @@ export function ProjectNodeView({ project, onRefresh }: { project: Project, onRe
                     </TabsTrigger>
                 </TabsList>
                 <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="sm" className="rounded-lg font-bold text-slate-400 hover:text-slate-900">
+                    <Button variant="ghost" size="sm" className="rounded-lg font-bold text-muted-foreground hover:text-slate-900">
                         <Filter size={14} className="mr-2" /> Filters
                     </Button>
                 </div>
@@ -139,13 +139,13 @@ export function ProjectNodeView({ project, onRefresh }: { project: Project, onRe
                     {/* PERFORMANCE TAB */}
                     <TabsContent value="performance" className="m-0 space-y-8">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                            <Card className="md:col-span-2 rounded-[2.5rem] border-none shadow-sm bg-white p-8">
+                            <Card className="md:col-span-2 rounded-[2.5rem] border-none shadow-sm bg-card p-8">
                                 <div className="flex items-center justify-between mb-8">
                                     <div>
-                                        <CardTitle className="text-xl font-black text-slate-900">Velocity Tracking</CardTitle>
-                                        <CardDescription className="font-bold text-slate-400">Project productivity vs budget expenditure</CardDescription>
+                                        <CardTitle className="text-xl font-black text-foreground">Velocity Tracking</CardTitle>
+                                        <CardDescription className="font-bold text-muted-foreground">Project productivity vs budget expenditure</CardDescription>
                                     </div>
-                                    <Badge className="bg-primary text-white border-none font-black text-[10px] px-3">REAL-TIME</Badge>
+                                    <Badge className="bg-primary text-card-foreground border-none font-black text-[10px] px-3">REAL-TIME</Badge>
                                 </div>
                                 <div className="h-[350px] w-full">
                                     <ResponsiveContainer width="100%" height="100%">
@@ -170,14 +170,14 @@ export function ProjectNodeView({ project, onRefresh }: { project: Project, onRe
                                 </div>
                             </Card>
 
-                            <Card className="rounded-[2.5rem] border-none shadow-sm bg-slate-900 text-white p-8 flex flex-col justify-between">
+                            <Card className="rounded-[2.5rem] border-none shadow-sm bg-slate-900 text-card-foreground p-8 flex flex-col justify-between">
                                 <div className="space-y-2">
                                     <h3 className="text-lg font-black uppercase tracking-widest text-primary">Mission Progress</h3>
-                                    <p className="text-sm text-slate-400 font-medium leading-relaxed">Phase 3: Operational Scaling is currently 85% complete with minor friction in logistics.</p>
+                                    <p className="text-sm text-muted-foreground font-medium leading-relaxed">Phase 3: Operational Scaling is currently 85% complete with minor friction in logistics.</p>
                                 </div>
                                 <div className="py-8">
                                     <div className="flex justify-between items-end mb-3">
-                                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Current Lifecycle</span>
+                                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Current Lifecycle</span>
                                         <span className="text-2xl font-black">78%</span>
                                     </div>
                                     <div className="h-3 w-full bg-white/5 rounded-full overflow-hidden">
@@ -189,7 +189,7 @@ export function ProjectNodeView({ project, onRefresh }: { project: Project, onRe
                                         />
                                     </div>
                                 </div>
-                                <Button className="w-full rounded-2xl h-14 bg-white text-slate-900 font-black uppercase tracking-widest text-xs hover:bg-slate-100">
+                                <Button className="w-full rounded-2xl h-14 bg-card text-foreground font-black uppercase tracking-widest text-xs hover:bg-slate-100">
                                     Optimize Workflow
                                 </Button>
                             </Card>
@@ -205,12 +205,12 @@ export function ProjectNodeView({ project, onRefresh }: { project: Project, onRe
 
                     {/* EXECUTION TAB */}
                     <TabsContent value="execution" className="m-0">
-                        <Card className="rounded-[2.5rem] border-none shadow-sm bg-white overflow-hidden">
-                            <CardHeader className="p-8 border-b border-slate-100 bg-slate-50/30">
+                        <Card className="rounded-[2.5rem] border-none shadow-sm bg-card overflow-hidden">
+                            <CardHeader className="p-8 border-b border-border bg-slate-50/30">
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <CardTitle className="text-xl font-black">Strategic Roadmap</CardTitle>
-                                        <CardDescription className="font-bold text-slate-400 uppercase tracking-tighter text-[10px]">Phase Control & Milestone Tracking</CardDescription>
+                                        <CardDescription className="font-bold text-muted-foreground uppercase tracking-tighter text-[10px]">Phase Control & Milestone Tracking</CardDescription>
                                     </div>
                                     <Button variant="outline" className="rounded-xl font-bold text-xs h-10 border-2">Full Gantt View</Button>
                                 </div>
@@ -219,11 +219,11 @@ export function ProjectNodeView({ project, onRefresh }: { project: Project, onRe
                                 <Table>
                                     <TableHeader className="bg-slate-50/50">
                                         <TableRow className="hover:bg-transparent">
-                                            <TableHead className="px-8 font-black text-[10px] uppercase tracking-widest text-slate-400">Milestone</TableHead>
-                                            <TableHead className="px-8 font-black text-[10px] uppercase tracking-widest text-slate-400">Owner</TableHead>
-                                            <TableHead className="px-8 font-black text-[10px] uppercase tracking-widest text-slate-400">Health</TableHead>
-                                            <TableHead className="px-8 font-black text-[10px] uppercase tracking-widest text-slate-400">Progress</TableHead>
-                                            <TableHead className="px-8 text-right font-black text-[10px] uppercase tracking-widest text-slate-400">Due Date</TableHead>
+                                            <TableHead className="px-8 font-black text-[10px] uppercase tracking-widest text-muted-foreground">Milestone</TableHead>
+                                            <TableHead className="px-8 font-black text-[10px] uppercase tracking-widest text-muted-foreground">Owner</TableHead>
+                                            <TableHead className="px-8 font-black text-[10px] uppercase tracking-widest text-muted-foreground">Health</TableHead>
+                                            <TableHead className="px-8 font-black text-[10px] uppercase tracking-widest text-muted-foreground">Progress</TableHead>
+                                            <TableHead className="px-8 text-right font-black text-[10px] uppercase tracking-widest text-muted-foreground">Due Date</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -248,8 +248,8 @@ export function ProjectNodeView({ project, onRefresh }: { project: Project, onRe
 
                     {/* FINANCE TAB */}
                     <TabsContent value="finance" className="m-0">
-                        <Card className="rounded-[2.5rem] border-none shadow-sm bg-white p-8">
-                            <div className="flex items-center justify-between mb-8 pb-6 border-b border-slate-100">
+                        <Card className="rounded-[2.5rem] border-none shadow-sm bg-card p-8">
+                            <div className="flex items-center justify-between mb-8 pb-6 border-b border-border">
                                 <h3 className="text-xl font-black flex items-center gap-3">
                                     <div className="h-10 w-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
                                         <DollarSign size={20} />
@@ -281,12 +281,12 @@ export function ProjectNodeView({ project, onRefresh }: { project: Project, onRe
                                                 <div className="h-3 w-3 rounded-full" style={{ backgroundColor: item.color }} />
                                                 <span className="text-sm font-black text-slate-700">{item.name}</span>
                                             </div>
-                                            <span className="text-sm font-bold text-slate-400">{item.value}%</span>
+                                            <span className="text-sm font-bold text-muted-foreground">{item.value}%</span>
                                         </div>
                                     ))}
-                                    <div className="pt-6 border-t border-slate-100">
+                                    <div className="pt-6 border-t border-border">
                                         <div className="flex justify-between items-center">
-                                            <span className="text-xs font-black uppercase tracking-widest text-slate-400">Project ROI Forecast</span>
+                                            <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">Project ROI Forecast</span>
                                             <span className="text-lg font-black text-emerald-600">+22.4%</span>
                                         </div>
                                     </div>
@@ -303,9 +303,9 @@ export function ProjectNodeView({ project, onRefresh }: { project: Project, onRe
         <aside className="col-span-12 lg:col-span-3 space-y-8">
           
           {/* Stakeholders */}
-          <Card className="rounded-[2rem] border-none shadow-sm bg-white overflow-hidden">
+          <Card className="rounded-[2rem] border-none shadow-sm bg-card overflow-hidden">
             <CardHeader className="p-6 pb-2">
-                <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                <CardTitle className="text-sm font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                     <Users size={14} className="text-primary" />
                     Key Personnel
                 </CardTitle>
@@ -318,9 +318,9 @@ export function ProjectNodeView({ project, onRefresh }: { project: Project, onRe
           </Card>
 
           {/* Activity Log */}
-          <Card className="rounded-[2rem] border-none shadow-sm bg-white overflow-hidden flex flex-col">
+          <Card className="rounded-[2rem] border-none shadow-sm bg-card overflow-hidden flex flex-col">
             <CardHeader className="p-6 pb-2">
-                <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                <CardTitle className="text-sm font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                     <Activity size={14} className="text-blue-500" />
                     Live Activity
                 </CardTitle>
@@ -338,14 +338,14 @@ export function ProjectNodeView({ project, onRefresh }: { project: Project, onRe
           </Card>
 
           {/* Quick Files */}
-          <Card className="rounded-[2.5rem] border-none shadow-sm bg-blue-600 p-8 text-white relative overflow-hidden group cursor-pointer hover:shadow-xl hover:shadow-blue-200 transition-all">
+          <Card className="rounded-[2.5rem] border-none shadow-sm bg-blue-600 p-8 text-card-foreground relative overflow-hidden group cursor-pointer hover:shadow-xl hover:shadow-blue-200 transition-all">
             <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:scale-110 transition-transform">
                 <FileText size={80} />
             </div>
             <div className="relative z-10">
                 <h4 className="font-black text-xl mb-2">Project Repository</h4>
                 <p className="text-xs font-medium text-blue-100 mb-6 opacity-80">14 Active Documents (CAD, Specs, Contracts)</p>
-                <Button className="w-full rounded-xl bg-white text-blue-600 font-black uppercase tracking-widest text-[10px] hover:bg-slate-100">
+                <Button className="w-full rounded-xl bg-card text-blue-600 font-black uppercase tracking-widest text-[10px] hover:bg-slate-100">
                     Access Vault
                 </Button>
             </div>
@@ -369,13 +369,13 @@ export function ProjectNodeView({ project, onRefresh }: { project: Project, onRe
 function KPIItem({ label, value, trend, icon: Icon, color }: any) {
     return (
         <div className="flex items-center gap-4 px-4">
-            <div className={cn("h-10 w-10 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100 shadow-sm", color)}>
+            <div className={cn("h-10 w-10 rounded-xl bg-muted flex items-center justify-center border border-border shadow-sm", color)}>
                 <Icon size={18} />
             </div>
             <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</p>
+                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{label}</p>
                 <div className="flex items-baseline gap-2">
-                    <span className="text-lg font-black text-slate-900 tracking-tighter">{value}</span>
+                    <span className="text-lg font-black text-foreground tracking-tighter">{value}</span>
                     <span className={cn("text-[9px] font-black", trend.includes('-') ? "text-rose-500" : "text-emerald-500")}>{trend}</span>
                 </div>
             </div>
@@ -391,13 +391,13 @@ function StatWidget({ label, value, sub, icon: Icon, color }: any) {
         rose: "bg-rose-50 text-rose-600 border-rose-100",
     };
     return (
-        <Card className="rounded-3xl border-none shadow-sm bg-white p-6 hover:translate-y-[-4px] transition-transform">
+        <Card className="rounded-3xl border-none shadow-sm bg-card p-6 hover:translate-y-[-4px] transition-transform">
             <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center mb-4 border", colors[color])}>
                 <Icon size={20} />
             </div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{label}</p>
-            <h4 className="text-xl font-black text-slate-900 tracking-tight">{value}</h4>
-            <p className="text-[10px] font-bold text-slate-400 mt-1">{sub}</p>
+            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">{label}</p>
+            <h4 className="text-xl font-black text-foreground tracking-tight">{value}</h4>
+            <p className="text-[10px] font-bold text-muted-foreground mt-1">{sub}</p>
         </Card>
     );
 }
@@ -411,28 +411,28 @@ function ExecutionRow({ title, owner, status, progress, date }: any) {
                         status === 'completed' ? "bg-emerald-500 shadow-[0_0_8px_#10b981]" : 
                         status === 'active' ? "bg-blue-500 shadow-[0_0_8px_#3b82f6]" : "bg-slate-200"
                     )} />
-                    <span className="text-sm font-black text-slate-900">{title}</span>
+                    <span className="text-sm font-black text-foreground">{title}</span>
                 </div>
             </TableCell>
-            <TableCell className="px-8 font-bold text-xs text-slate-500">{owner}</TableCell>
+            <TableCell className="px-8 font-bold text-xs text-muted-foreground">{owner}</TableCell>
             <TableCell className="px-8">
                 <Badge variant="outline" className={cn("rounded-lg text-[9px] font-black uppercase tracking-widest border-none px-2", 
                     status === 'completed' ? "bg-emerald-50 text-emerald-600" : 
-                    status === 'active' ? "bg-blue-50 text-blue-600" : "bg-slate-100 text-slate-400"
+                    status === 'active' ? "bg-blue-50 text-blue-600" : "bg-muted text-muted-foreground"
                 )}>
                     {status}
                 </Badge>
             </TableCell>
             <TableCell className="px-8 w-48">
                 <div className="space-y-1.5">
-                    <div className="flex justify-between text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                    <div className="flex justify-between text-[9px] font-black text-muted-foreground uppercase tracking-widest">
                         <span>Load</span>
                         <span>{progress}%</span>
                     </div>
-                    <Progress value={progress} className="h-1 bg-slate-100" />
+                    <Progress value={progress} className="h-1 bg-muted" />
                 </div>
             </TableCell>
-            <TableCell className="px-8 text-right font-black text-xs text-slate-400 uppercase">{date}</TableCell>
+            <TableCell className="px-8 text-right font-black text-xs text-muted-foreground uppercase">{date}</TableCell>
         </TableRow>
     );
 }
@@ -443,38 +443,38 @@ function ResourceModule({ title, icon: Icon, color, onClick }: any) {
         blue: "bg-blue-50 text-blue-600 shadow-blue-100",
     };
     return (
-        <Card className="rounded-[2.5rem] border-none shadow-sm bg-white p-8 group hover:shadow-xl hover:shadow-slate-200 transition-all cursor-pointer overflow-hidden relative" onClick={onClick}>
+        <Card className="rounded-[2.5rem] border-none shadow-sm bg-card p-8 group hover:shadow-xl hover:shadow-slate-200 transition-all cursor-pointer overflow-hidden relative" onClick={onClick}>
             <div className="flex items-center justify-between relative z-10">
                 <div className={cn("h-14 w-14 rounded-2xl flex items-center justify-center shadow-lg", colors[color])}>
                     <Icon size={28} />
                 </div>
-                <div className="h-10 w-10 rounded-xl bg-slate-50 flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
+                <div className="h-10 w-10 rounded-xl bg-muted flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
                     <Maximize2 size={18} />
                 </div>
             </div>
             <div className="mt-8 relative z-10">
-                <h4 className="text-2xl font-black text-slate-900 tracking-tighter">{title}</h4>
-                <p className="text-sm font-bold text-slate-400 mt-1 uppercase tracking-tight">Access complete database</p>
+                <h4 className="text-2xl font-black text-foreground tracking-tighter">{title}</h4>
+                <p className="text-sm font-bold text-muted-foreground mt-1 uppercase tracking-tight">Access complete database</p>
             </div>
             {/* Abstract Background Design */}
-            <div className="absolute -right-4 -bottom-4 h-32 w-32 bg-slate-50 rounded-full opacity-50 group-hover:scale-150 transition-transform duration-1000" />
+            <div className="absolute -right-4 -bottom-4 h-32 w-32 bg-muted rounded-full opacity-50 group-hover:scale-150 transition-transform duration-1000" />
         </Card>
     );
 }
 
 function ContactCard({ name, role, type }: any) {
     return (
-        <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 hover:bg-white hover:shadow-md border border-transparent hover:border-slate-100 transition-all cursor-pointer group">
+        <div className="flex items-center justify-between p-4 rounded-2xl bg-muted hover:bg-white hover:shadow-md border border-transparent hover:border-slate-100 transition-all cursor-pointer group">
             <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-slate-200 flex items-center justify-center font-black text-xs text-slate-500 group-hover:bg-primary group-hover:text-white transition-colors">
+                <div className="h-10 w-10 rounded-full bg-slate-200 flex items-center justify-center font-black text-xs text-muted-foreground group-hover:bg-primary group-hover:text-white transition-colors">
                     {name.split(' ').map((n:any) => n[0]).join('')}
                 </div>
                 <div>
-                    <p className="text-[11px] font-black text-slate-900">{name}</p>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase">{role}</p>
+                    <p className="text-[11px] font-black text-foreground">{name}</p>
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase">{role}</p>
                 </div>
             </div>
-            <Badge variant="outline" className="rounded-lg text-[8px] font-black uppercase tracking-widest border-slate-200 text-slate-400 px-1.5 h-5">{type}</Badge>
+            <Badge variant="outline" className="rounded-lg text-[8px] font-black uppercase tracking-widest border-border text-muted-foreground px-1.5 h-5">{type}</Badge>
         </div>
     );
 }
@@ -484,13 +484,13 @@ function ActivityItem({ user, action, time, variant }: any) {
         <div className="flex gap-4 group">
             <div className="relative">
                 <div className={cn("h-2 w-2 rounded-full mt-1.5 shrink-0 z-10 relative", variant === 'rose' ? "bg-rose-500" : "bg-blue-500")} />
-                <div className="absolute top-3 bottom-[-24px] left-[3.5px] w-[1px] bg-slate-100 last:hidden" />
+                <div className="absolute top-3 bottom-[-24px] left-[3.5px] w-[1px] bg-muted last:hidden" />
             </div>
             <div className="pb-6">
-                <p className="text-[11px] font-black text-slate-900 leading-none">
+                <p className="text-[11px] font-black text-foreground leading-none">
                     <span className="text-primary">{user}</span> {action}
                 </p>
-                <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase">{time}</p>
+                <p className="text-[10px] font-bold text-muted-foreground mt-1 uppercase">{time}</p>
             </div>
         </div>
     );

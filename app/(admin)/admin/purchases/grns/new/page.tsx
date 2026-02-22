@@ -173,17 +173,17 @@ export default function NewGRNPage() {
             <div className="flex items-center justify-between">
                 <Button 
                     variant="ghost" 
-                    className="rounded-xl font-bold text-slate-500 hover:text-slate-900"
+                    className="rounded-xl font-bold text-muted-foreground hover:text-slate-900"
                     onClick={() => router.back()}
                 >
                     <ChevronLeft className="mr-2 h-5 w-5" /> Cancel
                 </Button>
-                <h1 className="text-3xl font-black text-slate-900 tracking-tight">Receive Goods (GRN)</h1>
+                <h1 className="text-3xl font-black text-foreground tracking-tight">Receive Goods (GRN)</h1>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-8">
                 <div className="grid gap-8 md:grid-cols-2">
-                    <Card className="rounded-[2.5rem] border-none shadow-sm bg-white p-8">
+                    <Card className="rounded-[2.5rem] border-none shadow-sm bg-card p-8">
                         <CardHeader className="p-0 pb-6">
                             <CardTitle className="text-xl font-black flex items-center gap-2">
                                 <Truck size={20} className="text-primary" /> Receipt Details
@@ -191,67 +191,67 @@ export default function NewGRNPage() {
                         </CardHeader>
                         <div className="space-y-4">
                             <div className="space-y-2">
-                                <Label className="font-bold text-slate-500 ml-1">GRN Number</Label>
+                                <Label className="font-bold text-muted-foreground ml-1">GRN Number</Label>
                                 <Input 
                                     value={grnNumber}
                                     onChange={(e) => setGrnNumber(e.target.value)}
-                                    className="h-12 rounded-2xl border-2 border-slate-100 font-bold focus:border-primary outline-none"
+                                    className="h-12 rounded-2xl border-2 border-border font-bold focus:border-primary outline-none"
                                     required
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label className="font-bold text-slate-500 ml-1">Received Date</Label>
+                                <Label className="font-bold text-muted-foreground ml-1">Received Date</Label>
                                 <Input 
                                     type="date"
                                     value={receivedDate}
                                     onChange={(e) => setReceivedDate(e.target.value)}
-                                    className="h-12 rounded-2xl border-2 border-slate-100 font-bold focus:border-primary outline-none"
+                                    className="h-12 rounded-2xl border-2 border-border font-bold focus:border-primary outline-none"
                                     required
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label className="font-bold text-slate-500 ml-1">Notes</Label>
+                                <Label className="font-bold text-muted-foreground ml-1">Notes</Label>
                                 <Input 
                                     value={notes}
                                     onChange={(e) => setNotes(e.target.value)}
                                     placeholder="Carrier, tracking no, etc."
-                                    className="h-12 rounded-2xl border-2 border-slate-100 font-bold focus:border-primary outline-none"
+                                    className="h-12 rounded-2xl border-2 border-border font-bold focus:border-primary outline-none"
                                 />
                             </div>
                         </div>
                     </Card>
 
-                    <Card className="rounded-[2.5rem] border-none shadow-sm bg-white p-8">
+                    <Card className="rounded-[2.5rem] border-none shadow-sm bg-card p-8">
                         <CardHeader className="p-0 pb-6">
                             <CardTitle className="text-xl font-black flex items-center gap-2">
                                 <CheckCircle2 size={20} className="text-emerald-500" /> Source PO Info
                             </CardTitle>
                         </CardHeader>
                         <div className="space-y-4">
-                            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Purchase Order</p>
-                                <p className="text-lg font-black text-slate-900">{po?.po_number}</p>
+                            <div className="p-4 rounded-2xl bg-muted border border-border">
+                                <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1">Purchase Order</p>
+                                <p className="text-lg font-black text-foreground">{po?.po_number}</p>
                             </div>
-                            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Vendor</p>
-                                <p className="text-lg font-black text-slate-900">{po?.vendor?.name}</p>
+                            <div className="p-4 rounded-2xl bg-muted border border-border">
+                                <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1">Vendor</p>
+                                <p className="text-lg font-black text-foreground">{po?.vendor?.name}</p>
                             </div>
                         </div>
                     </Card>
                 </div>
 
-                <Card className="rounded-[2.5rem] border-none shadow-sm bg-white overflow-hidden">
+                <Card className="rounded-[2.5rem] border-none shadow-sm bg-card overflow-hidden">
                     <CardHeader className="p-8 pb-4">
                         <CardTitle className="text-2xl font-black">Items to Receive</CardTitle>
-                        <CardDescription className="font-bold text-slate-400">Match PO lines to Inventory Items and Locations</CardDescription>
+                        <CardDescription className="font-bold text-muted-foreground">Match PO lines to Inventory Items and Locations</CardDescription>
                     </CardHeader>
                     <div className="p-8 pt-4 space-y-6">
                         {lines.map((line, idx) => (
-                            <div key={idx} className="p-6 rounded-3xl bg-slate-50 border-2 border-slate-100 space-y-4">
+                            <div key={idx} className="p-6 rounded-3xl bg-muted border-2 border-border space-y-4">
                                 <div className="flex justify-between items-start">
                                     <div>
-                                        <p className="font-black text-slate-900 text-lg">{line.description}</p>
-                                        <p className="text-sm font-bold text-slate-400">Ordered: {line.quantity} units</p>
+                                        <p className="font-black text-foreground text-lg">{line.description}</p>
+                                        <p className="text-sm font-bold text-muted-foreground">Ordered: {line.quantity} units</p>
                                     </div>
                                     <div className="w-32">
                                         <Label className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Received Qty</Label>
@@ -259,7 +259,7 @@ export default function NewGRNPage() {
                                             type="number" 
                                             value={line.received_qty}
                                             onChange={(e) => updateLine(idx, 'received_qty', parseFloat(e.target.value))}
-                                            className="h-11 rounded-xl border-emerald-200 bg-white font-bold"
+                                            className="h-11 rounded-xl border-emerald-200 bg-card font-bold"
                                         />
                                     </div>
                                 </div>
@@ -267,11 +267,11 @@ export default function NewGRNPage() {
                                 {line.received_qty > 0 && (
                                     <div className="grid md:grid-cols-2 gap-4 pt-4 border-t border-slate-200/50">
                                         <div className="space-y-2">
-                                            <Label className="flex items-center gap-2 text-xs font-black text-slate-500 uppercase tracking-widest">
+                                            <Label className="flex items-center gap-2 text-xs font-black text-muted-foreground uppercase tracking-widest">
                                                 <Package size={14} /> Inventory Item (Variant)
                                             </Label>
                                             <select 
-                                                className="w-full h-11 rounded-xl border-2 border-slate-200 px-3 font-bold text-sm bg-white focus:border-primary outline-none"
+                                                className="w-full h-11 rounded-xl border-2 border-border px-3 font-bold text-sm bg-card focus:border-primary outline-none"
                                                 value={line.variant_id}
                                                 onChange={(e) => updateLine(idx, 'variant_id', e.target.value)}
                                             >
@@ -282,11 +282,11 @@ export default function NewGRNPage() {
                                             </select>
                                         </div>
                                         <div className="space-y-2">
-                                            <Label className="flex items-center gap-2 text-xs font-black text-slate-500 uppercase tracking-widest">
+                                            <Label className="flex items-center gap-2 text-xs font-black text-muted-foreground uppercase tracking-widest">
                                                 <MapPin size={14} /> Target Location
                                             </Label>
                                             <select 
-                                                className="w-full h-11 rounded-xl border-2 border-slate-200 px-3 font-bold text-sm bg-white focus:border-primary outline-none"
+                                                className="w-full h-11 rounded-xl border-2 border-border px-3 font-bold text-sm bg-card focus:border-primary outline-none"
                                                 value={line.location_id}
                                                 onChange={(e) => updateLine(idx, 'location_id', e.target.value)}
                                             >

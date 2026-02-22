@@ -157,19 +157,19 @@ export const TermHelp = ({ term }: { term: string }) => {
           <span className="sr-only">Explain {term}</span>
         </div>
       </HoverCardTrigger>
-      <HoverCardContent className="w-80 bg-white/95 backdrop-blur-sm shadow-xl border-slate-200">
+      <HoverCardContent className="w-80 bg-white/95 backdrop-blur-sm shadow-xl border-border">
         <div className="space-y-3">
           <div>
-            <h4 className="font-bold text-sm text-slate-900 flex items-center gap-2 mb-1">
+            <h4 className="font-bold text-sm text-foreground flex items-center gap-2 mb-1">
               <HelpCircle className="h-4 w-4 text-primary" /> What is it?
             </h4>
-            <p className="text-sm text-slate-600 leading-snug">{def.what}</p>
+            <p className="text-sm text-muted-foreground leading-snug">{def.what}</p>
           </div>
           <div>
-            <h4 className="font-bold text-sm text-slate-900 mb-1">Why it matters?</h4>
-            <p className="text-sm text-slate-600 leading-snug">{def.why}</p>
+            <h4 className="font-bold text-sm text-foreground mb-1">Why it matters?</h4>
+            <p className="text-sm text-muted-foreground leading-snug">{def.why}</p>
           </div>
-          <div className="bg-slate-50 p-2.5 rounded-md border border-slate-100">
+          <div className="bg-muted p-2.5 rounded-md border border-border">
             <p className="text-xs text-slate-700">
               <span className="font-semibold text-primary">Example: </span>
               {def.example}

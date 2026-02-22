@@ -66,7 +66,7 @@ export default function AdminMeetingsPage() {
       <DashboardShell requireAdmin>
         <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
           <RefreshCcw className="h-12 w-12 animate-spin text-primary" />
-          <p className="font-bold text-slate-900">Syncing Calendar...</p>
+          <p className="font-bold text-foreground">Syncing Calendar...</p>
         </div>
       </DashboardShell>
     );
@@ -77,8 +77,8 @@ export default function AdminMeetingsPage() {
       <div className="space-y-10 pb-12">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-1">
-            <h1 className="text-4xl font-black tracking-tight text-slate-900">Consultations</h1>
-            <p className="text-slate-500 font-medium">Manage project briefings and stakeholder meetings.</p>
+            <h1 className="text-4xl font-black tracking-tight text-foreground">Consultations</h1>
+            <p className="text-muted-foreground font-medium">Manage project briefings and stakeholder meetings.</p>
           </div>
         </div>
 
@@ -90,12 +90,12 @@ export default function AdminMeetingsPage() {
 
         <div className="space-y-6">
             <div className="flex items-center justify-between ml-2">
-                <h2 className="text-2xl font-black text-slate-900">Itinerary</h2>
+                <h2 className="text-2xl font-black text-foreground">Itinerary</h2>
                 <div className="relative">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input 
                         placeholder="Search purpose or client..." 
-                        className="pl-10 rounded-2xl border-none bg-white shadow-sm w-[350px] h-11 font-medium"
+                        className="pl-10 rounded-2xl border-none bg-card shadow-sm w-[350px] h-11 font-medium"
                         value={searchQuery}
                         onChange={e => setSearchQuery(e.target.value)}
                     />
@@ -107,7 +107,7 @@ export default function AdminMeetingsPage() {
                     <MeetingVisualCard key={m.id} meeting={m} client={users.find(u => u.id === m.client_id)} onClick={() => router.push(`/admin/meetings/${m.id}`)} />
                 ))}
                 {filteredMeetings.length === 0 && (
-                    <div className="col-span-full py-24 text-center bg-white rounded-[3rem] shadow-sm">
+                    <div className="col-span-full py-24 text-center bg-card rounded-[3rem] shadow-sm">
                         <Calendar size={48} className="mx-auto text-slate-100 mb-4" />
                         <p className="font-black text-slate-300 uppercase tracking-widest text-xs">No meetings scheduled</p>
                     </div>
@@ -123,27 +123,27 @@ function MeetingKPI({ title, value, icon: Icon, color }: { title: string; value:
     const variants: Record<string, string> = {
         blue: "bg-blue-50 text-blue-600 shadow-blue-100/50",
         amber: "bg-amber-50 text-amber-600 shadow-amber-100/50",
-        slate: "bg-slate-50 text-slate-600 shadow-slate-100/50",
+        slate: "bg-muted text-muted-foreground shadow-slate-100/50",
     };
     return (
-        <Card className="rounded-[2.5rem] border-none shadow-sm bg-white p-8 group hover:shadow-xl transition-all duration-500">
+        <Card className="rounded-[2.5rem] border-none shadow-sm bg-card p-8 group hover:shadow-xl transition-all duration-500">
             <div className="flex items-center justify-between mb-4">
                 <div className={cn("h-12 w-12 rounded-2xl flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform", variants[color])}>
                     <Icon size={24} strokeWidth={2.5} />
                 </div>
             </div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{title}</p>
-            <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{value}</h3>
+            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{title}</p>
+            <h3 className="text-3xl font-black text-foreground tracking-tighter">{value}</h3>
         </Card>
     );
 }
 
 function MeetingVisualCard({ meeting, client, onClick }: { meeting: MeetingRequest; client?: User; onClick: () => void }) {
     return (
-        <Card onClick={onClick} className="rounded-[3rem] border-none shadow-sm bg-white overflow-hidden group hover:shadow-2xl transition-all duration-500 cursor-pointer">
+        <Card onClick={onClick} className="rounded-[3rem] border-none shadow-sm bg-card overflow-hidden group hover:shadow-2xl transition-all duration-500 cursor-pointer">
             <CardHeader className="p-10 pb-6">
                 <div className="flex items-start justify-between mb-6">
-                    <div className="h-16 w-16 rounded-[1.5rem] bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-slate-900 group-hover:text-white transition-all duration-500 shadow-inner">
+                    <div className="h-16 w-16 rounded-[1.5rem] bg-muted flex items-center justify-center text-slate-300 group-hover:bg-slate-900 group-hover:text-white transition-all duration-500 shadow-inner">
                         <Video size={32} />
                     </div>
                     <Badge className={cn(
@@ -154,7 +154,7 @@ function MeetingVisualCard({ meeting, client, onClick }: { meeting: MeetingReque
                     </Badge>
                 </div>
                 <div className="space-y-2">
-                    <h3 className="text-2xl font-black text-slate-900 line-clamp-1 group-hover:text-primary transition-colors">{meeting.purpose}</h3>
+                    <h3 className="text-2xl font-black text-foreground line-clamp-1 group-hover:text-primary transition-colors">{meeting.purpose}</h3>
                     <p className="text-sm font-bold text-primary flex items-center gap-2 uppercase tracking-widest">
                         <UserIcon size={12} />
                         {client?.full_name || 'Anonymous Client'}
@@ -164,18 +164,18 @@ function MeetingVisualCard({ meeting, client, onClick }: { meeting: MeetingReque
             <CardContent className="p-10 pt-0 space-y-8">
                 <div className="flex items-center gap-6">
                     <div className="space-y-1">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</p>
-                        <p className="text-sm font-black text-slate-900">{new Date(meeting.requested_date).toLocaleDateString()}</p>
+                        <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Date</p>
+                        <p className="text-sm font-black text-foreground">{new Date(meeting.requested_date).toLocaleDateString()}</p>
                     </div>
                     <div className="space-y-1">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Time</p>
-                        <p className="text-sm font-black text-slate-900">{new Date(meeting.requested_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                        <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Time</p>
+                        <p className="text-sm font-black text-foreground">{new Date(meeting.requested_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                     </div>
                 </div>
                 <div className="flex items-center justify-between pt-6 border-t border-slate-50">
                     <div className="flex items-center gap-2">
                         <Clock size={14} className="text-slate-300" />
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{meeting.duration_minutes} Minute Session</span>
+                        <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{meeting.duration_minutes} Minute Session</span>
                     </div>
                     <ChevronRight className="h-6 w-6 text-slate-300 group-hover:text-slate-900 transition-transform group-hover:translate-x-1" />
                 </div>

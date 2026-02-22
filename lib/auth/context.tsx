@@ -16,29 +16,28 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// ==========================================
+// MOCK AUTH PROVIDER (Disconnected)
+// Always provides a system admin session
+// ==========================================
+
+const MOCK_ADMIN: User = {
+    id: 'u1',
+    email: 'admin@example.com',
+    full_name: 'System Admin',
+    role: 'admin',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+};
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(MOCK_ADMIN); // Default to logged in
+  const [loading, setLoading] = useState(false); // No loading delay for mockup
   const router = useRouter();
 
   const fetchUser = async () => {
-    try {
-      const res = await fetch('/api/auth/me');
-      const data = await res.json();
-      if (data.user) {
-        // Adapt Prisma Date objects to string if needed, or ensure types match
-        // Prisma returns Date objects for created_at, but our types expect strings usually.
-        // Assuming API returns JSON strings for dates.
-        setUser(data.user);
-      } else {
-        setUser(null);
-      }
-    } catch (error) {
-      console.error('Failed to fetch user', error);
-      setUser(null);
-    } finally {
-      setLoading(false);
-    }
+    // Simply keep the mock user
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -46,59 +45,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Login failed');
-      }
-
-      setUser(data.user);
-      return { error: null };
-    } catch (error) {
-      return { error: error as Error };
-    }
+    console.log('[Mock Auth] Sign In:', email);
+    setUser(MOCK_ADMIN);
+    return { error: null };
   };
 
   const signUp = async (email: string, password: string, fullName: string) => {
-    try {
-      const res = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, full_name: fullName }),
-      });
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Registration failed');
-      }
-
-      setUser(data.user);
-      return { error: null };
-    } catch (error) {
-      return { error: error as Error };
-    }
+    console.log('[Mock Auth] Sign Up:', fullName);
+    setUser({ ...MOCK_ADMIN, full_name: fullName, email });
+    return { error: null };
   };
 
   const signOut = async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' });
-      setUser(null);
-      router.push('/login');
-    } catch (error) {
-      console.error('Logout error', error);
-    }
+    console.log('[Mock Auth] Sign Out');
+    setUser(null);
+    router.push('/login');
   };
 
   const resetPassword = async (email: string) => {
-    // Placeholder for password reset logic
-    console.log('Reset password requested for:', email);
-    return { error: new Error('Password reset is not implemented yet.'), success: false };
+    console.log('[Mock Auth] Reset Password for:', email);
+    return { error: null, success: true };
   };
 
   return (

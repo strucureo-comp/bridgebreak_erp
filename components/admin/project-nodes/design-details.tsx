@@ -34,6 +34,7 @@ export function DesignDetails({ project, onUpdate }: { project: Project, onUpdat
   });
 
   const [saving, setSaving] = useState(false);
+  const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || '/api';
   const [newDoc, setNewDoc] = useState<Partial<DesignDoc>>({
     type: 'Drawing', name: '', status: 'pending', revision: 'R0', date: new Date().toISOString().split('T')[0]
   });
@@ -169,9 +170,10 @@ export function DesignDetails({ project, onUpdate }: { project: Project, onUpdat
             };
             setDocuments((prev) => [newEntry, ...prev]);
 
-            await fetch('/api/projects/upload-files', {
+            await fetch(`${apiBase}/projects/upload-files`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
               body: JSON.stringify({
                 project_id: project.id,
                 module_type: 'design',

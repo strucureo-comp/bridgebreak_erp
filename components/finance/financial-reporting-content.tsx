@@ -172,15 +172,15 @@ function TAccountTable({
     return (
         <Card className="rounded-2xl border border-border/60 overflow-hidden shadow-sm">
             {/* Title */}
-            <div className="bg-slate-900 text-white px-8 py-5 text-center">
+            <div className="bg-slate-900 text-card-foreground px-8 py-5 text-center">
                 <h3 className="text-lg font-bold tracking-tight">{title}</h3>
-                <p className="text-xs text-slate-400 font-medium mt-1">{subtitle}</p>
+                <p className="text-xs text-muted-foreground font-medium mt-1">{subtitle}</p>
             </div>
 
             {/* Dr / Cr Labels */}
-            <div className="flex justify-between px-8 py-2 bg-slate-50 border-b border-border/40">
-                <span className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">{drLabel}</span>
-                <span className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">{crLabel}</span>
+            <div className="flex justify-between px-8 py-2 bg-muted border-b border-border/40">
+                <span className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground">{drLabel}</span>
+                <span className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground">{crLabel}</span>
             </div>
 
             {/* Table */}
@@ -201,32 +201,32 @@ function TAccountTable({
                                 <tr key={i} className="border-b border-border/20 hover:bg-slate-50/50 transition-colors">
                                     <td className={cn(
                                         "px-6 py-2.5",
-                                        dr?.isBold && "font-bold text-slate-900",
-                                        dr?.isItalic && "italic text-slate-500",
+                                        dr?.isBold && "font-bold text-foreground",
+                                        dr?.isItalic && "italic text-muted-foreground",
                                         dr?.isGroupHeader && "font-bold text-slate-800 bg-slate-50/80 text-[13px]",
-                                        !dr?.isBold && !dr?.isGroupHeader && "text-slate-600",
+                                        !dr?.isBold && !dr?.isGroupHeader && "text-muted-foreground",
                                     )} style={dr?.indent ? { paddingLeft: `${24 + (dr.indent * 16)}px` } : {}}>
                                         {dr?.label || ''}
                                     </td>
                                     <td className={cn(
                                         "px-4 py-2.5 text-right font-mono tabular-nums",
-                                        dr?.isBold ? "font-bold text-slate-900" : "text-slate-600",
+                                        dr?.isBold ? "font-bold text-foreground" : "text-muted-foreground",
                                         dr?.isGroupHeader && "font-bold"
                                     )}>
                                         {dr && dr.amount !== 0 ? fmt(dr.amount) : ''}
                                     </td>
                                     <td className={cn(
-                                        "px-6 py-2.5 border-l-2 border-slate-200",
-                                        cr?.isBold && "font-bold text-slate-900",
-                                        cr?.isItalic && "italic text-slate-500",
+                                        "px-6 py-2.5 border-l-2 border-border",
+                                        cr?.isBold && "font-bold text-foreground",
+                                        cr?.isItalic && "italic text-muted-foreground",
                                         cr?.isGroupHeader && "font-bold text-slate-800 bg-slate-50/80 text-[13px]",
-                                        !cr?.isBold && !cr?.isGroupHeader && "text-slate-600",
+                                        !cr?.isBold && !cr?.isGroupHeader && "text-muted-foreground",
                                     )} style={cr?.indent ? { paddingLeft: `${24 + (cr.indent * 16)}px` } : {}}>
                                         {cr?.label || ''}
                                     </td>
                                     <td className={cn(
                                         "px-4 py-2.5 text-right font-mono tabular-nums",
-                                        cr?.isBold ? "font-bold text-slate-900" : "text-slate-600",
+                                        cr?.isBold ? "font-bold text-foreground" : "text-muted-foreground",
                                         cr?.isGroupHeader && "font-bold"
                                     )}>
                                         {cr && cr.amount !== 0 ? fmt(cr.amount) : ''}
@@ -236,10 +236,10 @@ function TAccountTable({
                         })}
                         {/* Total Row */}
                         <tr className="border-t-[3px] border-double border-slate-400 bg-slate-100/80">
-                            <td className="px-6 py-3 text-sm font-black text-slate-900 uppercase tracking-wider"></td>
-                            <td className="px-4 py-3 text-right font-mono font-black text-slate-900 text-[15px]">{fmt(drTotal)}</td>
-                            <td className="px-6 py-3 text-sm font-black text-slate-900 uppercase tracking-wider border-l-2 border-slate-300"></td>
-                            <td className="px-4 py-3 text-right font-mono font-black text-slate-900 text-[15px]">{fmt(crTotal)}</td>
+                            <td className="px-6 py-3 text-sm font-black text-foreground uppercase tracking-wider"></td>
+                            <td className="px-4 py-3 text-right font-mono font-black text-foreground text-[15px]">{fmt(drTotal)}</td>
+                            <td className="px-6 py-3 text-sm font-black text-foreground uppercase tracking-wider border-l-2 border-slate-300"></td>
+                            <td className="px-4 py-3 text-right font-mono font-black text-foreground text-[15px]">{fmt(crTotal)}</td>
                         </tr>
                     </tbody>
                 </table>
@@ -253,7 +253,7 @@ function LoadingState() {
     return (
         <div className="flex flex-col items-center justify-center min-h-[40vh] space-y-4">
             <Loader2 className="h-10 w-10 animate-spin text-primary" />
-            <p className="font-bold text-slate-500">Generating reports...</p>
+            <p className="font-bold text-muted-foreground">Generating reports...</p>
         </div>
     );
 }
@@ -268,7 +268,7 @@ function KpiCard({ label, value, icon: Icon, trend }: {
                 <div className={cn(
                     "h-10 w-10 rounded-xl flex items-center justify-center",
                     trend === 'up' ? "bg-emerald-50 text-emerald-600" :
-                        trend === 'down' ? "bg-rose-50 text-rose-600" : "bg-slate-100 text-slate-600"
+                        trend === 'down' ? "bg-rose-50 text-rose-600" : "bg-muted text-muted-foreground"
                 )}>
                     <Icon className="h-5 w-5" />
                 </div>
@@ -276,7 +276,7 @@ function KpiCard({ label, value, icon: Icon, trend }: {
                     <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{label}</p>
                     <p className={cn(
                         "text-xl font-black tabular-nums",
-                        value >= 0 ? "text-slate-900" : "text-rose-600"
+                        value >= 0 ? "text-foreground" : "text-rose-600"
                     )}>
                         ${fmt(value)}
                     </p>
@@ -467,17 +467,17 @@ export function FinancialReportingContent() {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div className="space-y-1">
-                    <h2 className="text-2xl font-black tracking-tight text-slate-900">Financial Reports</h2>
-                    <p className="text-slate-500 font-medium flex items-center gap-2">
+                    <h2 className="text-2xl font-black tracking-tight text-foreground">Financial Reports</h2>
+                    <p className="text-muted-foreground font-medium flex items-center gap-2">
                         <Scale className="h-4 w-4 text-primary" />
                         Statutory reports with Dr / Cr classification
                     </p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button variant="outline" size="icon" className="h-10 w-10 rounded-xl border-slate-200">
+                    <Button variant="outline" size="icon" className="h-10 w-10 rounded-xl border-border">
                         <Printer className="h-4 w-4" />
                     </Button>
-                    <Button variant="outline" size="icon" className="h-10 w-10 rounded-xl border-slate-200">
+                    <Button variant="outline" size="icon" className="h-10 w-10 rounded-xl border-border">
                         <Download className="h-4 w-4" />
                     </Button>
                 </div>
@@ -485,7 +485,7 @@ export function FinancialReportingContent() {
 
             {/* Sub-tabs */}
             <Tabs defaultValue="pnl" className="space-y-8">
-                <TabsList className="bg-slate-100 p-1 rounded-2xl h-12 w-full md:w-auto inline-flex">
+                <TabsList className="bg-muted p-1 rounded-2xl h-12 w-full md:w-auto inline-flex">
                     <TabsTrigger value="pnl" className="rounded-xl h-10 px-5 font-bold text-xs data-[state=active]:bg-white data-[state=active]:shadow-sm gap-1.5">
                         <BookOpen className="h-3.5 w-3.5" /> Trading & P&L
                     </TabsTrigger>
@@ -540,8 +540,8 @@ export function FinancialReportingContent() {
                             <Card className={cn(
                                 "rounded-2xl border-none shadow-lg overflow-hidden p-6",
                                 pnl.netProfit >= 0
-                                    ? "bg-gradient-to-r from-emerald-600 to-emerald-500 text-white"
-                                    : "bg-gradient-to-r from-rose-600 to-rose-500 text-white"
+                                    ? "bg-gradient-to-r from-emerald-600 to-emerald-500 text-card-foreground"
+                                    : "bg-gradient-to-r from-rose-600 to-rose-500 text-card-foreground"
                             )}>
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-4">
@@ -597,7 +597,7 @@ export function FinancialReportingContent() {
                                     <div className="flex items-center gap-3">
                                         <Scale className={cn("h-5 w-5", bsAccountData.leftTotal === bsAccountData.rightTotal ? "text-emerald-600" : "text-amber-600")} />
                                         <div>
-                                            <p className="text-sm font-bold text-slate-900">
+                                            <p className="text-sm font-bold text-foreground">
                                                 {bsAccountData.leftTotal === bsAccountData.rightTotal
                                                     ? '✓ Balance Sheet is balanced'
                                                     : '⚠ Balance Sheet is out of balance'
@@ -633,16 +633,16 @@ export function FinancialReportingContent() {
                 <TabsContent value="tb">
                     {isLoading ? <LoadingState /> : tbData ? (
                         <Card className="rounded-2xl border border-border/60 overflow-hidden shadow-sm">
-                            <div className="bg-slate-900 text-white px-8 py-5 text-center">
+                            <div className="bg-slate-900 text-card-foreground px-8 py-5 text-center">
                                 <h3 className="text-lg font-bold tracking-tight">Trial Balance</h3>
-                                <p className="text-xs text-slate-400 font-medium mt-1">as on {dateStr}</p>
+                                <p className="text-xs text-muted-foreground font-medium mt-1">as on {dateStr}</p>
                             </div>
 
                             {/* Dr/Cr header */}
                             <div className="overflow-x-auto">
                                 <table className="w-full text-sm">
                                     <thead>
-                                        <tr className="bg-slate-50 border-b-2 border-slate-300">
+                                        <tr className="bg-muted border-b-2 border-slate-300">
                                             <th className="px-6 py-3 text-left font-bold text-slate-700">Code</th>
                                             <th className="px-6 py-3 text-left font-bold text-slate-700">Account Name</th>
                                             <th className="px-6 py-3 text-left font-bold text-slate-700">Type</th>
@@ -672,7 +672,7 @@ export function FinancialReportingContent() {
 
                                             return (
                                                 <tr key={account.id} className="hover:bg-slate-50 transition-colors">
-                                                    <td className="px-6 py-3 font-mono text-xs text-slate-400">{account.code}</td>
+                                                    <td className="px-6 py-3 font-mono text-xs text-muted-foreground">{account.code}</td>
                                                     <td className="px-6 py-3 font-semibold text-slate-700">{account.name}</td>
                                                     <td className="px-6 py-3">
                                                         <Badge variant="outline" className="rounded-full text-[10px] font-semibold capitalize">
@@ -690,7 +690,7 @@ export function FinancialReportingContent() {
                                         })}
                                     </tbody>
                                     <tfoot>
-                                        <tr className="bg-slate-100 border-t-[3px] border-double border-slate-400 font-black text-slate-900">
+                                        <tr className="bg-muted border-t-[3px] border-double border-slate-400 font-black text-foreground">
                                             <td colSpan={3} className="px-6 py-3 text-right text-xs uppercase tracking-wider">Totals</td>
                                             <td className="px-4 py-3 text-right font-mono tabular-nums text-emerald-800 bg-emerald-50/50">
                                                 {fmt(tbData.reduce((sum: number, a: Account) => {
@@ -721,9 +721,9 @@ export function FinancialReportingContent() {
                     {isLoading ? <LoadingState /> : (
                         <div className="space-y-6">
                             <Card className="rounded-2xl border border-border/60 overflow-hidden shadow-sm">
-                                <div className="bg-slate-900 text-white px-8 py-5 text-center">
+                                <div className="bg-slate-900 text-card-foreground px-8 py-5 text-center">
                                     <h3 className="text-lg font-bold tracking-tight">Cash Flow Statement</h3>
-                                    <p className="text-xs text-slate-400 font-medium mt-1">for the period ending {dateStr}</p>
+                                    <p className="text-xs text-muted-foreground font-medium mt-1">for the period ending {dateStr}</p>
                                 </div>
 
                                 <div className="p-6 space-y-1">
@@ -772,7 +772,7 @@ export function FinancialReportingContent() {
                                     <div className="border-t-[3px] border-double border-slate-400 my-4" />
 
                                     {/* Net Change */}
-                                    <div className="flex items-center justify-between p-4 bg-slate-900 text-white rounded-xl">
+                                    <div className="flex items-center justify-between p-4 bg-slate-900 text-card-foreground rounded-xl">
                                         <span className="font-bold uppercase tracking-wider text-sm">Net Change in Cash (A+B+C)</span>
                                         <span className="text-2xl font-black font-mono tabular-nums">${fmt(pnl?.netProfit || 0)}</span>
                                     </div>
@@ -806,22 +806,22 @@ function CashFlowSection({ title, items, total }: {
                         className={cn(
                             "flex items-center justify-between py-1.5 px-3 rounded-lg",
                             item.isGroupHeader && "mt-2",
-                            item.isBold && "bg-slate-50"
+                            item.isBold && "bg-muted"
                         )}
                         style={{ paddingLeft: `${12 + (item.indent || 0) * 16}px` }}
                     >
                         <span className={cn(
                             "text-sm",
-                            item.isBold ? "font-bold text-slate-900" :
+                            item.isBold ? "font-bold text-foreground" :
                                 item.isGroupHeader ? "font-bold text-slate-700 text-xs uppercase tracking-wider" :
-                                    "text-slate-600"
+                                    "text-muted-foreground"
                         )}>
                             {item.label}
                         </span>
                         {!item.isGroupHeader && (
                             <span className={cn(
                                 "font-mono tabular-nums text-sm",
-                                item.isBold ? "font-bold text-slate-900" : "text-slate-600"
+                                item.isBold ? "font-bold text-foreground" : "text-muted-foreground"
                             )}>
                                 {item.amount !== 0 ? `${item.amount < 0 ? '(' : ''}$${fmt(Math.abs(item.amount))}${item.amount < 0 ? ')' : ''}` : '—'}
                             </span>
@@ -829,9 +829,9 @@ function CashFlowSection({ title, items, total }: {
                     </div>
                 ))}
             </div>
-            <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-border/40 mt-2">
-                <span className="text-sm font-bold text-slate-900">Net Cash from {title.split('. ')[1] || title}</span>
-                <span className="font-mono font-bold tabular-nums text-slate-900">${fmt(total)}</span>
+            <div className="flex items-center justify-between p-3 bg-muted rounded-xl border border-border/40 mt-2">
+                <span className="text-sm font-bold text-foreground">Net Cash from {title.split('. ')[1] || title}</span>
+                <span className="font-mono font-bold tabular-nums text-foreground">${fmt(total)}</span>
             </div>
         </div>
     );
@@ -840,9 +840,9 @@ function CashFlowSection({ title, items, total }: {
 /* ─── Empty Report ─── */
 function EmptyReport({ label }: { label: string }) {
     return (
-        <Card className="rounded-2xl border-2 border-dashed border-slate-200 p-16 text-center">
+        <Card className="rounded-2xl border-2 border-dashed border-border p-16 text-center">
             <FileText className="h-12 w-12 mx-auto mb-4 text-slate-200" />
-            <p className="font-bold text-slate-400">{label} report is empty</p>
+            <p className="font-bold text-muted-foreground">{label} report is empty</p>
             <p className="text-xs text-slate-300 mt-1">Post journal entries to generate this report</p>
         </Card>
     );

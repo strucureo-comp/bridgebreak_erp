@@ -29,6 +29,16 @@ export type AccountGroup =
   | 'Operating Expenses'
   | 'Financial Expenses';
 
+export type VoucherType = 
+  | 'PAYMENT'
+  | 'RECEIPT'
+  | 'CONTRA'
+  | 'JOURNAL'
+  | 'SALES'
+  | 'PURCHASE'
+  | 'CREDIT_NOTE'
+  | 'DEBIT_NOTE';
+
 export interface Account {
   id: string;
   name: string;
@@ -50,7 +60,10 @@ export interface Ledger {
   debit: number;
   credit: number;
   reference_id: string;
-  reference_type: 'invoice' | 'transaction' | 'manual';
+  reference_type: 'invoice' | 'transaction' | 'manual' | 'voucher';
+  voucher_type?: VoucherType;
+  cost_center_id?: string;
+  project_id?: string;
   running_balance: number;
   created_at: string;
   currency?: CurrencyCode; // Original transaction currency
@@ -59,6 +72,12 @@ export interface Ledger {
   tax_amount?: number; // Tax component
   tax_rate_id?: string; // Reference to tax rate
   entity_id?: string; // Entity/branch ID
+  
+  // PDC Fields
+  is_pdc?: boolean;
+  pdc_clearance_date?: string;
+  cheque_number?: string;
+  bank_name?: string;
 }
 
 export interface TrialBalance {
@@ -169,13 +188,20 @@ export class TallyEngine {
     date: string,
     description: string,
     reference_id: string,
-    reference_type: 'invoice' | 'transaction' | 'manual',
+    reference_type: 'invoice' | 'transaction' | 'manual' | 'voucher',
     meta?: {
       currency?: CurrencyCode;
       exchange_rate?: number;
       tax_amount?: number;
       tax_rate_id?: string;
       entity_id?: string;
+      voucher_type?: VoucherType;
+      cost_center_id?: string;
+      project_id?: string;
+      is_pdc?: boolean;
+      pdc_clearance_date?: string;
+      cheque_number?: string;
+      bank_name?: string;
     }
   ): boolean {
     if (!this.accounts.has(debit_account_id) || !this.accounts.has(credit_account_id)) {
@@ -193,6 +219,9 @@ export class TallyEngine {
       credit: 0,
       reference_id,
       reference_type,
+      voucher_type: meta?.voucher_type,
+      cost_center_id: meta?.cost_center_id,
+      project_id: meta?.project_id,
       running_balance: this.calculateAccountBalance(debit_account_id, date),
       created_at: new Date().toISOString(),
       currency: meta?.currency,
@@ -201,6 +230,10 @@ export class TallyEngine {
       tax_amount: meta?.tax_amount,
       tax_rate_id: meta?.tax_rate_id,
       entity_id: meta?.entity_id,
+      is_pdc: meta?.is_pdc,
+      pdc_clearance_date: meta?.pdc_clearance_date,
+      cheque_number: meta?.cheque_number,
+      bank_name: meta?.bank_name,
     });
 
     // Credit entry
@@ -212,6 +245,9 @@ export class TallyEngine {
       credit: baseAmount,
       reference_id,
       reference_type,
+      voucher_type: meta?.voucher_type,
+      cost_center_id: meta?.cost_center_id,
+      project_id: meta?.project_id,
       running_balance: this.calculateAccountBalance(credit_account_id, date),
       created_at: new Date().toISOString(),
       currency: meta?.currency,
@@ -220,10 +256,104 @@ export class TallyEngine {
       tax_amount: meta?.tax_amount,
       tax_rate_id: meta?.tax_rate_id,
       entity_id: meta?.entity_id,
+      is_pdc: meta?.is_pdc,
+      pdc_clearance_date: meta?.pdc_clearance_date,
+      cheque_number: meta?.cheque_number,
+      bank_name: meta?.bank_name,
     });
 
     this.clearCache();
     return true;
+  }
+
+  /**
+   * Record a payment (Credit to bank/cash, Debit to expense or liability)
+   */
+  recordPayment(
+    amount: number,
+    date: string,
+    description: string,
+    reference_id: string,
+    debit_account_id: string,
+    credit_account_id: string = 'acc_bank',
+    meta?: {
+      currency?: CurrencyCode;
+      exchange_rate?: number;
+      tax_amount?: number;
+      tax_rate_id?: string;
+      entity_id?: string;
+      cost_center_id?: string;
+      project_id?: string;
+    }
+  ): boolean {
+    return this.recordTransaction(
+      debit_account_id,
+      credit_account_id,
+      amount,
+      date,
+      description,
+      reference_id,
+      'voucher',
+      { ...meta, voucher_type: 'PAYMENT' }
+    );
+  }
+
+  /**
+   * Record a receipt (Debit to bank/cash, Credit to income or asset)
+   */
+  recordReceipt(
+    amount: number,
+    date: string,
+    description: string,
+    reference_id: string,
+    credit_account_id: string,
+    debit_account_id: string = 'acc_bank',
+    meta?: {
+      currency?: CurrencyCode;
+      exchange_rate?: number;
+      tax_amount?: number;
+      tax_rate_id?: string;
+      entity_id?: string;
+      cost_center_id?: string;
+      project_id?: string;
+    }
+  ): boolean {
+    return this.recordTransaction(
+      debit_account_id,
+      credit_account_id,
+      amount,
+      date,
+      description,
+      reference_id,
+      'voucher',
+      { ...meta, voucher_type: 'RECEIPT' }
+    );
+  }
+
+  /**
+   * Record a contra entry (Transfer between bank and cash)
+   */
+  recordContra(
+    amount: number,
+    date: string,
+    description: string,
+    reference_id: string,
+    debit_account_id: string,
+    credit_account_id: string,
+    meta?: {
+      entity_id?: string;
+    }
+  ): boolean {
+    return this.recordTransaction(
+      debit_account_id,
+      credit_account_id,
+      amount,
+      date,
+      description,
+      reference_id,
+      'voucher',
+      { ...meta, voucher_type: 'CONTRA' }
+    );
   }
 
   /**
@@ -241,6 +371,8 @@ export class TallyEngine {
       tax_amount?: number;
       tax_rate_id?: string;
       entity_id?: string;
+      cost_center_id?: string;
+      project_id?: string;
     }
   ): boolean {
     return this.recordTransaction(
@@ -250,8 +382,8 @@ export class TallyEngine {
       date,
       description,
       reference_id,
-      'transaction',
-      meta
+      'voucher',
+      { ...meta, voucher_type: 'SALES' }
     );
   }
 
@@ -270,6 +402,8 @@ export class TallyEngine {
       tax_amount?: number;
       tax_rate_id?: string;
       entity_id?: string;
+      cost_center_id?: string;
+      project_id?: string;
     }
   ): boolean {
     return this.recordTransaction(
@@ -279,8 +413,8 @@ export class TallyEngine {
       date,
       description,
       reference_id,
-      'transaction',
-      meta
+      'voucher',
+      { ...meta, voucher_type: 'PURCHASE' }
     );
   }
 

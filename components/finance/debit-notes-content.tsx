@@ -301,8 +301,8 @@ export function DebitNotesContent() {
                     <CardContent className="p-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-slate-500 font-medium">Total Debit Notes</p>
-                                <p className="text-2xl font-bold text-slate-900 mt-1">
+                                <p className="text-sm text-muted-foreground font-medium">Total Debit Notes</p>
+                                <p className="text-2xl font-bold text-foreground mt-1">
                                     ${stats.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                 </p>
                             </div>
@@ -316,8 +316,8 @@ export function DebitNotesContent() {
                     <CardContent className="p-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-slate-500 font-medium">Posted</p>
-                                <p className="text-2xl font-bold text-slate-900 mt-1">{stats.posted}</p>
+                                <p className="text-sm text-muted-foreground font-medium">Posted</p>
+                                <p className="text-2xl font-bold text-foreground mt-1">{stats.posted}</p>
                             </div>
                             <div className="p-3 bg-blue-100 rounded-xl">
                                 <CheckCircle2 className="w-6 h-6 text-blue-600" />
@@ -329,8 +329,8 @@ export function DebitNotesContent() {
                     <CardContent className="p-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-slate-500 font-medium">Draft</p>
-                                <p className="text-2xl font-bold text-slate-900 mt-1">{stats.draft}</p>
+                                <p className="text-sm text-muted-foreground font-medium">Draft</p>
+                                <p className="text-2xl font-bold text-foreground mt-1">{stats.draft}</p>
                             </div>
                             <div className="p-3 bg-amber-100 rounded-xl">
                                 <FileText className="w-6 h-6 text-amber-600" />
@@ -342,8 +342,8 @@ export function DebitNotesContent() {
                     <CardContent className="p-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-slate-500 font-medium">Applied</p>
-                                <p className="text-2xl font-bold text-slate-900 mt-1">{stats.applied}</p>
+                                <p className="text-sm text-muted-foreground font-medium">Applied</p>
+                                <p className="text-2xl font-bold text-foreground mt-1">{stats.applied}</p>
                             </div>
                             <div className="p-3 bg-purple-100 rounded-xl">
                                 <ArrowLeftRight className="w-6 h-6 text-purple-600" />
@@ -358,8 +358,8 @@ export function DebitNotesContent() {
                 <CardHeader className="pb-4">
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                         <div>
-                            <CardTitle className="text-2xl font-bold text-slate-900">Debit Notes</CardTitle>
-                            <p className="text-slate-500 mt-1">Manage vendor returns and chargebacks</p>
+                            <CardTitle className="text-2xl font-bold text-foreground">Debit Notes</CardTitle>
+                            <p className="text-muted-foreground mt-1">Manage vendor returns and chargebacks</p>
                         </div>
                         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
                             <DialogTrigger asChild>
@@ -514,11 +514,11 @@ export function DebitNotesContent() {
                                     {/* Totals */}
                                     <div className="space-y-2 text-right">
                                         <div className="flex justify-between text-sm">
-                                            <span className="text-slate-500">Subtotal:</span>
+                                            <span className="text-muted-foreground">Subtotal:</span>
                                             <span className="font-medium">${totals.subtotal.toFixed(2)}</span>
                                         </div>
                                         <div className="flex justify-between text-sm">
-                                            <span className="text-slate-500">Tax:</span>
+                                            <span className="text-muted-foreground">Tax:</span>
                                             <span className="font-medium">${totals.totalTax.toFixed(2)}</span>
                                         </div>
                                         <div className="flex justify-between text-lg font-bold">
@@ -547,7 +547,7 @@ export function DebitNotesContent() {
                 </CardHeader>
                 <CardContent>
                     <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-                        <TabsList className="rounded-xl bg-slate-100 p-1">
+                        <TabsList className="rounded-xl bg-muted p-1">
                             <TabsTrigger value="all" className="rounded-lg">All</TabsTrigger>
                             <TabsTrigger value="draft" className="rounded-lg">Draft</TabsTrigger>
                             <TabsTrigger value="posted" className="rounded-lg">Posted</TabsTrigger>
@@ -556,7 +556,7 @@ export function DebitNotesContent() {
 
                         <div className="border rounded-2xl overflow-hidden">
                             <Table>
-                                <TableHeader className="bg-slate-50">
+                                <TableHeader className="bg-muted">
                                     <TableRow>
                                         <TableHead className="font-semibold">Debit Note #</TableHead>
                                         <TableHead className="font-semibold">Vendor</TableHead>
@@ -570,11 +570,11 @@ export function DebitNotesContent() {
                                 <TableBody>
                                     {loading ? (
                                         <TableRow>
-                                            <TableCell colSpan={7} className="text-center py-8 text-slate-500">Loading...</TableCell>
+                                            <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Loading...</TableCell>
                                         </TableRow>
                                     ) : filteredNotes.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={7} className="text-center py-8 text-slate-500">No debit notes found</TableCell>
+                                            <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No debit notes found</TableCell>
                                         </TableRow>
                                     ) : (
                                         filteredNotes.map((note) => (

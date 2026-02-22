@@ -5,36 +5,19 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getQuotes, createSalesOrder, getPriceLists, createPriceList } from "@/lib/api";
 import { format } from "date-fns";
-import { CheckCircle, FileText, ArrowRight, Tag, Plus } from "lucide-react";
+import { CheckCircle, FileText, ArrowRight, Tag, Plus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 
-export function SalesContent() {
-    return (
-        <Tabs defaultValue="quotes" className="space-y-4">
-            <TabsList>
-                <TabsTrigger value="quotes">Quotes & Orders</TabsTrigger>
-                <TabsTrigger value="pricelists">Price Lists</TabsTrigger>
-            </TabsList>
-            <TabsContent value="quotes">
-                <QuotesContent />
-            </TabsContent>
-            <TabsContent value="pricelists">
-                <PriceListContent />
-            </TabsContent>
-        </Tabs>
-    );
-}
-
-function QuotesContent() {
+export function QuotesList() {
     const [quotes, setQuotes] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const router = useRouter();
 
     useEffect(() => {
         loadQuotes();
@@ -61,16 +44,26 @@ function QuotesContent() {
                 lines: quote.lines
             });
             toast.success("Quote converted to Sales Order");
-            loadQuotes(); // Refresh to see updated status
+            loadQuotes();
         } catch (error) {
             toast.error("Failed to convert quote");
         }
     }
 
-    if (isLoading) return <div>Loading sales data...</div>;
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+        );
+    }
+
+    const activeQuotes = quotes.filter(q => q.status === 'draft' || q.status === 'sent');
+    const convertedQuotes = quotes.filter(q => q.status === 'converted');
 
     return (
         <div className="space-y-6">
+            {/* Stats */}
             <div className="grid gap-4 md:grid-cols-3">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -78,26 +71,44 @@ function QuotesContent() {
                         <FileText className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{quotes.filter(q => q.status === 'draft' || q.status === 'sent').length}</div>
+                        <div className="text-2xl font-bold">{activeQuotes.length}</div>
                         <p className="text-xs text-muted-foreground">Waiting for acceptance</p>
                     </CardContent>
                 </Card>
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Converted Orders</CardTitle>
+                        <CardTitle className="text-sm font-medium">Converted</CardTitle>
                         <CheckCircle className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{quotes.filter(q => q.status === 'converted').length}</div>
-                        <p className="text-xs text-muted-foreground">Successfully closed</p>
+                        <div className="text-2xl font-bold">{convertedQuotes.length}</div>
+                        <p className="text-xs text-muted-foreground">To sales orders</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Total Value</CardTitle>
+                        <Tag className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">
+                            ${quotes.reduce((sum, q) => sum + Number(q.total_amount || 0), 0).toLocaleString()}
+                        </div>
+                        <p className="text-xs text-muted-foreground">All quotes</p>
                     </CardContent>
                 </Card>
             </div>
 
+            {/* Quotes Table */}
             <Card>
-                <CardHeader>
-                    <CardTitle>Recent Quotes</CardTitle>
-                    <CardDescription>Manage customer estimates and convert to orders</CardDescription>
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                        <CardTitle>Quotes</CardTitle>
+                        <CardDescription>Manage customer estimates and convert to orders</CardDescription>
+                    </div>
+                    <Button onClick={() => router.push('/admin/quotations/new')}>
+                        <Plus className="h-4 w-4 mr-2" /> New Quote
+                    </Button>
                 </CardHeader>
                 <CardContent>
                     <Table>
@@ -132,12 +143,19 @@ function QuotesContent() {
                                                 variant="secondary"
                                                 onClick={() => handleConvertToOrder(quote)}
                                             >
-                                                Convert to Order <ArrowRight className="ml-2 h-3 w-3" />
+                                                Convert <ArrowRight className="ml-2 h-3 w-3" />
                                             </Button>
                                         )}
                                     </TableCell>
                                 </TableRow>
                             ))}
+                            {quotes.length === 0 && (
+                                <TableRow>
+                                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                                        No quotes found. Create your first quote to get started.
+                                    </TableCell>
+                                </TableRow>
+                            )}
                         </TableBody>
                     </Table>
                 </CardContent>
@@ -146,16 +164,22 @@ function QuotesContent() {
     );
 }
 
-function PriceListContent() {
+export function PriceListsContent() {
     const [lists, setLists] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [newName, setNewName] = useState("");
 
     useEffect(() => { loadLists(); }, []);
 
     async function loadLists() {
-        const data = await getPriceLists();
-        setLists(data || []);
+        try {
+            setIsLoading(true);
+            const data = await getPriceLists();
+            setLists(data || []);
+        } finally {
+            setIsLoading(false);
+        }
     }
 
     async function handleCreate() {
@@ -169,22 +193,42 @@ function PriceListContent() {
         } catch (e) { toast.error("Failed to create price list"); }
     }
 
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+        );
+    }
+
     return (
         <Card>
             <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                     <CardTitle>Price Lists</CardTitle>
-                    <CardDescription>Manage standard, VIP, and wholesale pricing strategies.</CardDescription>
+                    <CardDescription>Manage standard, VIP, and wholesale pricing strategies</CardDescription>
                 </div>
                 <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-                    <DialogTrigger asChild><Button><Plus className="mr-2 h-4 w-4" /> New Price List</Button></DialogTrigger>
+                    <DialogTrigger asChild>
+                        <Button><Plus className="mr-2 h-4 w-4" /> New Price List</Button>
+                    </DialogTrigger>
                     <DialogContent>
-                        <DialogHeader><DialogTitle>Create Price List</DialogTitle></DialogHeader>
+                        <DialogHeader>
+                            <DialogTitle>Create Price List</DialogTitle>
+                            <DialogDescription>Define a new pricing tier for your products</DialogDescription>
+                        </DialogHeader>
                         <div className="py-4">
                             <Label>Name</Label>
-                            <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="e.g. Wholesale 2025" />
+                            <Input
+                                value={newName}
+                                onChange={e => setNewName(e.target.value)}
+                                placeholder="e.g. Wholesale 2025"
+                                className="mt-1.5"
+                            />
                         </div>
-                        <DialogFooter><Button onClick={handleCreate}>Create</Button></DialogFooter>
+                        <DialogFooter>
+                            <Button onClick={handleCreate}>Create</Button>
+                        </DialogFooter>
                     </DialogContent>
                 </Dialog>
             </CardHeader>
@@ -201,15 +245,22 @@ function PriceListContent() {
                     <TableBody>
                         {lists.map((list) => (
                             <TableRow key={list.id}>
-                                <TableCell className="font-bold">{list.name}</TableCell>
+                                <TableCell className="font-medium">{list.name}</TableCell>
                                 <TableCell>{list.currency}</TableCell>
                                 <TableCell>{list.items?.length || 0} Products</TableCell>
                                 <TableCell><Badge variant="outline">Active</Badge></TableCell>
                             </TableRow>
                         ))}
+                        {lists.length === 0 && (
+                            <TableRow>
+                                <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                                    No price lists found
+                                </TableCell>
+                            </TableRow>
+                        )}
                     </TableBody>
                 </Table>
             </CardContent>
         </Card>
-    )
+    );
 }

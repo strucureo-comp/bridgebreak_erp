@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { useAuth } from '@/lib/auth/context';
+import { useTenant } from '@/lib/tenant-context';
 import {
   getProducts, createProduct,
   getInventoryTransactions
@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import {
   Package,
   Plus,
@@ -25,7 +25,12 @@ import {
   Layers,
   History,
   PieChart as PieChartIcon,
-  TrendingUp
+  TrendingUp,
+  ChevronRight,
+  Warehouse,
+  ArrowUpRight,
+  ArrowDownLeft,
+  MoveHorizontal
 } from 'lucide-react';
 import {
   PieChart,
@@ -40,50 +45,46 @@ import {
   CartesianGrid
 } from 'recharts';
 import { toast } from 'sonner';
-import type { Product, InventoryTransaction, ProductVariant } from '@/lib/db/types';
+import type { Product, InventoryTransaction } from '@/lib/db/types';
 import { cn } from '@/lib/utils';
+import { ModuleGuard } from '@/components/layout/module-guard';
 
 export default function InventoryPage() {
-  const { user } = useAuth();
+  const { getModuleLabel } = useTenant();
   const [products, setProducts] = useState<Product[]>([]);
   const [transactions, setTransactions] = useState<InventoryTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isMounted, setIsMounted] = useState(false);
-
   const [isItemOpen, setIsItemOpen] = useState(false);
 
   useEffect(() => {
-    setIsMounted(true);
-    if (user?.role === 'admin') fetchData();
-  }, [user]);
+    fetchData();
+  }, []);
 
   const fetchData = async () => {
     try {
       setLoading(true);
       const [prodData, txData] = await Promise.all([
-        getProducts(),
-        getInventoryTransactions()
+        getProducts().catch(() => []),
+        getInventoryTransactions().catch(() => [])
       ]);
-      setProducts(prodData || []);
+      setProducts((prodData as Product[]) || []);
       setTransactions(txData || []);
     } catch (error) {
       console.error('Inventory Fetch Error:', error);
+      toast.error('Failed to sync stock data');
     } finally {
       setLoading(false);
     }
   };
 
-  // Helper to calculate total stock for a product across all variants and locations
   const validProducts = useMemo(() => {
     return products.map(p => {
       const totalStock = p.variants?.reduce((sum, v) => {
         const variantStock = v.inventory?.reduce((s, i) => s + Number(i.quantity), 0) || 0;
         return sum + variantStock;
       }, 0) || 0;
-
-      const avgCost = p.variants?.[0]?.cost || 0; // Simplified
-
+      const avgCost = p.variants?.[0]?.cost || 0;
       return { ...p, totalStock, avgCost };
     });
   }, [products]);
@@ -91,7 +92,7 @@ export default function InventoryPage() {
   const stats = useMemo(() => {
     return {
       totalItems: validProducts.length,
-      lowStock: validProducts.filter(p => p.totalStock <= 5).length, // Hardcoded threshold for now
+      lowStock: validProducts.filter(p => p.totalStock <= 5).length,
       totalValue: validProducts.reduce((sum, p) => sum + (p.totalStock * p.avgCost), 0),
       movements: transactions.length
     };
@@ -106,13 +107,6 @@ export default function InventoryPage() {
     return Object.entries(cats).map(([name, value]) => ({ name, value }));
   }, [validProducts]);
 
-  const topItemsByValue = useMemo(() => {
-    return validProducts
-      .map(p => ({ name: p.name, value: p.totalStock * p.avgCost }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 5);
-  }, [validProducts]);
-
   const filteredItems = useMemo(() => {
     return validProducts.filter(p =>
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -120,16 +114,14 @@ export default function InventoryPage() {
     );
   }, [validProducts, searchQuery]);
 
-  const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
-
-  if (!isMounted) return null;
+  const CHART_COLORS = ['#ef4444', '#18181b', '#71717a', '#d4d4d8', '#f4f4f5'];
 
   if (loading) {
     return (
       <DashboardShell requireAdmin>
         <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
-          <RefreshCcw className="h-12 w-12 animate-spin text-primary" />
-          <p className="font-bold text-slate-900">Scanning Supply Chain...</p>
+          <RefreshCcw className="h-10 w-10 animate-spin text-primary" />
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Inventory Sync in Progress</p>
         </div>
       </DashboardShell>
     );
@@ -137,210 +129,209 @@ export default function InventoryPage() {
 
   return (
     <DashboardShell requireAdmin>
-      <div className="space-y-8 pb-12">
-        {/* Visual Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-1">
-            <h1 className="text-4xl font-black tracking-tight text-slate-900">Stock & Inventory</h1>
-            <p className="text-slate-500 font-medium flex items-center gap-2">
-              <Box className="h-4 w-4 text-primary" />
-              Real-time tracking of products, variants, and warehouse levels
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Dialog open={isItemOpen} onOpenChange={setIsItemOpen}>
-              <DialogTrigger asChild>
-                <Button className="rounded-2xl bg-primary h-12 px-8 font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] transition-transform">
-                  <Plus className="h-5 w-5 mr-2" />
-                  Add New Product
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="rounded-[2.5rem] p-8 max-w-lg">
-                <ProductForm onSuccess={() => { setIsItemOpen(false); fetchData(); }} />
-              </DialogContent>
-            </Dialog>
-          </div>
-        </div>
-
-        {/* Visual Stats Grid */}
-        <div className="grid gap-6 md:grid-cols-4">
-          <InventoryKPI title="Unique Products" value={stats.totalItems} icon={Layers} color="blue" />
-          <InventoryKPI title="Low Stock Alerts" value={stats.lowStock} icon={AlertTriangle} color={stats.lowStock > 0 ? "rose" : "slate"} />
-          <InventoryKPI title="Total Valuation" value={`$${(stats.totalValue / 1000).toFixed(1)}k`} icon={TrendingUp} color="emerald" />
-          <InventoryKPI title="Recent Movements" value={stats.movements} icon={History} color="indigo" />
-        </div>
-
-        {/* Visual Analysis Row */}
-        <div className="grid gap-6 lg:grid-cols-2">
-          <Card className="rounded-[2.5rem] border-none shadow-sm bg-white p-8">
-            <CardHeader className="p-0 pb-8 flex flex-row items-center justify-between">
+      <ModuleGuard module="operations">
+        <div className="space-y-6">
+          {/* Header */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
+            <div className="flex items-center gap-4">
+              <div className="h-10 w-10 rounded-lg bg-foreground text-card-foreground flex items-center justify-center shadow-sm">
+                <Warehouse className="h-5 w-5" />
+              </div>
               <div>
-                <CardTitle className="text-2xl font-black">Category Distribution</CardTitle>
-                <CardDescription className="font-medium text-slate-400">Total units per category</CardDescription>
-              </div>
-              <PieChartIcon className="text-primary opacity-20" size={32} />
-            </CardHeader>
-            <div className="h-[300px] w-full flex flex-col md:flex-row items-center gap-8">
-              <div className="h-full w-full md:w-1/2">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={stockDistribution} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
-                      {stockDistribution.map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip contentStyle={{ borderRadius: '15px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="flex-1 space-y-3 w-full">
-                {stockDistribution.map((cat, i) => (
-                  <div key={cat.name} className="flex items-center justify-between p-3 rounded-xl bg-slate-50">
-                    <div className="flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                      <span className="text-xs font-bold text-slate-600">{cat.name}</span>
-                    </div>
-                    <span className="text-xs font-black text-slate-900">{cat.value}</span>
-                  </div>
-                ))}
+                <h1 className="text-2xl font-bold tracking-tight text-foreground uppercase">{getModuleLabel('inventory')}</h1>
+                <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium">
+                  Stock Control & Asset Management
+                </p>
               </div>
             </div>
-          </Card>
-
-          <Card className="rounded-[2.5rem] border-none shadow-sm bg-white p-8">
-            <CardHeader className="p-0 pb-8">
-              <CardTitle className="text-2xl font-black">Top Products by Value</CardTitle>
-              <CardDescription className="font-medium text-slate-400">Highest value inventory assets</CardDescription>
-            </CardHeader>
-            <div className="h-[300px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={topItemsByValue} layout="vertical" margin={{ left: -20 }}>
-                  <CartesianGrid horizontal={false} stroke="#f1f5f9" />
-                  <XAxis type="number" hide />
-                  <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 900, fill: '#64748b' }} width={100} />
-                  <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '15px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
-                  <Bar dataKey="value" fill="#3b82f6" radius={[0, 10, 10, 0]} barSize={20} />
-                </BarChart>
-              </ResponsiveContainer>
+            <div className="flex items-center gap-2">
+              <Dialog open={isItemOpen} onOpenChange={setIsItemOpen}>
+                <DialogTrigger asChild>
+                  <Button className="h-10 px-6 gap-2 bg-primary hover:bg-primary/90 font-bold uppercase text-[10px] tracking-widest shadow-lg shadow-primary/20">
+                    <Plus className="h-4 w-4" /> Register Material
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-xl p-0 overflow-hidden border-none shadow-2xl rounded-md">
+                  <ProductForm onSuccess={() => { setIsItemOpen(false); fetchData(); }} />
+                </DialogContent>
+              </Dialog>
             </div>
-          </Card>
-        </div>
+          </div>
 
-        <Tabs defaultValue="products" className="space-y-8">
-          <TabsList className="inline-flex p-1 bg-slate-100 rounded-2xl">
-            <TabsTrigger value="products" className="rounded-xl px-8 font-bold data-[state=active]:bg-white data-[state=active]:shadow-sm">Product Catalog</TabsTrigger>
-            <TabsTrigger value="movements" className="rounded-xl px-8 font-bold data-[state=active]:bg-white data-[state=active]:shadow-md">Stock Log</TabsTrigger>
-          </TabsList>
+          {/* KPI Grid */}
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+            <StatsTile title="Material Catalog" value={stats.totalItems} icon={Layers} label="SKUs Tracked" />
+            <StatsTile title="Low Stock" value={stats.lowStock} icon={AlertTriangle} label="Critical Level" highlight={stats.lowStock > 0} />
+            <StatsTile title="Holding Value" value={`AED ${stats.totalValue.toLocaleString()}`} icon={TrendingUp} label="Net Assets" />
+            <StatsTile title="Activity Log" value={stats.movements} icon={History} label="Movements (30d)" />
+          </div>
 
-          <TabsContent value="products" className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
-            <div className="flex items-center justify-between ml-2">
-              <h2 className="text-2xl font-black text-slate-900">All Products</h2>
+          <Tabs defaultValue="catalog" className="space-y-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <TabsList className="bg-muted/50 border h-10 p-0.5 w-full md:w-auto justify-start overflow-x-auto no-scrollbar">
+                <TabsTrigger value="catalog" className="text-xs font-semibold px-6 h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">Catalog</TabsTrigger>
+                <TabsTrigger value="movements" className="text-xs font-semibold px-6 h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">Movement Log</TabsTrigger>
+                <TabsTrigger value="analytics" className="text-xs font-semibold px-6 h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">Stock Analytics</TabsTrigger>
+              </TabsList>
+
               <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                 <Input
-                  placeholder="Find a product..."
-                  className="pl-10 rounded-2xl border-none bg-white shadow-sm w-[300px] h-11 font-medium"
+                  placeholder="Search materials..."
+                  className="pl-9 h-9 border-border text-xs w-full md:w-64 rounded-md"
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                 />
               </div>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-3">
-              {filteredItems.map(p => (
-                <Card key={p.id} className="rounded-[2.5rem] border-none shadow-sm bg-white overflow-hidden group hover:shadow-xl transition-all duration-500">
-                  <CardContent className="p-8">
-                    <div className="flex items-start justify-between mb-6">
-                      <div className="h-16 w-16 rounded-[1.5rem] bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-slate-900 group-hover:text-white transition-all duration-500 shadow-inner">
-                        <Package size={32} />
+            <TabsContent value="catalog" className="mt-0">
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {filteredItems.map(p => (
+                  <Card key={p.id} className="border border-border shadow-sm rounded-md overflow-hidden bg-card hover:border-primary/50 transition-colors group">
+                    <CardContent className="p-5">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="h-10 w-10 rounded-md bg-muted flex items-center justify-center text-muted-foreground group-hover:bg-zinc-900 group-hover:text-white transition-all duration-300">
+                          <Package size={20} />
+                        </div>
+                        <Badge variant="outline" className={cn(
+                          "text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border-none",
+                          p.totalStock <= 5 ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600"
+                        )}>
+                          {p.totalStock <= 5 ? 'Low' : 'Healthy'}
+                        </Badge>
                       </div>
-                      <Badge className={cn(
-                        "rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest border-none",
-                        p.totalStock <= 5 ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600"
-                      )}>
-                        {p.totalStock <= 5 ? 'Low Stock' : 'In Stock'}
-                      </Badge>
+
+                      <div className="space-y-1 mb-4">
+                        <h3 className="text-sm font-bold text-foreground line-clamp-1 uppercase tracking-tight">{p.name}</h3>
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                          {p.category || 'General'} · {p.uom}
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 p-3 bg-muted rounded-md mb-4 border border-border">
+                        <div>
+                          <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-tighter">Stock Level</p>
+                          <p className="text-xs font-black text-foreground">{p.totalStock} {p.uom}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-tighter">Value</p>
+                          <p className="text-xs font-black text-foreground">AED {p.avgCost.toLocaleString()}</p>
+                        </div>
+                      </div>
+
+                      <Button variant="outline" className="w-full h-8 text-[9px] font-bold uppercase tracking-widest gap-2 rounded-md">
+                        Manage Assets <ChevronRight size={12} />
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="movements" className="mt-0">
+              <Card className="border shadow-sm rounded-md overflow-hidden bg-card">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead className="bg-muted border-b border-border">
+                      <tr>
+                        <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground">Timestamp</th>
+                        <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground">Material</th>
+                        <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground">Type</th>
+                        <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground text-right">Quantity</th>
+                        <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground">User</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {transactions.map(tx => (
+                        <tr key={tx.id} className="hover:bg-zinc-50/50 transition-colors">
+                          <td className="px-6 py-3 text-[10px] font-medium text-muted-foreground">{new Date(tx.date).toLocaleString()}</td>
+                          <td className="px-6 py-3 text-xs font-bold text-foreground uppercase">{tx.variant?.name || 'Asset Entry'}</td>
+                          <td className="px-6 py-3">
+                            <div className="flex items-center gap-2">
+                              {tx.type === 'in' ? <ArrowDownLeft className="h-3 w-3 text-emerald-500" /> : tx.type === 'out' ? <ArrowUpRight className="h-3 w-3 text-rose-500" /> : <MoveHorizontal className="h-3 w-3 text-muted-foreground" />}
+                              <span className="text-[10px] font-bold uppercase text-muted-foreground">{tx.type}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-3 text-xs font-black text-foreground text-right">{tx.quantity}</td>
+                          <td className="px-6 py-3 text-[10px] font-bold text-muted-foreground uppercase">{tx.user?.full_name || 'System'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="analytics" className="mt-0">
+              <div className="grid gap-6 lg:grid-cols-2">
+                <Card className="border border-border shadow-sm rounded-md bg-card p-6">
+                  <CardHeader className="p-0 pb-6 flex flex-row items-center justify-between">
+                    <div>
+                      <CardTitle className="text-sm font-black uppercase tracking-widest">Asset Distribution</CardTitle>
+                      <CardDescription className="text-[10px] font-bold text-muted-foreground uppercase">Weightage by category</CardDescription>
                     </div>
-                    <div className="space-y-1 mb-6">
-                      <h3 className="text-xl font-black text-slate-900 line-clamp-1">{p.name}</h3>
-                      <p className="text-sm font-bold text-slate-400 uppercase tracking-tight">
-                        {p.variants?.length || 1} Variants • {p.uom}
+                    <PieChartIcon className="text-zinc-200" size={24} />
+                  </CardHeader>
+                  <div className="h-[240px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie data={stockDistribution} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={4} dataKey="value">
+                          {stockDistribution.map((_, index) => (
+                            <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip contentStyle={{ borderRadius: '4px', border: '1px solid #e4e4e7', fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase' }} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </Card>
+
+                <Card className="border border-border shadow-sm rounded-md bg-foreground text-card-foreground p-6 relative overflow-hidden">
+                  <div className="relative z-10 space-y-4">
+                    <div className="h-10 w-10 rounded-md bg-primary text-card-foreground flex items-center justify-center shadow-sm">
+                      <TrendingUp className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold uppercase tracking-widest">Smart Stock Intelligence</h3>
+                      <p className="text-[10px] text-muted-foreground font-medium leading-relaxed uppercase tracking-wider mt-2">
+                        Predictive replenishment alerts enabled. System monitors material burn-rate to automate procurement requests.
                       </p>
                     </div>
-                    <div className="grid grid-cols-2 gap-4 p-4 bg-slate-50 rounded-2xl mb-6">
-                      <div className="space-y-0.5">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Qty</p>
-                        <p className="text-lg font-black text-slate-900">{p.totalStock} {p.uom}</p>
-                      </div>
-                      <div className="space-y-0.5">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Avg Cost</p>
-                        <p className="text-lg font-black text-slate-900">${p.avgCost.toLocaleString()}</p>
-                      </div>
-                    </div>
-                    <Button className="w-full rounded-xl bg-slate-100 hover:bg-slate-900 hover:text-white text-slate-900 font-bold border-none h-11 transition-all">
-                      Manage Product
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="movements">
-            {/* Transaction Log UI - Reuse from before but update fields */}
-            <div className="bg-white rounded-[2.5rem] shadow-sm p-8">
-              <div className="space-y-4">
-                {transactions.map(tx => (
-                  <div key={tx.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
-                    <div className="flex items-center gap-4">
-                      <div className={cn("h-10 w-10 rounded-full flex items-center justify-center text-white font-bold",
-                        tx.type === 'in' ? "bg-emerald-500" : tx.type === 'out' ? "bg-rose-500" : "bg-blue-500"
-                      )}>
-                        {tx.type === 'in' ? '+' : tx.type === 'out' ? '-' : 'T'}
-                      </div>
-                      <div>
-                        <p className="font-bold text-slate-900">{tx.variant?.name || 'Unknown Item'}</p>
-                        <p className="text-xs font-bold text-slate-400 uppercase">{tx.type} • {tx.user?.full_name}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-black text-slate-900">{tx.quantity}</p>
-                      <p className="text-xs font-bold text-slate-400">{new Date(tx.date).toLocaleDateString()}</p>
-                    </div>
+                    <Button className="w-full bg-card text-foreground hover:bg-zinc-200 h-9 font-bold uppercase text-[9px] tracking-widest">Generate Report</Button>
                   </div>
-                ))}
-                {transactions.length === 0 && <p className="text-center text-slate-400 font-medium py-8">No movements recorded</p>}
+                </Card>
               </div>
-            </div>
-          </TabsContent>
-        </Tabs>
-      </div>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </ModuleGuard>
     </DashboardShell>
   );
 }
 
-function InventoryKPI({ title, value, icon: Icon, color }: { title: string; value: any; icon: any; color: string }) {
-  const variants: Record<string, string> = {
-    blue: "bg-blue-50 text-blue-600 shadow-blue-100/50",
-    emerald: "bg-emerald-50 text-emerald-600 shadow-emerald-100/50",
-    indigo: "bg-indigo-50 text-indigo-600 shadow-indigo-100/50",
-    rose: "bg-rose-50 text-rose-600 shadow-rose-100/50",
-    slate: "bg-slate-50 text-slate-600 shadow-slate-100/50",
-  };
+function StatsTile({ title, value, icon: Icon, label, highlight }: { title: string; value: any; icon: any; label: string; highlight?: boolean }) {
   return (
-    <Card className="rounded-[2.5rem] border-none shadow-sm bg-white p-8 group hover:shadow-xl transition-all duration-500">
-      <div className="flex items-center justify-between mb-4">
-        <div className={cn("h-12 w-12 rounded-2xl flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform", variants[color])}>
-          <Icon size={24} strokeWidth={2.5} />
+    <Card className={cn(
+      "border border-border shadow-sm rounded-md bg-card p-5 relative overflow-hidden",
+      highlight && "border-rose-200 bg-rose-50/30"
+    )}>
+      <div className="flex justify-between items-start mb-4">
+        <div className={cn(
+          "h-8 w-8 rounded-md flex items-center justify-center border",
+          highlight ? "bg-rose-100 border-rose-200 text-rose-600" : "bg-muted border-border text-muted-foreground"
+        )}>
+          <Icon size={16} />
         </div>
       </div>
-      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{title}</p>
-      <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{value}</h3>
+      <div className="space-y-0.5">
+        <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{title}</p>
+        <h3 className="text-xl font-black text-foreground tracking-tight">{value}</h3>
+        <p className={cn("text-[8px] font-black uppercase tracking-tighter", highlight ? "text-rose-500" : "text-muted-foreground")}>{label}</p>
+      </div>
     </Card>
   );
 }
-
-// --- Forms ---
 
 function ProductForm({ onSuccess }: { onSuccess: () => void }) {
   const [formData, setFormData] = useState({
@@ -354,68 +345,86 @@ function ProductForm({ onSuccess }: { onSuccess: () => void }) {
         price: Number(formData.price),
         cost: Number(formData.cost)
       });
-      toast.success('Product created successfully');
+      toast.success('Material entry committed');
       onSuccess();
-    } catch { toast.error('Failed to create product'); }
+    } catch { toast.error('Commit failed'); }
   };
 
   return (
-    <div className="space-y-8">
-      <div className="space-y-2">
-        <h3 className="text-3xl font-black tracking-tight">New Product</h3>
-        <p className="text-slate-500 font-medium">Create a new product master record.</p>
+    <div className="bg-card">
+      <div className="p-6 bg-foreground text-card-foreground">
+        <div className="h-10 w-10 rounded-lg bg-white/10 flex items-center justify-center border border-white/10 mb-6">
+          <Plus className="h-5 w-5 text-primary" />
+        </div>
+        <h3 className="text-2xl font-bold tracking-tight uppercase">Register Material</h3>
+        <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest mt-1">Initialize asset in Master Catalog</p>
       </div>
-      <div className="grid gap-6">
-        <div className="space-y-2">
-          <Label className="font-bold ml-1">Product Name</Label>
-          <Input placeholder="e.g. Industrial Pump X200" className="h-12 rounded-2xl font-bold" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label className="font-bold ml-1">SKU (Default)</Label>
-            <Input placeholder="PUMP-X200" className="h-12 rounded-2xl font-bold font-mono" value={formData.sku} onChange={e => setFormData({ ...formData, sku: e.target.value })} />
-          </div>
-          <div className="space-y-2">
-            <Label className="font-bold ml-1">Category</Label>
-            <Input placeholder="e.g. Machinery" className="h-12 rounded-2xl font-bold" value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })} />
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label className="font-bold ml-1">Unit of Measure</Label>
-            <Select value={formData.uom} onValueChange={v => setFormData({ ...formData, uom: v })}>
-              <SelectTrigger className="h-12 rounded-2xl font-bold"><SelectValue /></SelectTrigger>
-              <SelectContent className="rounded-xl">
-                <SelectItem value="pcs">Pieces (Each)</SelectItem>
-                <SelectItem value="kg">Kilograms</SelectItem>
-                <SelectItem value="m">Meters</SelectItem>
-                <SelectItem value="l">Liters</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label className="font-bold ml-1">Type</Label>
-            <Select value={formData.type} onValueChange={v => setFormData({ ...formData, type: v })}>
-              <SelectTrigger className="h-12 rounded-2xl font-bold"><SelectValue /></SelectTrigger>
-              <SelectContent className="rounded-xl">
-                <SelectItem value="goods">Goods (Stocked)</SelectItem>
-                <SelectItem value="service">Service</SelectItem>
-              </SelectContent>
-            </Select>
+      <div className="p-6 space-y-6">
+        <div className="space-y-4">
+          <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">1. Basic Identification</Label>
+          <div className="grid gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Material Name</Label>
+              <Input placeholder="e.g. Structural Steel H-Beam" className="h-10 border-border" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Primary SKU</Label>
+                <Input placeholder="STL-H-001" className="h-10 border-border font-mono font-bold uppercase text-xs" value={formData.sku} onChange={e => setFormData({ ...formData, sku: e.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Asset Category</Label>
+                <Input placeholder="Raw Materials" className="h-10 border-border" value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })} />
+              </div>
+            </div>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label className="font-bold ml-1">Sales Price</Label>
-            <Input type="number" className="h-12 rounded-2xl font-bold" value={formData.price} onChange={e => setFormData({ ...formData, price: e.target.value })} />
+
+        <div className="space-y-4">
+          <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">2. Logistical Metrics</Label>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Unit of Measure</Label>
+              <Select value={formData.uom} onValueChange={v => setFormData({ ...formData, uom: v })}>
+                <SelectTrigger className="h-10 border-border text-xs font-bold uppercase"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pcs">Pieces</SelectItem>
+                  <SelectItem value="kg">Kilograms</SelectItem>
+                  <SelectItem value="m">Meters</SelectItem>
+                  <SelectItem value="l">Liters</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Management Type</Label>
+              <Select value={formData.type} onValueChange={v => setFormData({ ...formData, type: v })}>
+                <SelectTrigger className="h-10 border-border text-xs font-bold uppercase"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="goods">Stocked Inventory</SelectItem>
+                  <SelectItem value="service">Non-Stock Service</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label className="font-bold ml-1">Cost Price</Label>
-            <Input type="number" className="h-12 rounded-2xl font-bold" value={formData.cost} onChange={e => setFormData({ ...formData, cost: e.target.value })} />
+        </div>
+
+        <div className="space-y-4">
+          <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">3. Financial Valuation</Label>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Purchase Cost (AED)</Label>
+              <Input type="number" className="h-10 border-border font-bold" value={formData.cost} onChange={e => setFormData({ ...formData, cost: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Target Selling Price (AED)</Label>
+              <Input type="number" className="h-10 border-border font-bold" value={formData.price} onChange={e => setFormData({ ...formData, price: e.target.value })} />
+            </div>
           </div>
         </div>
       </div>
-      <Button onClick={handleSubmit} className="w-full h-14 rounded-2xl bg-slate-900 font-black text-lg uppercase tracking-widest shadow-xl shadow-slate-200 transition-transform active:scale-95">Create Product</Button>
+      <div className="p-6 bg-muted border-t border-border">
+        <Button onClick={handleSubmit} className="w-full h-12 bg-primary font-black uppercase text-xs tracking-widest shadow-lg shadow-primary/20">Commit Asset Record</Button>
+      </div>
     </div>
   );
 }

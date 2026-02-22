@@ -54,19 +54,21 @@ export function ModuleGuard({ module, children }: ModuleGuardProps) {
         <div className="space-y-8 pb-12 max-w-3xl mx-auto animate-in fade-in duration-500">
 
             {/* Blocked Banner */}
-            <Card className="rounded-3xl border-amber-200 bg-amber-50/50 overflow-hidden">
-                <CardContent className="p-8 text-center space-y-4">
-                    <div className="h-16 w-16 rounded-2xl bg-amber-100 flex items-center justify-center text-amber-600 mx-auto">
-                        <Lock className="h-8 w-8" />
+            <Card className="rounded-3xl border-border bg-card overflow-hidden shadow-lg mt-10">
+                <CardContent className="p-12 text-center space-y-6">
+                    <div className="h-20 w-20 rounded-2xl bg-muted/50 flex items-center justify-center text-muted-foreground mx-auto shadow-inner border">
+                        <Lock className="h-10 w-10 text-primary/50" />
                     </div>
-                    <h2 className="text-2xl font-bold tracking-tight">Module Locked</h2>
-                    <p className="text-muted-foreground max-w-md mx-auto">
-                        {access.reason}
-                    </p>
-                    {access.redirect_to && (
+                    <div>
+                        <h2 className="text-2xl font-black tracking-widest uppercase text-foreground mb-2">Module Suspended</h2>
+                        <p className="text-[13px] font-medium text-muted-foreground uppercase tracking-wider max-w-md mx-auto">
+                            {access.reason || "This system hub is disabled for your tenant. Contact your system administrator to re-enable access."}
+                        </p>
+                    </div>
+                    {access.redirect_to ? (
                         <Button
                             onClick={() => router.push(access.redirect_to!)}
-                            className="rounded-xl font-semibold gap-2 mt-4"
+                            className="rounded-xl font-bold uppercase tracking-widest text-[11px] gap-2 mt-6 h-11 px-8"
                         >
                             {access.required_stage === 'company_profile' && 'Go to Company Setup'}
                             {access.required_stage === 'finance_setup' && 'Go to Finance Setup'}
@@ -74,77 +76,86 @@ export function ModuleGuard({ module, children }: ModuleGuardProps) {
                             {!access.required_stage && 'Go to Settings'}
                             <ArrowRight className="h-4 w-4" />
                         </Button>
+                    ) : (
+                        <Button
+                            onClick={() => router.push('/admin/dashboard')}
+                            className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-md font-bold uppercase tracking-widest text-[11px] gap-2 mt-6 h-11 px-8 shadow-sm"
+                        >
+                            Return to Dashboard
+                        </Button>
                     )}
                 </CardContent>
             </Card>
 
-            {/* Setup Progress Chain */}
-            <Card className="rounded-3xl border-border/50">
-                <CardContent className="p-8 space-y-6">
-                    <div className="space-y-1">
-                        <h3 className="text-lg font-bold">Setup Progress</h3>
-                        <p className="text-sm text-muted-foreground">
-                            Complete these steps to unlock all modules
-                        </p>
-                    </div>
-
-                    {/* Progress Bar */}
-                    <div className="relative">
-                        <div className="h-2 bg-muted rounded-full">
-                            <div
-                                className="h-2 bg-primary rounded-full transition-all duration-700"
-                                style={{ width: `${setupProgress.percentage}%` }}
-                            />
+            {/* Setup Progress Chain (Only if it's a new tenant setup block) */}
+            {access.required_stage && (
+                <Card className="rounded-3xl border-border/50">
+                    <CardContent className="p-8 space-y-6">
+                        <div className="space-y-1">
+                            <h3 className="text-lg font-bold">Setup Progress</h3>
+                            <p className="text-sm text-muted-foreground">
+                                Complete these steps to unlock all modules
+                            </p>
                         </div>
-                        <p className="text-xs text-muted-foreground mt-2 font-semibold">
-                            Step {setupProgress.step} of {setupProgress.total}: {setupProgress.label}
-                        </p>
-                    </div>
 
-                    {/* Steps */}
-                    <div className="space-y-3">
-                        {SETUP_CHAIN.map((step, i) => {
-                            const Icon = iconMap[step.icon] || CheckCircle2;
-                            const isComplete = tenantStatus ? getStepComplete(step.key, tenantStatus) : false;
-                            const isCurrent = !isComplete && (i === 0 || (tenantStatus ? getStepComplete(SETUP_CHAIN[i - 1].key, tenantStatus) : false));
-
-                            return (
+                        {/* Progress Bar */}
+                        <div className="relative">
+                            <div className="h-2 bg-muted rounded-full">
                                 <div
-                                    key={step.key}
-                                    className={cn(
-                                        "flex items-center gap-4 p-4 rounded-2xl transition-all",
-                                        isComplete ? "bg-emerald-50/50" : isCurrent ? "bg-primary/5 border border-primary/20" : "bg-muted/20 opacity-50"
-                                    )}
-                                >
-                                    <div className={cn(
-                                        "h-10 w-10 rounded-xl flex items-center justify-center shrink-0",
-                                        isComplete ? "bg-emerald-100 text-emerald-600" :
-                                            isCurrent ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
-                                    )}>
-                                        {isComplete ? <CheckCircle2 className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
+                                    className="h-2 bg-primary rounded-full transition-all duration-700"
+                                    style={{ width: `${setupProgress.percentage}%` }}
+                                />
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-2 font-semibold">
+                                Step {setupProgress.step} of {setupProgress.total}: {setupProgress.label}
+                            </p>
+                        </div>
+
+                        {/* Steps */}
+                        <div className="space-y-3">
+                            {SETUP_CHAIN.map((step, i) => {
+                                const Icon = iconMap[step.icon] || CheckCircle2;
+                                const isComplete = tenantStatus ? getStepComplete(step.key, tenantStatus) : false;
+                                const isCurrent = !isComplete && (i === 0 || (tenantStatus ? getStepComplete(SETUP_CHAIN[i - 1].key, tenantStatus) : false));
+
+                                return (
+                                    <div
+                                        key={step.key}
+                                        className={cn(
+                                            "flex items-center gap-4 p-4 rounded-2xl transition-all",
+                                            isComplete ? "bg-emerald-50/50" : isCurrent ? "bg-primary/5 border border-primary/20" : "bg-muted/20 opacity-50"
+                                        )}
+                                    >
+                                        <div className={cn(
+                                            "h-10 w-10 rounded-xl flex items-center justify-center shrink-0",
+                                            isComplete ? "bg-emerald-100 text-emerald-600" :
+                                                isCurrent ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                                        )}>
+                                            {isComplete ? <CheckCircle2 className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className={cn("text-sm font-semibold", isComplete && "text-emerald-700")}>
+                                                {step.label}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground">{step.description}</p>
+                                        </div>
+                                        {isComplete && (
+                                            <Badge className="bg-emerald-100 text-emerald-600 border-none rounded-full text-[10px] font-bold">
+                                                Done
+                                            </Badge>
+                                        )}
+                                        {isCurrent && (
+                                            <Badge className="bg-primary text-primary-foreground border-none rounded-full text-[10px] font-bold animate-pulse">
+                                                Current
+                                            </Badge>
+                                        )}
                                     </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className={cn("text-sm font-semibold", isComplete && "text-emerald-700")}>
-                                            {step.label}
-                                        </p>
-                                        <p className="text-xs text-muted-foreground">{step.description}</p>
-                                    </div>
-                                    {isComplete && (
-                                        <Badge className="bg-emerald-100 text-emerald-600 border-none rounded-full text-[10px] font-bold">
-                                            Done
-                                        </Badge>
-                                    )}
-                                    {isCurrent && (
-                                        <Badge className="bg-primary text-primary-foreground border-none rounded-full text-[10px] font-bold animate-pulse">
-                                            Current
-                                        </Badge>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
-                </CardContent>
-            </Card>
+                                );
+                            })}
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
         </div>
     );
 }

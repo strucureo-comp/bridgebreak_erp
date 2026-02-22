@@ -102,6 +102,9 @@ export interface Ledger {
   balance: number;
   reference_id?: string;
   reference_type?: string;
+  voucher_type?: string;
+  cost_center_id?: string;
+  project_id?: string;
   engine_id?: string;
   created_at: string;
 }
@@ -114,6 +117,9 @@ export interface LedgerInput {
   credit: number;
   reference_id?: string;
   reference_type?: string;
+  voucher_type?: string;
+  cost_center_id?: string;
+  project_id?: string;
 }
 
 export interface DateRange {

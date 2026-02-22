@@ -139,17 +139,17 @@ export default function NewVendorBillPage() {
         <div className="flex items-center justify-between">
             <Button 
                 variant="ghost" 
-                className="rounded-xl font-bold text-slate-500 hover:text-slate-900"
+                className="rounded-xl font-bold text-muted-foreground hover:text-slate-900"
                 onClick={() => router.back()}
             >
                 <ChevronLeft className="mr-2 h-5 w-5" /> Cancel
             </Button>
-            <h1 className="text-3xl font-black text-slate-900 tracking-tight">Record Vendor Bill</h1>
+            <h1 className="text-3xl font-black text-foreground tracking-tight">Record Vendor Bill</h1>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
             <div className="grid gap-8 md:grid-cols-2">
-                <Card className="rounded-[2.5rem] border-none shadow-sm bg-white p-8">
+                <Card className="rounded-[2.5rem] border-none shadow-sm bg-card p-8">
                     <CardHeader className="p-0 pb-6">
                         <CardTitle className="text-xl font-black flex items-center gap-2">
                             <Receipt size={20} className="text-primary" /> Bill Details
@@ -157,19 +157,19 @@ export default function NewVendorBillPage() {
                     </CardHeader>
                     <div className="space-y-4">
                         <div className="space-y-2">
-                            <Label className="font-bold text-slate-500 ml-1">Vendor Bill No.</Label>
+                            <Label className="font-bold text-muted-foreground ml-1">Vendor Bill No.</Label>
                             <Input 
                                 value={billNumber}
                                 onChange={(e) => setBillNumber(e.target.value)}
                                 placeholder="e.g. INV-2024-001"
-                                className="h-12 rounded-2xl border-2 border-slate-100 font-bold focus:border-primary outline-none"
+                                className="h-12 rounded-2xl border-2 border-border font-bold focus:border-primary outline-none"
                                 required
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label className="font-bold text-slate-500 ml-1">Link Purchase Order (Optional)</Label>
+                            <Label className="font-bold text-muted-foreground ml-1">Link Purchase Order (Optional)</Label>
                             <select 
-                                className="w-full h-12 rounded-2xl border-2 border-slate-100 font-bold focus:border-primary outline-none px-4 bg-white"
+                                className="w-full h-12 rounded-2xl border-2 border-border font-bold focus:border-primary outline-none px-4 bg-card"
                                 value={selectedPo}
                                 onChange={(e) => setSelectedPo(e.target.value)}
                             >
@@ -180,19 +180,19 @@ export default function NewVendorBillPage() {
                             </select>
                         </div>
                         <div className="space-y-2">
-                            <Label className="font-bold text-slate-500 ml-1">Due Date</Label>
+                            <Label className="font-bold text-muted-foreground ml-1">Due Date</Label>
                             <Input 
                                 type="date"
                                 value={dueDate}
                                 onChange={(e) => setDueDate(e.target.value)}
-                                className="h-12 rounded-2xl border-2 border-slate-100 font-bold focus:border-primary outline-none"
+                                className="h-12 rounded-2xl border-2 border-border font-bold focus:border-primary outline-none"
                                 required
                             />
                         </div>
                     </div>
                 </Card>
 
-                <Card className="rounded-[2.5rem] border-none shadow-sm bg-white p-8">
+                <Card className="rounded-[2.5rem] border-none shadow-sm bg-card p-8">
                     <CardHeader className="p-0 pb-6">
                         <CardTitle className="text-xl font-black flex items-center gap-2">
                             <FileText size={20} className="text-primary" /> Vendor Info
@@ -200,9 +200,9 @@ export default function NewVendorBillPage() {
                     </CardHeader>
                     <div className="space-y-4">
                         <div className="space-y-2">
-                            <Label className="font-bold text-slate-500 ml-1">Supplier / Vendor</Label>
+                            <Label className="font-bold text-muted-foreground ml-1">Supplier / Vendor</Label>
                             <select 
-                                className="w-full h-12 rounded-2xl border-2 border-slate-100 font-bold focus:border-primary outline-none px-4 bg-white"
+                                className="w-full h-12 rounded-2xl border-2 border-border font-bold focus:border-primary outline-none px-4 bg-card"
                                 value={selectedVendor}
                                 onChange={(e) => setSelectedVendor(e.target.value)}
                                 required
@@ -218,7 +218,7 @@ export default function NewVendorBillPage() {
                 </Card>
             </div>
 
-            <Card className="rounded-[2.5rem] border-none shadow-sm bg-white overflow-hidden">
+            <Card className="rounded-[2.5rem] border-none shadow-sm bg-card overflow-hidden">
                 <CardHeader className="p-8 pb-4 flex flex-row items-center justify-between">
                     <CardTitle className="text-2xl font-black">Bill Items</CardTitle>
                     <Button type="button" onClick={addLine} variant="outline" className="rounded-xl font-bold">
@@ -228,13 +228,13 @@ export default function NewVendorBillPage() {
                 <CardContent className="p-8 pt-4">
                     <div className="space-y-4">
                         {lines.map((line, idx) => (
-                            <div key={idx} className="flex flex-col md:flex-row gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                            <div key={idx} className="flex flex-col md:flex-row gap-4 p-4 rounded-2xl bg-muted border border-border">
                                 <div className="flex-1">
                                     <Input 
                                         placeholder="Description"
                                         value={line.description}
                                         onChange={(e) => updateLine(idx, 'description', e.target.value)}
-                                        className="h-11 rounded-xl border-slate-200"
+                                        className="h-11 rounded-xl border-border"
                                     />
                                 </div>
                                 <div className="w-24">
@@ -243,7 +243,7 @@ export default function NewVendorBillPage() {
                                         placeholder="Qty"
                                         value={line.quantity}
                                         onChange={(e) => updateLine(idx, 'quantity', parseFloat(e.target.value))}
-                                        className="h-11 rounded-xl border-slate-200"
+                                        className="h-11 rounded-xl border-border"
                                     />
                                 </div>
                                 <div className="w-32">
@@ -252,7 +252,7 @@ export default function NewVendorBillPage() {
                                         placeholder="Price"
                                         value={line.unit_price}
                                         onChange={(e) => updateLine(idx, 'unit_price', parseFloat(e.target.value))}
-                                        className="h-11 rounded-xl border-slate-200"
+                                        className="h-11 rounded-xl border-border"
                                     />
                                 </div>
                                 <div className="w-24">
@@ -261,7 +261,7 @@ export default function NewVendorBillPage() {
                                         placeholder="Tax %"
                                         value={line.tax_rate}
                                         onChange={(e) => updateLine(idx, 'tax_rate', parseFloat(e.target.value))}
-                                        className="h-11 rounded-xl border-slate-200"
+                                        className="h-11 rounded-xl border-border"
                                     />
                                 </div>
                                 <div className="w-32 flex items-center font-bold text-slate-700">
@@ -274,17 +274,17 @@ export default function NewVendorBillPage() {
                         ))}
                     </div>
 
-                    <div className="mt-8 pt-8 border-t-2 border-slate-100 flex justify-end">
+                    <div className="mt-8 pt-8 border-t-2 border-border flex justify-end">
                         <div className="w-64 space-y-2">
-                            <div className="flex justify-between font-bold text-slate-500">
+                            <div className="flex justify-between font-bold text-muted-foreground">
                                 <span>Subtotal</span>
                                 <span>${totals.subtotal.toLocaleString()}</span>
                             </div>
-                            <div className="flex justify-between font-bold text-slate-500">
+                            <div className="flex justify-between font-bold text-muted-foreground">
                                 <span>Tax</span>
                                 <span>${totals.tax.toLocaleString()}</span>
                             </div>
-                            <div className="flex justify-between text-xl font-black text-primary pt-2 border-t border-slate-200">
+                            <div className="flex justify-between text-xl font-black text-primary pt-2 border-t border-border">
                                 <span>Total</span>
                                 <span>${totals.total.toLocaleString()}</span>
                             </div>

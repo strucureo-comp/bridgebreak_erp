@@ -1,12 +1,15 @@
 import './globals.css';
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Roboto } from 'next/font/google';
 import { AuthProvider } from '@/lib/auth/context';
 import { TenantProvider } from '@/lib/tenant-context';
 import { Toaster } from '@/components/ui/sonner';
-import { TaxCollectionInitializer } from '@/components/tax-collection-initializer';
 
-const inter = Inter({ subsets: ['latin'] });
+const roboto = Roboto({
+  weight: ['300', '400', '500', '700'],
+  subsets: ['latin'],
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
@@ -36,10 +39,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+      <body className={roboto.className}>
         <AuthProvider>
           <TenantProvider>
-            <TaxCollectionInitializer />
             {children}
             <Toaster />
           </TenantProvider>

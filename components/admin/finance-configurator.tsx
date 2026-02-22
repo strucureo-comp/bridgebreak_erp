@@ -102,18 +102,18 @@ export function FinanceConfigurator({ currentConfig, onSave }: FinanceConfigurat
     <div className="space-y-8 max-w-5xl mx-auto pb-20">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">
-          <h2 className="text-3xl font-black tracking-tight text-slate-900">Finance Settings</h2>
-          <p className="text-slate-500 font-medium">Configure how your business handles money and taxes</p>
+          <h2 className="text-3xl font-black tracking-tight text-foreground">Finance Settings</h2>
+          <p className="text-muted-foreground font-medium">Configure how your business handles money and taxes</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="rounded-xl border-slate-200 font-bold" onClick={() => applyRegionalTemplate('INDIA')}>🇮🇳 India</Button>
-          <Button variant="outline" className="rounded-xl border-slate-200 font-bold" onClick={() => applyRegionalTemplate('EU')}>🇪🇺 Europe</Button>
-          <Button variant="outline" className="rounded-xl border-slate-200 font-bold" onClick={() => applyRegionalTemplate('US')}>🇺🇸 USA</Button>
+          <Button variant="outline" className="rounded-xl border-border font-bold" onClick={() => applyRegionalTemplate('INDIA')}>🇮🇳 India</Button>
+          <Button variant="outline" className="rounded-xl border-border font-bold" onClick={() => applyRegionalTemplate('EU')}>🇪🇺 Europe</Button>
+          <Button variant="outline" className="rounded-xl border-border font-bold" onClick={() => applyRegionalTemplate('US')}>🇺🇸 USA</Button>
         </div>
       </div>
 
       <Tabs defaultValue="general" className="space-y-8">
-        <TabsList className="inline-flex p-1 bg-slate-100 rounded-2xl w-full md:w-auto">
+        <TabsList className="inline-flex p-1 bg-muted rounded-2xl w-full md:w-auto">
           <TabsTrigger value="general" className="rounded-xl px-8 font-bold data-[state=active]:bg-white data-[state=active]:shadow-sm">Business Info</TabsTrigger>
           <TabsTrigger value="tax" className="rounded-xl px-8 font-bold data-[state=active]:bg-white data-[state=active]:shadow-sm">Tax Setup</TabsTrigger>
           <TabsTrigger value="currency" className="rounded-xl px-8 font-bold data-[state=active]:bg-white data-[state=active]:shadow-sm">Currency</TabsTrigger>
@@ -123,14 +123,14 @@ export function FinanceConfigurator({ currentConfig, onSave }: FinanceConfigurat
           <Card className="rounded-[2.5rem] border-none shadow-sm p-8">
             <CardHeader className="p-0 pb-8">
               <CardTitle className="text-2xl font-black">Company Details</CardTitle>
-              <CardDescription className="text-base font-medium text-slate-400">Basic identification for your financial reports</CardDescription>
+              <CardDescription className="text-base font-medium text-muted-foreground">Basic identification for your financial reports</CardDescription>
             </CardHeader>
             <CardContent className="p-0 space-y-8">
               <div className="grid gap-6 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label className="font-bold text-slate-700 ml-1">Company Name</Label>
                   <Input
-                    className="h-12 rounded-xl border-slate-200 font-bold text-lg"
+                    className="h-12 rounded-xl border-border font-bold text-lg"
                     value={config.company_name}
                     onChange={(e) => setConfig({ ...config, company_name: e.target.value })}
                     placeholder="e.g. System Steel LLC"
@@ -139,7 +139,7 @@ export function FinanceConfigurator({ currentConfig, onSave }: FinanceConfigurat
                 <div className="space-y-2">
                   <Label className="font-bold text-slate-700 ml-1">Registration ID</Label>
                   <Input
-                    className="h-12 rounded-xl border-slate-200 font-bold font-mono"
+                    className="h-12 rounded-xl border-border font-bold font-mono"
                     value={config.company_id}
                     onChange={(e) => setConfig({ ...config, company_id: e.target.value })}
                     placeholder="Company ID"
@@ -156,7 +156,7 @@ export function FinanceConfigurator({ currentConfig, onSave }: FinanceConfigurat
                     value={config.accounting_standard}
                     onValueChange={(val: AccountingStandard) => setConfig({ ...config, accounting_standard: val })}
                   >
-                    <SelectTrigger className="h-12 rounded-xl border-slate-200 font-bold">
+                    <SelectTrigger className="h-12 rounded-xl border-border font-bold">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="rounded-xl">
@@ -172,7 +172,7 @@ export function FinanceConfigurator({ currentConfig, onSave }: FinanceConfigurat
                     value={config.date_format}
                     onValueChange={(val: DateFormat) => setConfig({ ...config, date_format: val })}
                   >
-                    <SelectTrigger className="h-12 rounded-xl border-slate-200 font-bold">
+                    <SelectTrigger className="h-12 rounded-xl border-border font-bold">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="rounded-xl">
@@ -192,13 +192,13 @@ export function FinanceConfigurator({ currentConfig, onSave }: FinanceConfigurat
           <Card className="rounded-[2.5rem] border-none shadow-sm p-8">
             <CardHeader className="p-0 pb-8">
               <CardTitle className="text-2xl font-black">Tax & Compliance</CardTitle>
-              <CardDescription className="text-base font-medium text-slate-400">Select your tax regime and enter your tax ID</CardDescription>
+              <CardDescription className="text-base font-medium text-muted-foreground">Select your tax regime and enter your tax ID</CardDescription>
             </CardHeader>
             <CardContent className="p-0 space-y-8">
-              <div className="flex items-center justify-between p-6 bg-slate-50 rounded-3xl">
+              <div className="flex items-center justify-between p-6 bg-muted rounded-3xl">
                 <div className="space-y-1">
-                  <p className="font-black text-slate-900">Enable Tax Tracking</p>
-                  <p className="text-sm text-slate-500 font-medium">Automatic calculation of VAT/GST on transactions</p>
+                  <p className="font-black text-foreground">Enable Tax Tracking</p>
+                  <p className="text-sm text-muted-foreground font-medium">Automatic calculation of VAT/GST on transactions</p>
                 </div>
                 <Switch
                   checked={config.features?.enable_tax_tracking}
@@ -226,7 +226,7 @@ export function FinanceConfigurator({ currentConfig, onSave }: FinanceConfigurat
                         });
                       }}
                     >
-                      <SelectTrigger className="h-12 rounded-xl border-slate-200 font-bold">
+                      <SelectTrigger className="h-12 rounded-xl border-border font-bold">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="rounded-xl max-h-[300px]">
@@ -243,7 +243,7 @@ export function FinanceConfigurator({ currentConfig, onSave }: FinanceConfigurat
                   <div className="space-y-2">
                     <Label className="font-bold text-slate-700 ml-1">Tax ID / Registration Number</Label>
                     <Input
-                      className="h-12 rounded-xl border-slate-200 font-bold font-mono"
+                      className="h-12 rounded-xl border-border font-bold font-mono"
                       value={config.tax_config?.tax_id}
                       onChange={(e) => setConfig({ ...config, tax_config: { ...config.tax_config!, tax_id: e.target.value } })}
                       placeholder="e.g. TRN / GSTIN"
@@ -259,7 +259,7 @@ export function FinanceConfigurator({ currentConfig, onSave }: FinanceConfigurat
           <Card className="rounded-[2.5rem] border-none shadow-sm p-8">
             <CardHeader className="p-0 pb-8">
               <CardTitle className="text-2xl font-black">Currency Settings</CardTitle>
-              <CardDescription className="text-base font-medium text-slate-400">Choose your base currency for reporting</CardDescription>
+              <CardDescription className="text-base font-medium text-muted-foreground">Choose your base currency for reporting</CardDescription>
             </CardHeader>
             <CardContent className="p-0 space-y-8">
               <div className="space-y-2">
@@ -270,7 +270,7 @@ export function FinanceConfigurator({ currentConfig, onSave }: FinanceConfigurat
                     setConfig({ ...config, currency_config: { ...config.currency_config!, base_currency: val } })
                   }
                 >
-                  <SelectTrigger className="h-12 rounded-xl border-slate-200 font-black">
+                  <SelectTrigger className="h-12 rounded-xl border-border font-black">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl max-h-[300px]">
@@ -281,10 +281,10 @@ export function FinanceConfigurator({ currentConfig, onSave }: FinanceConfigurat
                 </Select>
               </div>
 
-              <div className="flex items-center justify-between p-6 bg-slate-50 rounded-3xl">
+              <div className="flex items-center justify-between p-6 bg-muted rounded-3xl">
                 <div className="space-y-1">
-                  <p className="font-black text-slate-900">Multi-Currency Support</p>
-                  <p className="text-sm text-slate-500 font-medium">Track transactions in different currencies</p>
+                  <p className="font-black text-foreground">Multi-Currency Support</p>
+                  <p className="text-sm text-muted-foreground font-medium">Track transactions in different currencies</p>
                 </div>
                 <Switch
                   checked={config.features?.enable_multi_currency}
@@ -302,7 +302,7 @@ export function FinanceConfigurator({ currentConfig, onSave }: FinanceConfigurat
         </TabsContent>
       </Tabs>
 
-      <div className="flex justify-end gap-3 pt-8 border-t border-slate-100">
+      <div className="flex justify-end gap-3 pt-8 border-t border-border">
         <Button variant="ghost" className="rounded-xl font-bold h-12 px-8">Discard</Button>
         <Button onClick={handleSave} className="rounded-xl bg-slate-900 h-12 px-12 font-black shadow-xl shadow-slate-200 tracking-widest uppercase text-xs">Update Configuration</Button>
       </div>

@@ -108,7 +108,7 @@ export default function AdminLeadsPage() {
             <DashboardShell requireAdmin>
                 <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
                     <RefreshCcw className="h-12 w-12 animate-spin text-primary" />
-                    <p className="font-bold text-slate-900">Synchronizing Pipeline...</p>
+                    <p className="font-bold text-foreground">Synchronizing Pipeline...</p>
                 </div>
             </DashboardShell>
         );
@@ -119,8 +119,8 @@ export default function AdminLeadsPage() {
             <div className="space-y-8 pb-12 w-full overflow-x-auto">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 min-w-[300px]">
                     <div className="space-y-1">
-                        <h1 className="text-4xl font-black tracking-tight text-slate-900">Lead Pipeline</h1>
-                        <p className="text-slate-500 font-medium flex items-center gap-2">
+                        <h1 className="text-4xl font-black tracking-tight text-foreground">Lead Pipeline</h1>
+                        <p className="text-muted-foreground font-medium flex items-center gap-2">
                             <Target className="h-4 w-4 text-primary" />
                             Manage leads, conversions, and sales opportunities
                         </p>
@@ -135,7 +135,7 @@ export default function AdminLeadsPage() {
                             <DialogContent className="max-w-2xl rounded-[2.5rem] p-8">
                                 <DialogHeader className="space-y-2">
                                     <DialogTitle className="text-3xl font-black">Register Lead</DialogTitle>
-                                    <DialogDescription className="text-base font-medium text-slate-400">Add a new potential client to the sales funnel.</DialogDescription>
+                                    <DialogDescription className="text-base font-medium text-muted-foreground">Add a new potential client to the sales funnel.</DialogDescription>
                                 </DialogHeader>
                                 <div className="grid gap-6 py-6">
                                     <div className="grid grid-cols-2 gap-4">
@@ -161,7 +161,7 @@ export default function AdminLeadsPage() {
                                     <div className="space-y-2">
                                         <Label className="font-bold ml-1">Potential Value</Label>
                                         <div className="relative">
-                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-slate-400">$</span>
+                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-muted-foreground">$</span>
                                             <Input type="number" className="h-12 pl-8 rounded-xl font-bold" value={formData.potential_value} onChange={e => setFormData({ ...formData, potential_value: parseInt(e.target.value) })} />
                                         </div>
                                     </div>
@@ -187,10 +187,10 @@ export default function AdminLeadsPage() {
 
                 <div className="space-y-6">
                     <div className="flex items-center justify-between px-2">
-                        <h2 className="text-2xl font-black text-slate-900">Sales Funnel</h2>
+                        <h2 className="text-2xl font-black text-foreground">Sales Funnel</h2>
                         <div className="relative">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                            <Input placeholder="Find lead or company..." className="pl-10 rounded-2xl border-none bg-white shadow-sm w-[350px] h-11 font-medium" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input placeholder="Find lead or company..." className="pl-10 rounded-2xl border-none bg-card shadow-sm w-[350px] h-11 font-medium" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
                         </div>
                     </div>
 
@@ -203,36 +203,36 @@ export default function AdminLeadsPage() {
                                         <div className="flex items-center justify-between px-4">
                                             <div className="flex items-center gap-3">
                                                 <div className={cn("h-2.5 w-2.5 rounded-full", stage.color)} />
-                                                <span className="text-sm font-black text-slate-900 uppercase tracking-widest">{stage.label}</span>
+                                                <span className="text-sm font-black text-foreground uppercase tracking-widest">{stage.label}</span>
                                             </div>
-                                            <Badge variant="secondary" className="rounded-full bg-slate-100 text-slate-400 font-black border-none px-2">{stageLeads.length}</Badge>
+                                            <Badge variant="secondary" className="rounded-full bg-muted text-muted-foreground font-black border-none px-2">{stageLeads.length}</Badge>
                                         </div>
 
                                         <div className="space-y-4">
                                             {stageLeads.map(lead => (
-                                                <Card key={lead.id} className="rounded-[2rem] border-none shadow-sm bg-white overflow-hidden group hover:shadow-xl transition-all duration-500 cursor-pointer">
+                                                <Card key={lead.id} className="rounded-[2rem] border-none shadow-sm bg-card overflow-hidden group hover:shadow-xl transition-all duration-500 cursor-pointer">
                                                     <CardContent className="p-6 space-y-4">
                                                         <div className="flex items-start justify-between">
                                                             <div className="space-y-1 min-w-0">
-                                                                <h4 className="text-base font-black text-slate-900 truncate">{lead.first_name} {lead.last_name}</h4>
-                                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">{lead.company || 'Private Party'}</p>
+                                                                <h4 className="text-base font-black text-foreground truncate">{lead.first_name} {lead.last_name}</h4>
+                                                                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest truncate">{lead.company || 'Private Party'}</p>
                                                             </div>
-                                                            <div className={cn("h-10 w-10 rounded-2xl flex items-center justify-center shadow-inner group-hover:bg-slate-900 group-hover:text-white transition-all duration-500 bg-slate-50 text-slate-300")}>
+                                                            <div className={cn("h-10 w-10 rounded-2xl flex items-center justify-center shadow-inner group-hover:bg-slate-900 group-hover:text-white transition-all duration-500 bg-muted text-slate-300")}>
                                                                 <Briefcase size={18} />
                                                             </div>
                                                         </div>
 
                                                         {(lead.potential_value ?? 0) > 0 && (
-                                                            <div className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl group-hover:bg-slate-100 transition-colors">
-                                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Est. Value</span>
-                                                                <span className="text-sm font-black text-slate-900">${(lead.potential_value ?? 0).toLocaleString()}</span>
+                                                            <div className="flex items-center justify-between p-3 bg-muted rounded-2xl group-hover:bg-slate-100 transition-colors">
+                                                                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Est. Value</span>
+                                                                <span className="text-sm font-black text-foreground">${(lead.potential_value ?? 0).toLocaleString()}</span>
                                                             </div>
                                                         )}
 
                                                         <div className="flex items-center justify-between pt-4 border-t border-slate-50">
                                                             <div className="flex items-center gap-2">
                                                                 <div className={cn("h-1.5 w-1.5 rounded-full", (lead.probability ?? 0) > 70 ? 'bg-emerald-500' : (lead.probability ?? 0) > 40 ? 'bg-amber-500' : 'bg-slate-300')} />
-                                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{lead.probability ?? 0}% Prob.</span>
+                                                                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{lead.probability ?? 0}% Prob.</span>
                                                             </div>
                                                             <ChevronRight size={14} className="text-slate-200 group-hover:text-slate-900 transition-colors" />
                                                         </div>
@@ -240,7 +240,7 @@ export default function AdminLeadsPage() {
                                                 </Card>
                                             ))}
                                             {stageLeads.length === 0 && (
-                                                <div className="h-32 border-2 border-dashed border-slate-100 rounded-[2rem] flex flex-col items-center justify-center opacity-50">
+                                                <div className="h-32 border-2 border-dashed border-border rounded-[2rem] flex flex-col items-center justify-center opacity-50">
                                                     <LayoutGrid size={24} className="text-slate-200 mb-2" />
                                                     <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Empty Stage</span>
                                                 </div>
@@ -263,17 +263,17 @@ function LeadKPI({ title, value, icon: Icon, color }: { title: string; value: an
         blue: "bg-blue-50 text-blue-600 shadow-blue-100/50",
         emerald: "bg-emerald-50 text-emerald-600 shadow-emerald-100/50",
         indigo: "bg-indigo-50 text-indigo-600 shadow-indigo-100/50",
-        slate: "bg-slate-50 text-slate-600 shadow-slate-100/50",
+        slate: "bg-muted text-muted-foreground shadow-slate-100/50",
     };
     return (
-        <Card className="rounded-[2.5rem] border-none shadow-sm bg-white p-8 group hover:shadow-xl transition-all duration-500">
+        <Card className="rounded-[2.5rem] border-none shadow-sm bg-card p-8 group hover:shadow-xl transition-all duration-500">
             <div className="flex items-center justify-between mb-4">
                 <div className={cn("h-12 w-12 rounded-2xl flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform", variants[color])}>
                     <Icon size={24} strokeWidth={2.5} />
                 </div>
             </div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{title}</p>
-            <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{value}</h3>
+            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{title}</p>
+            <h3 className="text-3xl font-black text-foreground tracking-tighter">{value}</h3>
         </Card>
     );
 }

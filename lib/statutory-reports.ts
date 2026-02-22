@@ -338,6 +338,18 @@ export class StatutoryReportGenerator {
   }
 
   /**
+   * Generate VAT Return (UAE - FTA VAT 201)
+   */
+  generateUAEVATReturn(from_date: string, to_date: string): VATReturn {
+    const report = this.generateVATReturn(from_date, to_date);
+    // UAE specific adjustments could go here (e.g., Emirate-wise breakdown if metadata available)
+    return {
+      ...report,
+      vat_number: this.config.tax_config.tax_id || 'UAE-TRN-PENDING',
+    };
+  }
+
+  /**
    * Export report as JSON
    */
   exportJSON(report: any): string {

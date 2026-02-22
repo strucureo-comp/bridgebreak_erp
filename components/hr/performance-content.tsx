@@ -8,33 +8,38 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getPerformanceData, createPerformanceItem } from "@/lib/api";
 import { format } from "date-fns";
-import { Target, Award, Plus, Calendar, CheckCircle, Clock } from "lucide-react";
+import { Target, Award, Plus, Calendar, CheckCircle, Clock, Search, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 
 export function PerformanceContent() {
     return (
-        <Tabs defaultValue="goals" className="space-y-6">
-            <TabsList className="bg-white p-1 rounded-xl border border-slate-100">
-                <TabsTrigger value="goals" className="rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
-                    <Target className="mr-2 h-4 w-4" /> Goals & Objectives
-                </TabsTrigger>
-                <TabsTrigger value="reviews" className="rounded-lg data-[state=active]:bg-purple-50 data-[state=active]:text-purple-700">
-                    <Award className="mr-2 h-4 w-4" /> Performance Reviews
-                </TabsTrigger>
-            </TabsList>
+        <div className="space-y-6">
+            <Tabs defaultValue="goals" className="space-y-6">
+                <div className="flex items-center justify-between">
+                    <TabsList className="bg-muted/50 border h-10 p-0.5">
+                        <TabsTrigger value="goals" className="text-xs font-semibold px-6 h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                            Objectives
+                        </TabsTrigger>
+                        <TabsTrigger value="reviews" className="text-xs font-semibold px-6 h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                            Reviews
+                        </TabsTrigger>
+                    </TabsList>
+                </div>
 
-            <TabsContent value="goals">
-                <GoalsList />
-            </TabsContent>
+                <TabsContent value="goals" className="mt-0">
+                    <GoalsList />
+                </TabsContent>
 
-            <TabsContent value="reviews">
-                <ReviewsList />
-            </TabsContent>
-        </Tabs>
+                <TabsContent value="reviews" className="mt-0">
+                    <ReviewsList />
+                </TabsContent>
+            </Tabs>
+        </div>
     );
 }
 
@@ -65,60 +70,67 @@ function GoalsList() {
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
-                <div>
-                    <h3 className="text-lg font-bold">My Objectives</h3>
-                    <p className="text-slate-500 text-sm">Track your quarterly and annual goals.</p>
+                <div className="relative w-64">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                    <Input placeholder="Filter goals..." className="h-9 pl-8 text-xs rounded-md border-border" />
                 </div>
                 <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-                    <DialogTrigger asChild><Button><Plus className="mr-2 h-4 w-4" /> New Goal</Button></DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader><DialogTitle>Set New Goal</DialogTitle></DialogHeader>
+                    <DialogTrigger asChild>
+                        <Button size="sm" className="h-9 gap-2 bg-primary hover:bg-primary/90 font-bold uppercase tracking-widest text-[10px]">
+                            <Plus className="h-3.5 w-3.5" /> Set Objective
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-md">
+                        <DialogHeader>
+                            <DialogTitle>New Objective</DialogTitle>
+                        </DialogHeader>
                         <div className="space-y-4 py-4">
-                            <div className="space-y-2">
-                                <Label>Title</Label>
-                                <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Increase sales by 10%" />
+                            <div className="space-y-1.5">
+                                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Title</Label>
+                                <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Sales Growth" />
                             </div>
-                            <div className="space-y-2">
-                                <Label>Description</Label>
-                                <Textarea value={description} onChange={e => setDescription(e.target.value)} />
+                            <div className="space-y-1.5">
+                                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Detail</Label>
+                                <Textarea value={description} onChange={e => setDescription(e.target.value)} className="min-h-[100px]" />
                             </div>
-                            <div className="space-y-2">
-                                <Label>Due Date</Label>
+                            <div className="space-y-1.5">
+                                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Deadline</Label>
                                 <Input type="date" value={date} onChange={e => setDate(e.target.value)} />
                             </div>
                         </div>
-                        <DialogFooter><Button onClick={handleCreate}>Save Goal</Button></DialogFooter>
+                        <Button onClick={handleCreate} className="w-full bg-primary h-10 font-bold uppercase tracking-widest text-[10px]">Save Objective</Button>
                     </DialogContent>
                 </Dialog>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 {goals.map(goal => (
-                    <Card key={goal.id} className="relative group hover:shadow-md transition-shadow">
-                        <CardHeader className="pb-3">
-                            <div className="flex justify-between items-start">
-                                <Badge variant={goal.status === 'completed' ? 'default' : 'outline'}>
-                                    {goal.status.replace('_', ' ')}
+                    <Card key={goal.id} className="border shadow-sm rounded-md overflow-hidden bg-card hover:border-primary/50 transition-colors cursor-pointer group">
+                        <CardContent className="p-4">
+                            <div className="flex justify-between items-start mb-4">
+                                <Badge variant="outline" className={cn(
+                                    "text-[8px] font-black uppercase tracking-widest",
+                                    goal.status === 'completed' ? "border-emerald-100 text-emerald-700 bg-emerald-50" : "text-muted-foreground"
+                                )}>
+                                    {goal.status}
                                 </Badge>
                                 {goal.due_date && (
-                                    <span className="text-xs text-slate-400 flex items-center">
-                                        <Calendar className="mr-1 h-3 w-3" />
+                                    <span className="text-[10px] font-bold text-muted-foreground flex items-center">
+                                        <Clock className="mr-1 h-3 w-3" />
                                         {format(new Date(goal.due_date), 'MMM d')}
                                     </span>
                                 )}
                             </div>
-                            <CardTitle className="text-base mt-2">{goal.title}</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <p className="text-sm text-slate-500 line-clamp-2">{goal.description}</p>
+                            <h4 className="text-sm font-bold text-foreground mb-1 group-hover:text-primary transition-colors">{goal.title}</h4>
+                            <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">{goal.description}</p>
                         </CardContent>
                     </Card>
                 ))}
             </div>
             {goals.length === 0 && (
-                <div className="text-center p-12 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
-                    <Target className="h-10 w-10 text-slate-300 mx-auto mb-3" />
-                    <p className="text-slate-500 font-medium">No goals set yet.</p>
+                <div className="flex flex-col items-center justify-center py-20 bg-muted border border-dashed border-border rounded-md">
+                    <Target size={32} className="text-zinc-200 mb-4" />
+                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">No objectives set</p>
                 </div>
             )}
         </div>
@@ -136,38 +148,51 @@ function ReviewsList() {
     }
 
     return (
-        <Card className="border-none shadow-none bg-transparent">
-            <CardHeader className="px-0 pt-0">
-                <CardTitle>Performance Reviews</CardTitle>
-                <CardDescription>Past and upcoming evaluation cycles.</CardDescription>
+        <Card className="border shadow-sm rounded-md overflow-hidden bg-card">
+            <CardHeader className="border-b bg-muted/50 py-4 flex flex-row items-center justify-between">
+                <div>
+                    <CardTitle className="text-sm font-bold uppercase tracking-widest text-foreground">Review History</CardTitle>
+                </div>
+                <Award className="h-4 w-4 text-muted-foreground/60" />
             </CardHeader>
-            <CardContent className="px-0">
+            <div className="overflow-x-auto">
                 <Table>
-                    <TableHeader>
+                    <TableHeader className="bg-muted/50">
                         <TableRow>
-                            <TableHead>Cycle</TableHead>
-                            <TableHead>Reviewee</TableHead>
-                            <TableHead>Reviewer</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Date</TableHead>
+                            <TableHead className="px-6 h-10 font-bold text-[10px] uppercase tracking-wider">Cycle</TableHead>
+                            <TableHead className="px-6 h-10 font-bold text-[10px] uppercase tracking-wider">Entity</TableHead>
+                            <TableHead className="px-6 h-10 font-bold text-[10px] uppercase tracking-wider">Status</TableHead>
+                            <TableHead className="px-6 h-10 font-bold text-[10px] uppercase tracking-wider">Date</TableHead>
+                            <TableHead className="px-6 h-10 text-right font-bold text-[10px] uppercase tracking-wider">Audit</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {reviews.map(review => (
-                            <TableRow key={review.id}>
-                                <TableCell className="font-bold">{review.cycle}</TableCell>
-                                <TableCell>{review.user?.full_name}</TableCell>
-                                <TableCell>{review.reviewer?.full_name}</TableCell>
-                                <TableCell><Badge variant="outline">{review.status}</Badge></TableCell>
-                                <TableCell>{review.review_date ? format(new Date(review.review_date), 'MMM d, yyyy') : '-'}</TableCell>
+                            <TableRow key={review.id} className="hover:bg-zinc-50/50 transition-colors">
+                                <TableCell className="px-6 py-4 text-xs font-bold text-foreground uppercase">{review.cycle}</TableCell>
+                                <TableCell className="px-6 py-4">
+                                    <p className="text-xs font-bold text-foreground">{review.user?.full_name}</p>
+                                    <p className="text-[10px] text-muted-foreground uppercase font-medium">Reviewer: {review.reviewer?.full_name}</p>
+                                </TableCell>
+                                <TableCell className="px-6 py-4">
+                                    <Badge variant="outline" className="text-[8px] font-black uppercase tracking-widest">{review.status}</Badge>
+                                </TableCell>
+                                <TableCell className="px-6 py-4 text-xs font-medium text-muted-foreground">
+                                    {review.review_date ? format(new Date(review.review_date), 'MMM d, yyyy') : '—'}
+                                </TableCell>
+                                <TableCell className="px-6 py-4 text-right">
+                                    <ChevronRight className="h-4 w-4 ml-auto text-muted-foreground/60" />
+                                </TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
                 </Table>
                 {reviews.length === 0 && (
-                    <div className="text-center p-8 text-slate-400">No reviews found.</div>
+                    <div className="p-12 text-center text-muted-foreground italic">
+                        <p className="text-xs font-medium uppercase tracking-widest">No reviews found</p>
+                    </div>
                 )}
-            </CardContent>
+            </div>
         </Card>
     )
 }

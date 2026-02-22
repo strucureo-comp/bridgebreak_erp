@@ -1,18 +1,20 @@
 'use client';
 
 import { DashboardShell } from '@/components/layout/dashboard-shell';
+import { useTenant } from '@/lib/tenant-context';
 import { ManufacturingContent } from '@/components/manufacturing/manufacturing-content';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Factory, Activity, Box, AlertTriangle } from 'lucide-react';
 
 export default function ManufacturingPage() {
+    const { getModuleLabel } = useTenant();
     return (
         <DashboardShell requireAdmin>
             <div className="space-y-8 pb-12">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                     <div className="space-y-1">
-                        <h1 className="text-4xl font-black tracking-tight text-slate-900">Manufacturing</h1>
-                        <p className="text-slate-500 font-medium">Production planning, execution, and BOM management.</p>
+                        <h1 className="text-4xl font-black tracking-tight text-foreground">{getModuleLabel('manufacturing')}</h1>
+                        <p className="text-muted-foreground font-medium">Production planning, execution, and BOM management.</p>
                     </div>
                 </div>
 
@@ -23,7 +25,7 @@ export default function ManufacturingPage() {
                     <KPI title="Finished Goods" value="450" icon={Box} color="green" />
                 </div>
 
-                <ManufacturingContent />
+                <ManufacturingContent boms={[]} orders={[]} onRefresh={() => { }} />
             </div>
         </DashboardShell>
     );
@@ -37,14 +39,14 @@ function KPI({ title, value, icon: Icon, color }: { title: string; value: string
         red: "bg-red-50 text-red-600",
     };
     return (
-        <Card className="rounded-[2rem] border-none shadow-sm bg-white p-6">
+        <Card className="rounded-[2rem] border-none shadow-sm bg-card p-6">
             <div className="flex items-center gap-4">
                 <div className={`h-12 w-12 rounded-xl flex items-center justify-center ${variants[color]}`}>
                     <Icon size={24} />
                 </div>
                 <div>
-                    <p className="text-xs font-bold text-slate-400 uppercase">{title}</p>
-                    <h3 className="text-2xl font-black text-slate-900">{value}</h3>
+                    <p className="text-xs font-bold text-muted-foreground uppercase">{title}</p>
+                    <h3 className="text-2xl font-black text-foreground">{value}</h3>
                 </div>
             </div>
         </Card>

@@ -115,7 +115,7 @@ export default function AdminPlanningPage() {
             <DashboardShell requireAdmin>
                 <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
                     <RefreshCcw className="h-12 w-12 animate-spin text-primary" />
-                    <p className="font-bold text-slate-900">Loading Strategic Roadmap...</p>
+                    <p className="font-bold text-foreground">Loading Strategic Roadmap...</p>
                 </div>
             </DashboardShell>
         );
@@ -126,8 +126,8 @@ export default function AdminPlanningPage() {
             <div className="space-y-8 pb-12">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                     <div className="space-y-1">
-                        <h1 className="text-4xl font-black tracking-tight text-slate-900">Strategic Roadmap</h1>
-                        <p className="text-slate-500 font-medium">Coordinate internal ideas, strategies, and tasks.</p>
+                        <h1 className="text-4xl font-black tracking-tight text-foreground">Strategic Roadmap</h1>
+                        <p className="text-muted-foreground font-medium">Coordinate internal ideas, strategies, and tasks.</p>
                     </div>
                     <Button onClick={() => setIsDialogOpen(true)} className="rounded-2xl bg-primary h-12 px-8 font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] transition-transform">
                         <Plus className="h-5 w-5 mr-2" /> New Strategy Note
@@ -151,25 +151,25 @@ export default function AdminPlanningPage() {
                                 <div className="flex items-center justify-between px-4">
                                     <div className="flex items-center gap-3">
                                         <div className={cn("h-2 w-2 rounded-full", catKey === 'idea' ? 'bg-blue-500' : catKey === 'strategy' ? 'bg-indigo-500' : catKey === 'todo' ? 'bg-emerald-500' : 'bg-slate-400')} />
-                                        <span className="text-sm font-black text-slate-900 uppercase tracking-widest">{cat.label}</span>
+                                        <span className="text-sm font-black text-foreground uppercase tracking-widest">{cat.label}</span>
                                     </div>
-                                    <Badge variant="secondary" className="rounded-full bg-slate-100 text-slate-400 font-black border-none">{catNotes.length}</Badge>
+                                    <Badge variant="secondary" className="rounded-full bg-muted text-muted-foreground font-black border-none">{catNotes.length}</Badge>
                                 </div>
 
                                 <div className="space-y-4">
                                     {catNotes.map(note => (
-                                        <Card key={note.id} className="rounded-[2rem] border-none shadow-sm bg-white overflow-hidden group hover:shadow-xl transition-all duration-500 relative">
+                                        <Card key={note.id} className="rounded-[2rem] border-none shadow-sm bg-card overflow-hidden group hover:shadow-xl transition-all duration-500 relative">
                                             <CardContent className="p-6">
                                                 <div className="flex items-start justify-between mb-4">
                                                     <div className="space-y-1">
-                                                        <h4 className="text-base font-black text-slate-900 leading-tight">{note.title}</h4>
+                                                        <h4 className="text-base font-black text-foreground leading-tight">{note.title}</h4>
                                                         <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{new Date(note.created_at).toLocaleDateString()}</p>
                                                     </div>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl bg-slate-50 text-slate-200 hover:text-rose-600 hover:bg-rose-50" onClick={(e) => handleDelete(note.id, e)}>
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl bg-muted text-slate-200 hover:text-rose-600 hover:bg-rose-50" onClick={(e) => handleDelete(note.id, e)}>
                                                         <Trash2 size={14} />
                                                     </Button>
                                                 </div>
-                                                <p className="text-sm font-medium text-slate-400 line-clamp-4 leading-relaxed italic">
+                                                <p className="text-sm font-medium text-muted-foreground line-clamp-4 leading-relaxed italic">
                                                     &ldquo;{note.content}&rdquo;
                                                 </p>
                                             </CardContent>
@@ -177,7 +177,7 @@ export default function AdminPlanningPage() {
                                     ))}
                                     <Button
                                         variant="ghost"
-                                        className="w-full h-16 rounded-[2rem] border-2 border-dashed border-slate-100 text-slate-300 hover:text-primary hover:border-primary/30 font-black uppercase text-[10px] tracking-[0.2em] transition-all"
+                                        className="w-full h-16 rounded-[2rem] border-2 border-dashed border-border text-slate-300 hover:text-primary hover:border-primary/30 font-black uppercase text-[10px] tracking-[0.2em] transition-all"
                                         onClick={() => { setCategory(catKey); setIsDialogOpen(true); }}
                                     >
                                         <Plus size={16} className="mr-2" /> Add to {cat.label}
@@ -231,17 +231,17 @@ function PlanningKPI({ title, value, icon: Icon, color }: { title: string; value
         blue: "bg-blue-50 text-blue-600 shadow-blue-100/50",
         emerald: "bg-emerald-50 text-emerald-600 shadow-emerald-100/50",
         indigo: "bg-indigo-50 text-indigo-600 shadow-indigo-100/50",
-        slate: "bg-slate-50 text-slate-600 shadow-slate-100/50",
+        slate: "bg-muted text-muted-foreground shadow-slate-100/50",
     };
     return (
-        <Card className="rounded-[2.5rem] border-none shadow-sm bg-white p-8 group hover:shadow-xl transition-all duration-500">
+        <Card className="rounded-[2.5rem] border-none shadow-sm bg-card p-8 group hover:shadow-xl transition-all duration-500">
             <div className="flex items-center justify-between mb-4">
                 <div className={cn("h-12 w-12 rounded-2xl flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform", variants[color])}>
                     <Icon size={24} strokeWidth={2.5} />
                 </div>
             </div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{title}</p>
-            <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{value}</h3>
+            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{title}</p>
+            <h3 className="text-3xl font-black text-foreground tracking-tighter">{value}</h3>
         </Card>
     );
 }

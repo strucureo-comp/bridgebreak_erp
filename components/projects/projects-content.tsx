@@ -177,10 +177,10 @@ function SchedulingContent() {
                         </CardHeader>
                         <CardContent className="pl-6 pt-2">
                             <div className="text-sm font-medium flex items-center gap-2 mb-1">
-                                <Calendar className="h-3 w-3 text-slate-400" />
+                                <Calendar className="h-3 w-3 text-muted-foreground" />
                                 {format(new Date(booking.start_date), 'MMM d')} - {format(new Date(booking.end_date), 'MMM d')}
                             </div>
-                            <div className="text-xs text-slate-500">
+                            <div className="text-xs text-muted-foreground">
                                 {Number(booking.hours)} hours allocated
                             </div>
                         </CardContent>
@@ -188,7 +188,7 @@ function SchedulingContent() {
                 ))}
             </div>
             {bookings.length === 0 && (
-                <div className="text-center p-8 text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                <div className="text-center p-8 text-muted-foreground bg-muted rounded-xl border border-dashed border-border">
                     No active resource bookings.
                 </div>
             )}

@@ -1,11 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/context';
 import { getUsers, getProjects, createQuotation } from '@/lib/api';
-import { createQuotationDoc } from '@/lib/pdf-generator';
-import { QuotationPreview } from '@/components/admin/quotation-preview';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,34 +13,52 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Loader2, ArrowLeft, Plus, Trash2 } from 'lucide-react';
+import { 
+    Loader2, 
+    ChevronLeft, 
+    Plus, 
+    Trash2, 
+    ShieldCheck, 
+    Eye, 
+    Settings, 
+    User, 
+    Briefcase, 
+    Hash,
+    RefreshCcw,
+    FileText,
+    Calculator
+} from 'lucide-react';
 import Link from 'next/link';
-import type { User, Project, QuotationItem, QuotationStatus, Quotation } from '@/lib/db/types';
+import type { User as UserType, Project, QuotationItem, QuotationStatus } from '@/lib/db/types';
+import { BrandedDocumentPreview } from '@/components/common/branded-document-preview';
+import { useTenant } from '@/lib/tenant-context';
+import { cn } from '@/lib/utils';
 
 export default function NewQuotationPage() {
     const router = useRouter();
     const { user: adminUser } = useAuth();
+    const { companyProfile } = useTenant();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [users, setUsers] = useState<User[]>([]);
+    const [viewMode, setViewMode] = useState<'edit' | 'preview'>('edit');
+    
+    const [users, setUsers] = useState<UserType[]>([]);
     const [projects, setProjects] = useState<Project[]>([]);
 
     const [isManual, setIsManual] = useState(false);
-    const [isManualProject, setIsManualProject] = useState(false);
-    const [showPreview, setShowPreview] = useState(true);
     const [formData, setFormData] = useState({
         client_id: '',
         client_name: '',
         client_email: '',
         client_company: '',
         client_address: '',
-        client_is_company: false,
+        client_is_company: true,
         project_id: '',
         project_title: '',
-        quotation_number: '',
+        quotation_number: `QT-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
         valid_until: '',
         status: 'draft' as QuotationStatus,
-        currency: 'USD',
+        currency: companyProfile?.baseCurrency || 'AED',
         description: '',
         notes: '',
     });
@@ -51,49 +67,26 @@ export default function NewQuotationPage() {
         { description: '', quantity: 1, unit_price: 0, total: 0 }
     ]);
 
-    const calculateTotal = () => {
-        return items.reduce((sum, item) => sum + item.total, 0);
-    };
-
-    const getPreviewData = () => {
-        let project_title = formData.project_title;
-        if (!isManualProject && formData.project_id) {
-            const proj = projects.find(p => p.id === formData.project_id);
-            if (proj) project_title = proj.title;
-        }
-
+    const totals = useMemo(() => {
+        const subtotal = items.reduce((acc, item) => acc + item.total, 0);
+        const taxRate = 5; // Standard VAT
+        const tax = subtotal * (taxRate / 100);
         return {
-            ...formData,
-            items,
-            project_title,
-            amount: calculateTotal(),
-            created_at: new Date().toISOString(),
+            subtotal,
+            tax,
+            total: subtotal + tax
         };
-    };
+    }, [items]);
 
-    const getClient = () => {
-        if (isManual) {
-            return {
-                id: 'manual',
-                full_name: formData.client_name || 'Client Name',
-                email: formData.client_email || '',
-                role: 'client'
-            } as User;
-        }
-        return users.find(u => u.id === formData.client_id) || null;
-    };
+    const selectedClient = useMemo(() => {
+        if (isManual) return { name: formData.client_company || formData.client_name, address: formData.client_address };
+        const u = users.find(u => u.id === formData.client_id);
+        return { name: u?.full_name, address: '' };
+    }, [isManual, formData, users]);
 
     useEffect(() => {
-        if (adminUser === null) {
-            setLoading(false);
-            return;
-        }
-        if (adminUser?.role === 'admin') {
-            fetchData();
-        } else if (adminUser) {
-            setLoading(false);
-        }
-    }, [adminUser]);
+        fetchData();
+    }, []);
 
     const fetchData = async () => {
         try {
@@ -104,7 +97,7 @@ export default function NewQuotationPage() {
             setUsers(usersData.filter(u => u.role === 'client'));
             setProjects(projectsData);
         } catch (error) {
-            toast.error('Failed to fetch data');
+            toast.error('Failed to fetch CRM data');
         } finally {
             setLoading(false);
         }
@@ -113,508 +106,209 @@ export default function NewQuotationPage() {
     const handleItemChange = (index: number, field: keyof QuotationItem, value: any) => {
         const newItems = [...items];
         const item = { ...newItems[index] };
-
-        if (field === 'description') {
-            item.description = value;
-        } else if (field === 'quantity') {
+        if (field === 'description') item.description = value;
+        else if (field === 'quantity') {
             item.quantity = Number(value);
             item.total = item.quantity * item.unit_price;
         } else if (field === 'unit_price') {
             item.unit_price = Number(value);
             item.total = item.quantity * item.unit_price;
         }
-
         newItems[index] = item;
         setItems(newItems);
     };
 
-    const addItem = () => {
-        setItems([...items, { description: '', quantity: 1, unit_price: 0, total: 0 }]);
-    };
-
-    const removeItem = (index: number) => {
-        if (items.length > 1) {
-            setItems(items.filter((_, i) => i !== index));
-        }
-    };
-
-
-
-    const handleDownload = async () => {
-        try {
-            const data = getPreviewData();
-            // Ensure data conforms to Quotation type for generator
-            const quotationForPdf = {
-                ...data,
-                id: 'preview',
-                status: data.status || 'draft',
-                updated_at: new Date().toISOString(),
-                // client_id is handled in data
-            } as Quotation;
-
-            const clientForPdf = getClient();
-
-            const doc = await createQuotationDoc(quotationForPdf, clientForPdf);
-            doc.save(`${data.quotation_number || 'quotation'}.pdf`);
-            toast.success('PDF Downloaded');
-        } catch (error) {
-            console.error(error);
-            toast.error('Failed to download PDF');
-        }
-    };
+    const addItem = () => setItems([...items, { description: '', quantity: 1, unit_price: 0, total: 0 }]);
+    const removeItem = (index: number) => items.length > 1 && setItems(items.filter((_, i) => i !== index));
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-
-
-        const isClientValid = isManual
-            ? (formData.client_is_company ? !!formData.client_company : !!formData.client_name)
-            : !!formData.client_id;
-        if (!isClientValid || !formData.quotation_number || !formData.valid_until) {
-            toast.error('Please fill in all required fields');
-            return;
+        if ((!formData.client_id && !isManual) || !formData.quotation_number || !formData.valid_until) {
+            return toast.error('Required identity fields missing');
         }
-
-        if (items.some(item => !item.description || item.total <= 0)) {
-            toast.error('Please fill in all item details correctly');
-            return;
+        if (items.some(item => !item.description || item.total < 0)) {
+            return toast.error('Line item specifications invalid');
         }
 
         setSaving(true);
         try {
-            // Determine Project Title
-            let projectTitle = formData.project_title;
-            if (!isManualProject && formData.project_id) {
-                const proj = projects.find(p => p.id === formData.project_id);
-                if (proj) projectTitle = proj.title;
-            }
-
             const res = await createQuotation({
-                client_id: formData.client_id, // Empty if manual
-                client_name: isManual ? formData.client_name : undefined,
-                client_email: isManual ? formData.client_email : undefined,
-                client_company: isManual ? formData.client_company : undefined,
-                client_address: isManual ? formData.client_address : undefined,
-                client_is_company: isManual ? formData.client_is_company : undefined,
-                project_id: isManualProject ? undefined : (formData.project_id || undefined),
-                project_title: projectTitle || undefined,
-                quotation_number: formData.quotation_number,
-                amount: calculateTotal(),
-                currency: formData.currency,
-                valid_until: formData.valid_until,
-                status: formData.status,
-                description: formData.description || undefined,
+                ...formData,
+                amount: totals.total,
                 items: items,
-                notes: formData.notes || undefined,
             });
-
-            if (res) {
-                toast.success('Quotation created successfully');
-                router.push('/admin/quotations');
-            } else {
-                toast.error('Failed to create quotation');
-            }
+            toast.success('Proposal Dispatched');
+            router.push('/admin/quotations');
         } catch (error: any) {
-            toast.error(error.message || 'An error occurred');
+            toast.error(error.message || 'Dispatch failed');
         } finally {
             setSaving(false);
         }
     };
 
-    if (loading) {
-        return (
-            <DashboardShell requireAdmin>
-                <div className="flex items-center justify-center min-h-[400px]">
-                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                </div>
-            </DashboardShell>
-        );
-    }
+    if (loading) return (
+        <div className="flex flex-col items-center justify-center min-h-screen space-y-4">
+            <RefreshCcw className="h-10 w-10 animate-spin text-primary" />
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Initializing Quotation Engine</p>
+        </div>
+    );
 
     return (
         <DashboardShell requireAdmin>
-            <div className="space-y-6">
-                <div className="flex items-center justify-between">
+            <div className="space-y-6 pb-12">
+                {/* Header */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6 bg-card -mx-4 px-4 sticky top-0 z-20">
                     <div className="flex items-center gap-4">
-                        <Button variant="ghost" size="icon" asChild>
-                            <Link href="/admin/quotations">
-                                <ArrowLeft className="h-4 w-4" />
-                            </Link>
+                        <Button variant="ghost" size="icon" className="h-10 w-10 border" onClick={() => router.back()}>
+                            <ChevronLeft className="h-5 w-5" />
                         </Button>
-                        <div>
-                            <h1 className="text-3xl font-bold tracking-tight">Create Quotation</h1>
-                            <p className="text-muted-foreground">Create a new price quotation for a client</p>
+                        <div className="space-y-0.5">
+                            <h1 className="text-xl font-bold tracking-tight text-foreground uppercase leading-none">Draft Quotation</h1>
+                            <div className="flex items-center gap-4">
+                                <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Sales CRM Hub</span>
+                                <div className="flex p-0.5 bg-muted rounded-md">
+                                    <button onClick={() => setViewMode('edit')} className={cn("px-3 py-1 rounded text-[9px] font-black uppercase tracking-widest", viewMode === 'edit' ? "bg-card shadow-sm" : "text-muted-foreground")}>Edit</button>
+                                    <button onClick={() => setViewMode('preview')} className={cn("px-3 py-1 rounded text-[9px] font-black uppercase tracking-widest", viewMode === 'preview' ? "bg-card text-primary shadow-sm" : "text-muted-foreground")}>Preview</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowPreview(!showPreview)}
-                        className="hidden lg:flex"
-                    >
-                        {showPreview ? 'Hide Preview' : 'Show Preview'}
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <Button variant="outline" className="h-10 px-6 font-bold uppercase text-[10px] tracking-widest" onClick={() => router.back()}>Cancel</Button>
+                        <Button onClick={handleSubmit} disabled={saving} className="h-10 px-8 gap-2 bg-primary font-bold uppercase text-[10px] tracking-widest shadow-lg shadow-primary/20">
+                            {saving ? <RefreshCcw className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
+                            Dispatch Proposal
+                        </Button>
+                    </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="space-y-6">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Quotation Details</CardTitle>
-                                <CardDescription>Enter the information for this quotation</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <form onSubmit={handleSubmit} className="space-y-6">
-                                    <div className="grid gap-4 md:grid-cols-2">
-                                        <div className="space-y-4">
-                                            <div className="flex items-center justify-between">
-                                                <Label htmlFor="client">Client Details *</Label>
-                                                <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="h-8 text-xs text-muted-foreground hover:text-primary"
-                                                    onClick={() => {
-                                                        setIsManual(!isManual);
-                                                        setFormData(prev => ({
-                                                            ...prev,
-                                                            client_id: '',
-                                                            client_name: '',
-                                                            client_email: '',
-                                                            client_company: '',
-                                                            client_address: ''
-                                                        }));
-                                                    }}
-                                                >
-                                                    {isManual ? 'Select Existing Client' : 'Enter Manually (Non-Client)'}
-                                                </Button>
-                                            </div>
-
-                                            {isManual ? (
-                                                <div className="space-y-4 border rounded-md p-4 bg-muted/20">
-                                                    <div className="flex items-center space-x-2 pb-2 border-b border-gray-200/20">
-                                                        <Switch
-                                                            id="client_is_company"
-                                                            checked={formData.client_is_company}
-                                                            onCheckedChange={(checked) => setFormData({ ...formData, client_is_company: checked })}
-                                                            disabled={saving}
-                                                        />
-                                                        <Label htmlFor="client_is_company" className="cursor-pointer">This is a Company Client</Label>
-                                                    </div>
-
-                                                    <div className="grid grid-cols-2 gap-4">
-                                                        <div className="space-y-2">
-                                                            <Label htmlFor="client_name" className="text-xs">
-                                                                {formData.client_is_company ? 'Contact Person (Optional)' : 'Client Name *'}
-                                                            </Label>
-                                                            <Input
-                                                                id="client_name"
-                                                                placeholder="John Doe"
-                                                                value={formData.client_name}
-                                                                onChange={(e) => setFormData({ ...formData, client_name: e.target.value })}
-                                                                required={!formData.client_is_company && isManual}
-                                                                disabled={saving}
-                                                            />
-                                                        </div>
-                                                        <div className="space-y-2">
-                                                            <Label htmlFor="client_email" className="text-xs">Email</Label>
-                                                            <Input
-                                                                id="client_email"
-                                                                type="email"
-                                                                placeholder="john@example.com"
-                                                                value={formData.client_email}
-                                                                onChange={(e) => setFormData({ ...formData, client_email: e.target.value })}
-                                                                disabled={saving}
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="client_company" className="text-xs">
-                                                            {formData.client_is_company ? 'Company Name *' : 'Company Name'}
-                                                        </Label>
-                                                        <Input
-                                                            id="client_company"
-                                                            placeholder="Acme Corp"
-                                                            value={formData.client_company}
-                                                            onChange={(e) => setFormData({ ...formData, client_company: e.target.value })}
-                                                            required={formData.client_is_company && isManual}
-                                                            disabled={saving}
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="client_address" className="text-xs">Address/Location</Label>
-                                                        <Input
-                                                            id="client_address"
-                                                            placeholder="123 Main St, City, Country"
-                                                            value={formData.client_address}
-                                                            onChange={(e) => setFormData({ ...formData, client_address: e.target.value })}
-                                                            disabled={saving}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                <Select
-                                                    value={formData.client_id}
-                                                    onValueChange={(value) => setFormData({ ...formData, client_id: value })}
-                                                    disabled={saving}
-                                                >
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Select a client" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {users.map((u) => (
-                                                            <SelectItem key={u.id} value={u.id}>
-                                                                {u.full_name} ({u.email})
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                            )}
-                                        </div>
-
-                                        <div className="space-y-4">
-                                            <div className="flex items-center justify-between">
-                                                <Label htmlFor="project">Project Details (Optional)</Label>
-                                                <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="h-8 text-xs text-muted-foreground hover:text-primary"
-                                                    onClick={() => {
-                                                        setIsManualProject(!isManualProject);
-                                                        setFormData(prev => ({ ...prev, project_id: '', project_title: '' }));
-                                                    }}
-                                                >
-                                                    {isManualProject ? 'Select Existing Project' : 'Enter Manually'}
-                                                </Button>
-                                            </div>
-
-                                            {isManualProject ? (
-                                                <div className="space-y-2 border rounded-md p-4 bg-muted/20">
-                                                    <Label htmlFor="project_title" className="text-xs">Project Title</Label>
-                                                    <Input
-                                                        id="project_title"
-                                                        placeholder="e.g. Website Redesign"
-                                                        value={formData.project_title}
-                                                        onChange={(e) => setFormData({ ...formData, project_title: e.target.value })}
-                                                        disabled={saving}
-                                                    />
-                                                </div>
-                                            ) : (
-                                                <Select
-                                                    value={formData.project_id}
-                                                    onValueChange={(value) => setFormData({ ...formData, project_id: value })}
-                                                    disabled={saving || (!formData.client_id && !isManual)}
-                                                >
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Select a project" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {projects.filter(p => !formData.client_id || p.client_id === formData.client_id).map((p) => (
-                                                            <SelectItem key={p.id} value={p.id}>
-                                                                {p.title}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                            )}
-                                        </div>
+                {viewMode === 'edit' ? (
+                    <div className="grid gap-6 md:grid-cols-3 animate-in fade-in duration-300">
+                        <div className="md:col-span-1 space-y-6">
+                            {/* Basic Meta */}
+                            <Card className="border border-border shadow-sm rounded-md bg-card">
+                                <CardHeader className="border-b bg-muted/50 py-3">
+                                    <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                                        <Hash size={14} className="text-primary" /> Identification
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-5 space-y-4">
+                                    <div className="space-y-1.5">
+                                        <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Quotation Number</Label>
+                                        <Input value={formData.quotation_number} onChange={e => setFormData({...formData, quotation_number: e.target.value})} className="h-9 border-border font-mono font-bold uppercase text-xs" />
                                     </div>
-
-                                    <div className="grid gap-4 md:grid-cols-3">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="quotation_number">Quotation Number *</Label>
-                                            <Input
-                                                id="quotation_number"
-                                                placeholder="Q-001"
-                                                value={formData.quotation_number}
-                                                onChange={(e) => setFormData({ ...formData, quotation_number: e.target.value })}
-                                                required
-                                                disabled={saving}
-                                            />
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <Label htmlFor="valid_until">Valid Until (Optional)</Label>
-                                            <Input
-                                                id="valid_until"
-                                                type="date"
-                                                value={formData.valid_until}
-                                                onChange={(e) => setFormData({ ...formData, valid_until: e.target.value })}
-                                                disabled={saving}
-                                            />
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <Label htmlFor="status">Status *</Label>
-                                            <Select
-                                                value={formData.status}
-                                                onValueChange={(value: any) => setFormData({ ...formData, status: value })}
-                                                disabled={saving}
-                                            >
-                                                <SelectTrigger>
-                                                    <SelectValue />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="draft">Draft</SelectItem>
-                                                    <SelectItem value="sent">Sent</SelectItem>
-                                                    <SelectItem value="accepted">Accepted</SelectItem>
-                                                    <SelectItem value="rejected">Rejected</SelectItem>
-                                                    <SelectItem value="expired">Expired</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
+                                    <div className="space-y-1.5">
+                                        <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Valid Until</Label>
+                                        <Input type="date" value={formData.valid_until} onChange={e => setFormData({...formData, valid_until: e.target.value})} className="h-9 border-border text-xs font-bold" />
                                     </div>
+                                </CardContent>
+                            </Card>
 
-                                    <div className="space-y-2">
-                                        <Label htmlFor="currency">Currency *</Label>
-                                        <Select
-                                            value={formData.currency}
-                                            onValueChange={(value) => setFormData({ ...formData, currency: value })}
-                                            disabled={saving}
-                                        >
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select Currency" />
-                                            </SelectTrigger>
+                            {/* Client Block */}
+                            <Card className="border border-border shadow-sm rounded-md bg-card">
+                                <CardHeader className="border-b bg-muted/50 py-3 flex flex-row items-center justify-between">
+                                    <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                                        <User size={14} className="text-primary" /> Target Entity
+                                    </CardTitle>
+                                    <button onClick={() => setIsManual(!isManual)} className="text-[8px] font-black text-primary uppercase border-b border-primary/20">
+                                        {isManual ? 'Use Registry' : 'Enter Manual'}
+                                    </button>
+                                </CardHeader>
+                                <CardContent className="p-5 space-y-4">
+                                    {isManual ? (
+                                        <div className="space-y-3">
+                                            <Input placeholder="Company Name" value={formData.client_company} onChange={e => setFormData({...formData, client_company: e.target.value})} className="h-9 border-border text-xs font-bold" />
+                                            <Input placeholder="Email Address" value={formData.client_email} onChange={e => setFormData({...formData, client_email: e.target.value})} className="h-9 border-border text-xs" />
+                                            <Textarea placeholder="Physical Address" value={formData.client_address} onChange={e => setFormData({...formData, client_address: e.target.value})} className="min-h-[60px] text-xs border-border" />
+                                        </div>
+                                    ) : (
+                                        <Select value={formData.client_id} onValueChange={v => setFormData({...formData, client_id: v})}>
+                                            <SelectTrigger className="h-9 border-border text-xs font-bold uppercase"><SelectValue placeholder="Select Client..." /></SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="USD">USD ($)</SelectItem>
-                                                <SelectItem value="INR">INR (₹)</SelectItem>
-                                                <SelectItem value="EUR">EUR (€)</SelectItem>
-                                                <SelectItem value="GBP">GBP (£)</SelectItem>
-                                                <SelectItem value="AUD">AUD (A$)</SelectItem>
-                                                <SelectItem value="CAD">CAD (C$)</SelectItem>
-                                                <SelectItem value="SGD">SGD (S$)</SelectItem>
+                                                {users.map(u => <SelectItem key={u.id} value={u.id} className="text-xs uppercase font-bold">{u.full_name}</SelectItem>)}
                                             </SelectContent>
                                         </Select>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        </div>
+
+                        {/* Items Area */}
+                        <div className="md:col-span-2 space-y-6">
+                            <Card className="border border-border shadow-sm rounded-md bg-card overflow-hidden">
+                                <CardHeader className="border-b bg-muted/50 py-4 flex flex-row items-center justify-between">
+                                    <div className="space-y-0.5">
+                                        <CardTitle className="text-xs font-black uppercase tracking-widest text-foreground">Proposal Specification</CardTitle>
+                                        <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter">Line item breakdown for client review</p>
                                     </div>
-
-                                    <div className="space-y-4">
-                                        <div className="flex items-center justify-between">
-                                            <Label>Items</Label>
-                                            <Button type="button" variant="outline" size="sm" onClick={addItem}>
-                                                <Plus className="h-4 w-4 mr-2" />
-                                                Add Item
-                                            </Button>
+                                    <Button type="button" onClick={addItem} variant="outline" className="h-8 text-[9px] font-black uppercase tracking-widest border-primary/20 text-primary hover:bg-primary/5">
+                                        <Plus className="mr-1.5 h-3 w-3" /> Add Item
+                                    </Button>
+                                </CardHeader>
+                                <CardContent className="p-0">
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left">
+                                            <thead className="bg-muted/50 border-b border-border">
+                                                <tr>
+                                                    <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground">Description</th>
+                                                    <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground w-20">Qty</th>
+                                                    <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground w-32">Unit Price</th>
+                                                    <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground w-28 text-right">Total</th>
+                                                    <th className="px-6 py-3 w-12"></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-border">
+                                                {items.map((item, idx) => (
+                                                    <tr key={idx} className="group hover:bg-zinc-50/50">
+                                                        <td className="px-6 py-3"><Input value={item.description} onChange={e => handleItemChange(idx, 'description', e.target.value)} className="h-8 border-none bg-transparent font-bold text-xs uppercase" placeholder="Enter service..." /></td>
+                                                        <td className="px-6 py-3"><Input type="number" value={item.quantity} onChange={e => handleItemChange(idx, 'quantity', e.target.value)} className="h-8 border-border text-center text-xs font-bold" /></td>
+                                                        <td className="px-6 py-3"><Input type="number" value={item.unit_price} onChange={e => handleItemChange(idx, 'unit_price', e.target.value)} className="h-8 border-border text-xs font-bold" /></td>
+                                                        <td className="px-6 py-3 text-right text-xs font-black text-foreground">{item.total.toLocaleString()}</td>
+                                                        <td className="px-6 py-3 text-right">
+                                                            <button onClick={() => removeItem(idx)} className="text-muted-foreground/60 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={14} /></button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div className="p-8 bg-muted/30 border-t border-border grid md:grid-cols-2 gap-12">
+                                        <div className="space-y-3">
+                                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Internal Notes</Label>
+                                            <Textarea value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} className="min-h-[100px] border-border text-xs resize-none" placeholder="Administrative notes..." />
                                         </div>
-
-                                        <div className="border rounded-md p-4 space-y-4">
-                                            {items.map((item, index) => (
-                                                <div key={index} className="grid gap-4 md:grid-cols-12 items-end">
-                                                    <div className="md:col-span-6 space-y-2">
-                                                        <Label className="text-xs">Description</Label>
-                                                        <Input
-                                                            value={item.description}
-                                                            onChange={(e) => handleItemChange(index, 'description', e.target.value)}
-                                                            placeholder="Item description"
-                                                        />
-                                                    </div>
-                                                    <div className="md:col-span-2 space-y-2">
-                                                        <Label className="text-xs">Quantity</Label>
-                                                        <Input
-                                                            type="number"
-                                                            min="1"
-                                                            value={item.quantity}
-                                                            onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
-                                                        />
-                                                    </div>
-                                                    <div className="md:col-span-2 space-y-2">
-                                                        <Label className="text-xs">Unit Price</Label>
-                                                        <Input
-                                                            type="number"
-                                                            min="0"
-                                                            step="0.01"
-                                                            value={item.unit_price}
-                                                            onChange={(e) => handleItemChange(index, 'unit_price', e.target.value)}
-                                                        />
-                                                    </div>
-                                                    <div className="md:col-span-1 space-y-2">
-                                                        <Label className="text-xs">Total</Label>
-                                                        <div className="flex h-10 w-full items-center rounded-md border border-input bg-muted px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
-                                                            ${item.total.toFixed(2)}
-                                                        </div>
-                                                    </div>
-                                                    <div className="md:col-span-1">
-                                                        <Button
-                                                            type="button"
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            disabled={items.length === 1}
-                                                            onClick={() => removeItem(index)}
-                                                        >
-                                                            <Trash2 className="h-4 w-4 text-destructive" />
-                                                        </Button>
-                                                    </div>
+                                        <div className="space-y-4">
+                                            <div className="flex justify-between border-b pb-4">
+                                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Subtotal Position</span>
+                                                <span className="text-sm font-black text-foreground">{formData.currency} {totals.subtotal.toLocaleString()}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center bg-foreground text-card-foreground p-6 rounded-md">
+                                                <div className="space-y-0.5">
+                                                    <p className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground">Proposal Commitment</p>
+                                                    <p className="text-2xl font-black tracking-tighter">{formData.currency} {totals.total.toLocaleString()}</p>
                                                 </div>
-                                            ))}
-
-                                            <div className="flex justify-end pt-4 border-t">
-                                                <div className="text-right">
-                                                    <span className="text-muted-foreground mr-4">Total Amount:</span>
-                                                    <span className="text-2xl font-bold">${calculateTotal().toFixed(2)}</span>
-                                                </div>
+                                                <Calculator className="h-8 w-8 text-primary opacity-50" />
                                             </div>
                                         </div>
                                     </div>
-
-                                    <div className="space-y-2">
-                                        <Label htmlFor="description">Description (Internal/Summary)</Label>
-                                        <Textarea
-                                            id="description"
-                                            placeholder="Brief summary of the quotation..."
-                                            value={formData.description}
-                                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                            rows={2}
-                                            disabled={saving}
-                                        />
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <Label htmlFor="notes">Notes</Label>
-                                        <Textarea
-                                            id="notes"
-                                            placeholder="Add any notes relevant to the client..."
-                                            value={formData.notes}
-                                            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                                            rows={3}
-                                            disabled={saving}
-                                        />
-                                    </div>
-
-                                    <div className="flex gap-4">
-                                        <Button
-                                            type="button"
-                                            variant="secondary"
-                                            onClick={handleDownload}
-                                            disabled={saving}
-                                        >
-                                            Download PDF
-                                        </Button>
-                                        <Button type="submit" disabled={saving}>
-                                            {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                            Create Quotation
-                                        </Button>
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            onClick={() => router.push('/admin/quotations')}
-                                            disabled={saving}
-                                        >
-                                            Cancel
-                                        </Button>
-                                    </div>
-                                </form>
-                            </CardContent>
-                        </Card>
-                    </div>
-                    {showPreview && (
-                        <div className="hidden lg:block sticky top-6 h-[calc(100vh-100px)]">
-                            <QuotationPreview
-                                data={getPreviewData()}
-                                client={getClient()}
-                            />
+                                </CardContent>
+                            </Card>
                         </div>
-                    )}
-                </div>
+                    </div>
+                ) : (
+                    <div className="animate-in zoom-in-95 duration-300 py-10 bg-muted rounded-md border-2 border-dashed border-border">
+                        <BrandedDocumentPreview 
+                            type="quotation"
+                            number={formData.quotation_number}
+                            entityName={selectedClient.name || undefined}
+                            entityAddress={selectedClient.address || undefined}
+                            lines={items.map(i => ({ ...i, unit_price: i.unit_price }))}
+                            totals={totals}
+                            currency={formData.currency}
+                            notes={formData.notes}
+                        />
+                    </div>
+                )}
             </div>
         </DashboardShell>
     );

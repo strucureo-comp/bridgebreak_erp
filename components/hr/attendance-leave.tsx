@@ -1,13 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Clock, CheckCircle, XCircle, CalendarDays, TreePalm } from 'lucide-react';
+import { Plus, Clock, CheckCircle, XCircle, CalendarDays, TreePalm, ChevronRight, MessageSquare, User, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { applyLeave, updateLeaveStatus, createHoliday } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -30,14 +31,14 @@ export function AttendanceLeave({ employees, leaves, leaveTypes, holidays, onRef
         const fd = new FormData(e.currentTarget);
         try {
             await applyLeave({
-                employee_id: fd.get('employee_id'),
-                leave_type_id: fd.get('leave_type_id'),
-                from_date: fd.get('from_date'),
-                to_date: fd.get('to_date'),
-                days: fd.get('days'),
-                reason: fd.get('reason'),
+                employee_id: fd.get('employee_id') as string,
+                leave_type_id: fd.get('leave_type_id') as string,
+                from_date: fd.get('from_date') as string,
+                to_date: fd.get('to_date') as string,
+                days: fd.get('days') as string,
+                reason: fd.get('reason') as string,
             });
-            toast.success('Leave applied');
+            toast.success('Leave application submitted successfully');
             setLeaveOpen(false);
             onRefresh();
         } catch { toast.error('Failed to apply leave'); }
@@ -46,136 +47,201 @@ export function AttendanceLeave({ employees, leaves, leaveTypes, holidays, onRef
     const handleLeaveAction = async (id: string, status: 'approved' | 'rejected') => {
         try {
             await updateLeaveStatus(id, status);
-            toast.success(`Leave ${status}`);
+            toast.success(`Leave request ${status}`);
             onRefresh();
-        } catch { toast.error('Failed to update leave'); }
+        } catch { toast.error('Failed to update leave status'); }
     };
 
     const handleCreateHoliday = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         const fd = new FormData(e.currentTarget);
         try {
-            await createHoliday({ name: fd.get('name'), date: fd.get('date'), type: fd.get('type') });
-            toast.success('Holiday added');
+            await createHoliday({ 
+                name: fd.get('name') as string, 
+                date: fd.get('date') as string, 
+                type: fd.get('type') as string 
+            });
+            toast.success('Holiday added to calendar');
             setHolidayOpen(false);
             onRefresh();
         } catch { toast.error('Failed to add holiday'); }
     };
 
-    const statusBadge: Record<string, string> = {
-        pending: 'bg-amber-50 text-amber-700 border-amber-200',
-        approved: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-        rejected: 'bg-red-50 text-red-700 border-red-200',
-        cancelled: 'bg-slate-50 text-slate-400 border-slate-200',
-    };
-
     return (
-        <Tabs defaultValue="leaves" className="space-y-6">
-            <div className="flex items-center justify-between flex-wrap gap-3">
-                <TabsList className="rounded-xl bg-white/80 border shadow-sm">
-                    <TabsTrigger value="leaves" className="rounded-lg text-xs gap-1.5"><Clock className="h-3.5 w-3.5" />Leave Requests</TabsTrigger>
-                    <TabsTrigger value="holidays" className="rounded-lg text-xs gap-1.5"><TreePalm className="h-3.5 w-3.5" />Holiday Calendar</TabsTrigger>
-                </TabsList>
-                <div className="flex gap-2">
-                    <Dialog open={leaveOpen} onOpenChange={setLeaveOpen}>
-                        <DialogTrigger asChild><Button size="sm" className="rounded-xl gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-xs"><Plus className="h-3.5 w-3.5" /> Apply Leave</Button></DialogTrigger>
-                        <DialogContent className="max-w-md rounded-3xl">
-                            <DialogHeader><DialogTitle>Apply Leave</DialogTitle><DialogDescription>Submit a leave request</DialogDescription></DialogHeader>
-                            <form onSubmit={handleApplyLeave} className="space-y-3 mt-2">
-                                <select name="employee_id" required className="w-full h-10 rounded-xl border border-slate-200 px-3 text-sm bg-white">
-                                    <option value="">Select Employee</option>
-                                    {employees.filter(e => e.status === 'active').map(e => <option key={e.id} value={e.id}>{e.name} ({e.employee_id})</option>)}
-                                </select>
-                                <select name="leave_type_id" required className="w-full h-10 rounded-xl border border-slate-200 px-3 text-sm bg-white">
-                                    <option value="">Leave Type</option>
-                                    {leaveTypes.map(t => <option key={t.id} value={t.id}>{t.name} ({t.days_per_year} days/yr)</option>)}
-                                </select>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <Input name="from_date" type="date" required className="rounded-xl" />
-                                    <Input name="to_date" type="date" required className="rounded-xl" />
-                                </div>
-                                <Input name="days" type="number" step="0.5" placeholder="No. of days" required className="rounded-xl" />
-                                <Input name="reason" placeholder="Reason" className="rounded-xl" />
-                                <Button type="submit" className="w-full rounded-xl bg-indigo-600 hover:bg-indigo-700">Submit</Button>
-                            </form>
-                        </DialogContent>
-                    </Dialog>
-                    <Dialog open={holidayOpen} onOpenChange={setHolidayOpen}>
-                        <DialogTrigger asChild><Button size="sm" variant="outline" className="rounded-xl gap-1.5 text-xs"><CalendarDays className="h-3.5 w-3.5" /> Add Holiday</Button></DialogTrigger>
-                        <DialogContent className="max-w-sm rounded-3xl">
-                            <DialogHeader><DialogTitle>Add Holiday</DialogTitle><DialogDescription>Add a new holiday to the calendar</DialogDescription></DialogHeader>
-                            <form onSubmit={handleCreateHoliday} className="space-y-3 mt-2">
-                                <Input name="name" placeholder="Holiday Name" required className="rounded-xl" />
-                                <Input name="date" type="date" required className="rounded-xl" />
-                                <select name="type" className="w-full h-10 rounded-xl border border-slate-200 px-3 text-sm bg-white">
-                                    <option value="public">Public</option>
-                                    <option value="restricted">Restricted</option>
-                                    <option value="optional">Optional</option>
-                                </select>
-                                <Button type="submit" className="w-full rounded-xl bg-indigo-600 hover:bg-indigo-700">Add</Button>
-                            </form>
-                        </DialogContent>
-                    </Dialog>
-                </div>
-            </div>
-
-            <TabsContent value="leaves" className="space-y-4 mt-0">
-                {leaves.length === 0 ? (
-                    <Card className="rounded-3xl border-none shadow-sm bg-white p-12 text-center"><p className="text-sm text-slate-400">No leave requests found</p></Card>
-                ) : (
-                    <div className="grid gap-3">
-                        {leaves.map(leave => (
-                            <Card key={leave.id} className="rounded-2xl border-none shadow-sm bg-white">
-                                <CardContent className="p-5 flex items-center gap-4 flex-wrap">
-                                    <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-xs shrink-0">
-                                        {leave.employee?.name?.split(' ').map(n => n[0]).join('').slice(0, 2) || '??'}
+        <div className="space-y-6">
+            <Tabs defaultValue="leaves" className="space-y-6">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <TabsList className="bg-muted/50 border h-10 p-0.5">
+                        <TabsTrigger value="leaves" className="text-xs font-semibold px-6 h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                           Leave Pipeline
+                        </TabsTrigger>
+                        <TabsTrigger value="holidays" className="text-xs font-semibold px-6 h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                           Company Calendar
+                        </TabsTrigger>
+                    </TabsList>
+                    
+                    <div className="flex items-center gap-2">
+                        <Dialog open={leaveOpen} onOpenChange={setLeaveOpen}>
+                            <DialogTrigger asChild>
+                                <Button size="sm" variant="outline" className="h-9 gap-2">
+                                    <Plus className="h-3.5 w-3.5" /> Apply Leave
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-md">
+                                <DialogHeader>
+                                    <DialogTitle>Leave Application</DialogTitle>
+                                    <DialogDescription>Submit a formal request for time off.</DialogDescription>
+                                </DialogHeader>
+                                <form onSubmit={handleApplyLeave} className="space-y-4">
+                                    <div className="space-y-1.5">
+                                        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Employee</Label>
+                                        <select name="employee_id" required className="flex h-10 w-full rounded-md border border-border bg-card px-3 py-2 text-sm">
+                                            <option value="">Select Architect</option>
+                                            {employees.filter(e => e.status === 'active').map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+                                        </select>
                                     </div>
-                                    <div className="min-w-0 flex-1">
-                                        <h4 className="font-bold text-sm text-slate-800">{leave.employee?.name || 'Employee'}</h4>
-                                        <p className="text-[11px] text-slate-400">{leave.leave_type?.name} · {leave.days} day(s) · {new Date(leave.from_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} – {new Date(leave.to_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</p>
-                                        {leave.reason && <p className="text-[11px] text-slate-500 mt-0.5">"{leave.reason}"</p>}
-                                    </div>
-                                    <Badge variant="outline" className={cn('text-[10px]', statusBadge[leave.status])}>{leave.status}</Badge>
-                                    {leave.status === 'pending' && (
-                                        <div className="flex gap-1.5">
-                                            <Button size="sm" variant="outline" className="h-8 rounded-lg text-xs gap-1 border-emerald-200 text-emerald-600 hover:bg-emerald-50" onClick={() => handleLeaveAction(leave.id, 'approved')}>
-                                                <CheckCircle className="h-3.5 w-3.5" /> Approve
-                                            </Button>
-                                            <Button size="sm" variant="outline" className="h-8 rounded-lg text-xs gap-1 border-red-200 text-red-600 hover:bg-red-50" onClick={() => handleLeaveAction(leave.id, 'rejected')}>
-                                                <XCircle className="h-3.5 w-3.5" /> Reject
-                                            </Button>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-1.5">
+                                            <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">From Date</Label>
+                                            <Input name="from_date" type="date" required />
                                         </div>
-                                    )}
+                                        <div className="space-y-1.5">
+                                            <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">To Date</Label>
+                                            <Input name="to_date" type="date" required />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Reason</Label>
+                                        <Input name="reason" placeholder="Medical, Annual, etc." />
+                                    </div>
+                                    <Button type="submit" className="w-full bg-primary h-10 font-bold uppercase tracking-widest text-xs">Submit Request</Button>
+                                </form>
+                            </DialogContent>
+                        </Dialog>
+
+                        <Dialog open={holidayOpen} onOpenChange={setHolidayOpen}>
+                            <DialogTrigger asChild>
+                                <Button size="sm" className="h-9 gap-2 bg-primary hover:bg-primary/90">
+                                    <CalendarDays className="h-3.5 w-3.5" /> Add Holiday
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-sm">
+                                <DialogHeader>
+                                    <DialogTitle>Configure Holiday</DialogTitle>
+                                </DialogHeader>
+                                <form onSubmit={handleCreateHoliday} className="space-y-4">
+                                    <div className="space-y-1.5">
+                                        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Title</Label>
+                                        <Input name="name" required />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Date</Label>
+                                        <Input name="date" type="date" required />
+                                    </div>
+                                    <Button type="submit" className="w-full bg-primary h-10 font-bold uppercase tracking-widest text-xs">Save Holiday</Button>
+                                </form>
+                            </DialogContent>
+                        </Dialog>
+                    </div>
+                </div>
+
+                <TabsContent value="leaves" className="mt-0">
+                    <Card className="border shadow-sm rounded-md overflow-hidden">
+                        <CardHeader className="border-b bg-muted/50 flex flex-row items-center justify-between py-4">
+                            <CardTitle className="text-sm font-bold">Pending Approval</CardTitle>
+                            <div className="relative">
+                                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                                <Input placeholder="Filter..." className="h-8 pl-7 w-40 text-xs rounded-md" />
+                            </div>
+                        </CardHeader>
+                        <div className="divide-y">
+                            {leaves.length === 0 ? (
+                                <div className="p-12 text-center text-muted-foreground">
+                                    <p className="text-xs font-medium italic">All caught up. No pending requests.</p>
+                                </div>
+                            ) : (
+                                leaves.map(leave => (
+                                    <div key={leave.id} className="flex items-center justify-between p-4 hover:bg-accent hover:text-accent-foreground transition-colors group">
+                                        <div className="flex items-center gap-4 min-w-0 flex-1">
+                                            <div className="h-9 w-9 rounded-md bg-muted flex items-center justify-center text-muted-foreground font-bold text-xs uppercase">
+                                                {leave.employee?.name?.charAt(0)}
+                                            </div>
+                                            <div className="min-w-0">
+                                                <div className="flex items-center gap-2">
+                                                    <p className="text-sm font-bold text-foreground truncate">{leave.employee?.name}</p>
+                                                    <Badge variant="outline" className={cn(
+                                                        "text-[8px] font-black uppercase tracking-wider",
+                                                        leave.status === 'approved' ? "border-emerald-100 text-emerald-700 bg-emerald-50" :
+                                                        leave.status === 'pending' ? "border-amber-100 text-amber-700 bg-amber-50" :
+                                                        "border-border text-muted-foreground"
+                                                    )}>{leave.status}</Badge>
+                                                </div>
+                                                <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-tight mt-0.5">
+                                                    {leave.leave_type?.name} · {new Date(leave.from_date).toLocaleDateString()} to {new Date(leave.to_date).toLocaleDateString()} ({leave.days}d)
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-2 ml-4">
+                                            {leave.status === 'pending' && (
+                                                <>
+                                                    <Button 
+                                                        size="sm" 
+                                                        variant="ghost" 
+                                                        className="h-8 w-8 p-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-full"
+                                                        onClick={() => handleLeaveAction(leave.id, 'approved')}
+                                                    >
+                                                        <CheckCircle className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button 
+                                                        size="sm" 
+                                                        variant="ghost" 
+                                                        className="h-8 w-8 p-0 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-full"
+                                                        onClick={() => handleLeaveAction(leave.id, 'rejected')}
+                                                    >
+                                                        <XCircle className="h-4 w-4" />
+                                                    </Button>
+                                                </>
+                                            )}
+                                            <ChevronRight className="h-4 w-4 text-muted-foreground/60 group-hover:text-zinc-900 transition-colors" />
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </Card>
+                </TabsContent>
+
+                <TabsContent value="holidays" className="mt-0">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {holidays.map(h => (
+                            <Card key={h.id} className="border shadow-sm rounded-md overflow-hidden bg-card">
+                                <CardContent className="p-4">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <div className="h-10 w-10 rounded-md bg-foreground text-card-foreground flex flex-col items-center justify-center leading-none">
+                                            <span className="text-[8px] font-black uppercase opacity-60">
+                                                {new Date(h.date).toLocaleDateString('en-AE', { month: 'short' })}
+                                            </span>
+                                            <span className="text-lg font-bold">
+                                                {new Date(h.date).getDate()}
+                                            </span>
+                                        </div>
+                                        <Badge variant="secondary" className="text-[8px] font-black uppercase tracking-widest bg-muted text-muted-foreground border-none px-2 py-0.5">
+                                            {h.type}
+                                        </Badge>
+                                    </div>
+                                    <div className="space-y-0.5">
+                                        <h4 className="text-sm font-bold text-foreground">{h.name}</h4>
+                                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                                            {new Date(h.date).toLocaleDateString('en-AE', { weekday: 'long' })}
+                                        </p>
+                                    </div>
                                 </CardContent>
                             </Card>
                         ))}
                     </div>
-                )}
-            </TabsContent>
-
-            <TabsContent value="holidays" className="mt-0">
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    {holidays.map(h => {
-                        const isPast = new Date(h.date) < new Date();
-                        return (
-                            <Card key={h.id} className={cn('rounded-2xl border-none shadow-sm bg-white', isPast && 'opacity-60')}>
-                                <CardContent className="p-5 flex items-center gap-4">
-                                    <div className={cn('h-12 w-12 rounded-xl flex flex-col items-center justify-center text-center shrink-0', isPast ? 'bg-slate-100' : 'bg-indigo-50')}>
-                                        <span className="text-[10px] font-bold text-indigo-500 uppercase">{new Date(h.date).toLocaleDateString('en-IN', { month: 'short' })}</span>
-                                        <span className="text-lg font-black text-indigo-700 leading-none">{new Date(h.date).getDate()}</span>
-                                    </div>
-                                    <div>
-                                        <h4 className="font-bold text-sm text-slate-800">{h.name}</h4>
-                                        <p className="text-[11px] text-slate-400">{new Date(h.date).toLocaleDateString('en-IN', { weekday: 'long' })}</p>
-                                    </div>
-                                    <Badge variant="outline" className="ml-auto text-[9px] capitalize">{h.type}</Badge>
-                                </CardContent>
-                            </Card>
-                        );
-                    })}
-                    {holidays.length === 0 && <p className="text-center text-slate-400 py-12 text-sm col-span-full">No holidays configured</p>}
-                </div>
-            </TabsContent>
-        </Tabs>
+                </TabsContent>
+            </Tabs>
+        </div>
     );
 }

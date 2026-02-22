@@ -380,58 +380,58 @@ export function ReceivablesContent() {
         <div className="space-y-6">
             {/* Stats Cards */}
             <div className="grid gap-4 md:grid-cols-4">
-                <Card className="rounded-[2rem] border-none shadow-sm bg-gradient-to-br from-slate-900 to-slate-800 text-white">
+                <Card className="rounded-[2rem] border-none shadow-sm bg-gradient-to-br from-slate-900 to-slate-800 text-card-foreground">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium text-slate-300">Total Receivables</CardTitle>
                         <DollarSign className="h-4 w-4 text-emerald-400" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-black">${stats.totalAR.toLocaleString()}</div>
-                        <p className="text-xs text-slate-400 mt-1">Outstanding posted</p>
+                        <p className="text-xs text-muted-foreground mt-1">Outstanding posted</p>
                     </CardContent>
                 </Card>
-                <Card className="rounded-[2rem] border-none shadow-sm bg-white">
+                <Card className="rounded-[2rem] border-none shadow-sm bg-card">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-slate-500">Overdue</CardTitle>
+                        <CardTitle className="text-sm font-medium text-muted-foreground">Overdue</CardTitle>
                         <AlertCircle className="h-4 w-4 text-red-500" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-black text-red-600">${stats.overdue.toLocaleString()}</div>
-                        <p className="text-xs text-slate-400 mt-1">Past due date</p>
+                        <p className="text-xs text-muted-foreground mt-1">Past due date</p>
                     </CardContent>
                 </Card>
-                <Card className="rounded-[2rem] border-none shadow-sm bg-white">
+                <Card className="rounded-[2rem] border-none shadow-sm bg-card">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-slate-500">Posted</CardTitle>
+                        <CardTitle className="text-sm font-medium text-muted-foreground">Posted</CardTitle>
                         <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-black text-slate-900">{stats.postedCount}</div>
-                        <p className="text-xs text-slate-400 mt-1">In ledger</p>
+                        <div className="text-2xl font-black text-foreground">{stats.postedCount}</div>
+                        <p className="text-xs text-muted-foreground mt-1">In ledger</p>
                     </CardContent>
                 </Card>
-                <Card className="rounded-[2rem] border-none shadow-sm bg-white">
+                <Card className="rounded-[2rem] border-none shadow-sm bg-card">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-slate-500">Draft</CardTitle>
+                        <CardTitle className="text-sm font-medium text-muted-foreground">Draft</CardTitle>
                         <FileText className="h-4 w-4 text-amber-500" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-black text-slate-900">{stats.draftCount}</div>
-                        <p className="text-xs text-slate-400 mt-1">Not posted</p>
+                        <div className="text-2xl font-black text-foreground">{stats.draftCount}</div>
+                        <p className="text-xs text-muted-foreground mt-1">Not posted</p>
                     </CardContent>
                 </Card>
             </div>
 
             {/* Invoices Table */}
-            <Card className="rounded-[2.5rem] border-none shadow-sm bg-white">
+            <Card className="rounded-[2.5rem] border-none shadow-sm bg-card">
                 <CardHeader className="flex flex-row items-center justify-between">
                     <div>
-                        <CardTitle className="text-xl font-black text-slate-900">Customer Invoices</CardTitle>
-                        <p className="text-slate-500 font-medium text-sm">Manage invoices with automated tax calculations</p>
+                        <CardTitle className="text-xl font-black text-foreground">Customer Invoices</CardTitle>
+                        <p className="text-muted-foreground font-medium text-sm">Manage invoices with automated tax calculations</p>
                     </div>
                     <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
                         <DialogTrigger asChild>
-                            <Button className="rounded-2xl bg-slate-900 text-white font-bold shadow-lg shadow-slate-200 hover:bg-slate-800">
+                            <Button className="rounded-2xl bg-slate-900 text-card-foreground font-bold shadow-lg shadow-slate-200 hover:bg-slate-800">
                                 <Plus className="h-4 w-4 mr-2" />
                                 New Invoice
                             </Button>
@@ -537,12 +537,12 @@ export function ReceivablesContent() {
                                 </div>
 
                                 {/* Tax Exemption Toggle */}
-                                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+                                <div className="flex items-center justify-between p-4 bg-muted rounded-xl">
                                     <div className="flex items-center gap-3">
-                                        <Percent className="h-5 w-5 text-slate-500" />
+                                        <Percent className="h-5 w-5 text-muted-foreground" />
                                         <div>
                                             <Label className="font-bold cursor-pointer" htmlFor="tax-exempt">Tax Exempt Invoice</Label>
-                                            <p className="text-xs text-slate-500">Enable for non-taxable transactions</p>
+                                            <p className="text-xs text-muted-foreground">Enable for non-taxable transactions</p>
                                         </div>
                                     </div>
                                     <Switch
@@ -572,9 +572,9 @@ export function ReceivablesContent() {
 
                                     <div className="space-y-3">
                                         {lineItems.map((item, index) => (
-                                            <div key={item.id} className="grid grid-cols-12 gap-3 p-4 bg-slate-50 rounded-xl">
+                                            <div key={item.id} className="grid grid-cols-12 gap-3 p-4 bg-muted rounded-xl">
                                                 <div className="col-span-4">
-                                                    <Label className="text-xs font-bold text-slate-500 mb-1">Description</Label>
+                                                    <Label className="text-xs font-bold text-muted-foreground mb-1">Description</Label>
                                                     <Input
                                                         value={item.description}
                                                         onChange={e => updateLineItem(item.id, { description: e.target.value })}
@@ -583,7 +583,7 @@ export function ReceivablesContent() {
                                                     />
                                                 </div>
                                                 <div className="col-span-2">
-                                                    <Label className="text-xs font-bold text-slate-500 mb-1">Qty</Label>
+                                                    <Label className="text-xs font-bold text-muted-foreground mb-1">Qty</Label>
                                                     <Input
                                                         type="number"
                                                         min="1"
@@ -593,7 +593,7 @@ export function ReceivablesContent() {
                                                     />
                                                 </div>
                                                 <div className="col-span-2">
-                                                    <Label className="text-xs font-bold text-slate-500 mb-1">Unit Price</Label>
+                                                    <Label className="text-xs font-bold text-muted-foreground mb-1">Unit Price</Label>
                                                     <Input
                                                         type="number"
                                                         min="0"
@@ -604,7 +604,7 @@ export function ReceivablesContent() {
                                                     />
                                                 </div>
                                                 <div className="col-span-3">
-                                                    <Label className="text-xs font-bold text-slate-500 mb-1">
+                                                    <Label className="text-xs font-bold text-muted-foreground mb-1">
                                                         Tax Rate {!formData.isTaxExempt && taxRates.length === 0 && '(Loading...)'}
                                                     </Label>
                                                     <Select
@@ -637,15 +637,15 @@ export function ReceivablesContent() {
                                                     </Button>
                                                 </div>
                                                 <div className="col-span-12 flex justify-end gap-4 text-sm">
-                                                    <span className="text-slate-500">
+                                                    <span className="text-muted-foreground">
                                                         Amount: <strong>${(item.quantity * item.unitPrice).toFixed(2)}</strong>
                                                     </span>
                                                     {!formData.isTaxExempt && item.taxAmount > 0 && (
-                                                        <span className="text-slate-500">
+                                                        <span className="text-muted-foreground">
                                                             Tax: <strong className="text-amber-600">${item.taxAmount.toFixed(2)}</strong>
                                                         </span>
                                                     )}
-                                                    <span className="text-slate-900">
+                                                    <span className="text-foreground">
                                                         Total: <strong className="text-lg">${item.total.toFixed(2)}</strong>
                                                     </span>
                                                 </div>
@@ -658,24 +658,24 @@ export function ReceivablesContent() {
 
                                 {/* Totals */}
                                 <div className="flex justify-end">
-                                    <div className="w-full max-w-md space-y-3 p-6 bg-slate-50 rounded-2xl">
+                                    <div className="w-full max-w-md space-y-3 p-6 bg-muted rounded-2xl">
                                         <div className="flex justify-between text-sm">
-                                            <span className="text-slate-500">Subtotal</span>
+                                            <span className="text-muted-foreground">Subtotal</span>
                                             <span className="font-bold">${totals.subtotal.toFixed(2)}</span>
                                         </div>
                                         {!formData.isTaxExempt && (
                                             <div className="flex justify-between text-sm">
-                                                <span className="text-slate-500">Tax</span>
+                                                <span className="text-muted-foreground">Tax</span>
                                                 <span className="font-bold text-amber-600">${totals.totalTax.toFixed(2)}</span>
                                             </div>
                                         )}
                                         <Separator />
                                         <div className="flex justify-between">
                                             <span className="text-lg font-bold">Total</span>
-                                            <span className="text-2xl font-black text-slate-900">
+                                            <span className="text-2xl font-black text-foreground">
                                                 {currencies.find(c => c.code === formData.currency)?.symbol}
                                                 {totals.total.toFixed(2)}
-                                                <span className="text-sm font-normal text-slate-500 ml-2">{formData.currency}</span>
+                                                <span className="text-sm font-normal text-muted-foreground ml-2">{formData.currency}</span>
                                             </span>
                                         </div>
                                     </div>
@@ -736,7 +736,7 @@ export function ReceivablesContent() {
 
                 <CardContent>
                     <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-                        <TabsList className="rounded-xl bg-slate-100 p-1">
+                        <TabsList className="rounded-xl bg-muted p-1">
                             <TabsTrigger value="all" className="rounded-lg">All</TabsTrigger>
                             <TabsTrigger value="pending" className="rounded-lg">Pending</TabsTrigger>
                             <TabsTrigger value="paid" className="rounded-lg">Paid</TabsTrigger>
@@ -744,10 +744,10 @@ export function ReceivablesContent() {
                         </TabsList>
                     </Tabs>
 
-                    <div className="rounded-2xl border border-slate-100 overflow-hidden">
+                    <div className="rounded-2xl border border-border overflow-hidden">
                         <Table>
                             <TableHeader>
-                                <TableRow className="bg-slate-50 hover:bg-slate-50">
+                                <TableRow className="bg-muted hover:bg-slate-50">
                                     <TableHead className="font-bold">Invoice #</TableHead>
                                     <TableHead className="font-bold">Customer</TableHead>
                                     <TableHead className="font-bold">Date</TableHead>
@@ -761,7 +761,7 @@ export function ReceivablesContent() {
                             <TableBody>
                                 {filteredInvoices.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={8} className="text-center py-12 text-slate-400">
+                                        <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
                                             <Receipt className="h-12 w-12 mx-auto mb-3 text-slate-200" />
                                             <p className="font-medium">No invoices found</p>
                                         </TableCell>

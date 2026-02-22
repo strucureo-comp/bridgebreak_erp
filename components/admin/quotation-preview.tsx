@@ -27,7 +27,7 @@ export function QuotationPreview({ data, client }: QuotationPreviewProps) {
     };
 
     return (
-        <div className="bg-white text-black p-8 rounded-lg shadow-sm border h-full overflow-y-auto min-h-[600px] text-sm font-sans" id="quotation-preview">
+        <div className="bg-card text-black p-8 rounded-lg shadow-sm border h-full overflow-y-auto min-h-[600px] text-sm font-sans" id="quotation-preview">
             {/* Header */}
             <div className="flex justify-between items-start mb-8">
                 <div className="w-32 h-32 relative">
@@ -87,7 +87,7 @@ export function QuotationPreview({ data, client }: QuotationPreviewProps) {
             <div className="mb-8">
                 <table className="w-full">
                     <thead>
-                        <tr className="bg-gray-800 text-white">
+                        <tr className="bg-gray-800 text-card-foreground">
                             <th className="py-2 px-4 text-left rounded-tl-md">Description</th>
                             <th className="py-2 px-4 text-right">Quantity</th>
                             <th className="py-2 px-4 text-right">Unit Price</th>
@@ -103,7 +103,7 @@ export function QuotationPreview({ data, client }: QuotationPreviewProps) {
                             </tr>
                         ) : (
                             items.map((item, index) => (
-                                <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                                <tr key={index} className={index % 2 === 0 ? 'bg-card' : 'bg-gray-50'}>
                                     <td className="py-2 px-4 border-b">{item.description || 'Item Name'}</td>
                                     <td className="py-2 px-4 text-right border-b">{item.quantity}</td>
                                     <td className="py-2 px-4 text-right border-b">{formatCurrency(item.unit_price)}</td>

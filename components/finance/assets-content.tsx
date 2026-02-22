@@ -160,8 +160,8 @@ export function AssetsContent() {
                             <Building2 className="h-6 w-6" />
                         </div>
                         <div>
-                            <p className="text-sm font-medium text-slate-500">Total Assets</p>
-                            <h3 className="text-2xl font-black text-slate-900">{assets.length}</h3>
+                            <p className="text-sm font-medium text-muted-foreground">Total Assets</p>
+                            <h3 className="text-2xl font-black text-foreground">{assets.length}</h3>
                         </div>
                     </div>
                 </Card>
@@ -171,8 +171,8 @@ export function AssetsContent() {
                             <DollarSign className="h-6 w-6" />
                         </div>
                         <div>
-                            <p className="text-sm font-medium text-slate-500">Total Book Value</p>
-                            <h3 className="text-2xl font-black text-slate-900">
+                            <p className="text-sm font-medium text-muted-foreground">Total Book Value</p>
+                            <h3 className="text-2xl font-black text-foreground">
                                 ${assets.reduce((sum, a) => sum + Number(a.current_book_value), 0).toLocaleString()}
                             </h3>
                         </div>
@@ -184,9 +184,9 @@ export function AssetsContent() {
                             <TrendingDown className="h-6 w-6" />
                         </div>
                         <div>
-                            <p className="text-sm font-medium text-slate-500">Monthly Depreciation</p>
+                            <p className="text-sm font-medium text-muted-foreground">Monthly Depreciation</p>
                             {/* Estimate based on active assets first month calculation */}
-                            <h3 className="text-2xl font-black text-slate-900">
+                            <h3 className="text-2xl font-black text-foreground">
                                 ${assets
                                     .filter(a => a.status === 'active' && Number(a.current_book_value) > Number(a.salvage_value))
                                     .reduce((sum, a) => {
@@ -205,11 +205,11 @@ export function AssetsContent() {
                     <div className="relative">
                         <Input
                             placeholder="Search assets..."
-                            className="w-64 pl-10 bg-white border-none shadow-sm rounded-xl"
+                            className="w-64 pl-10 bg-card border-none shadow-sm rounded-xl"
                         />
-                        <Archive className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                        <Archive className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     </div>
-                    <Button variant="outline" className="rounded-xl border-none shadow-sm bg-white text-slate-600">
+                    <Button variant="outline" className="rounded-xl border-none shadow-sm bg-card text-muted-foreground">
                         Filter
                     </Button>
                 </div>
@@ -224,7 +224,7 @@ export function AssetsContent() {
                     </Button>
                     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                         <DialogTrigger asChild>
-                            <Button className="rounded-xl bg-slate-900 text-white hover:bg-slate-800 shadow-lg shadow-slate-900/20">
+                            <Button className="rounded-xl bg-slate-900 text-card-foreground hover:bg-slate-800 shadow-lg shadow-slate-900/20">
                                 <Plus className="mr-2 h-4 w-4" />
                                 Register Asset
                             </Button>
@@ -374,7 +374,7 @@ export function AssetsContent() {
                                 <Button
                                     onClick={handleCreateAsset}
                                     disabled={isInternalLoading}
-                                    className="bg-slate-900 text-white"
+                                    className="bg-slate-900 text-card-foreground"
                                 >
                                     {isInternalLoading ? 'Registering...' : 'Register Asset'}
                                 </Button>
@@ -385,10 +385,10 @@ export function AssetsContent() {
             </div>
 
             {/* Assets List Table */}
-            <Card className="rounded-[2rem] border-none shadow-sm bg-white overflow-hidden">
+            <Card className="rounded-[2rem] border-none shadow-sm bg-card overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left">
-                        <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider">
+                        <thead className="bg-muted text-muted-foreground font-bold uppercase tracking-wider">
                             <tr>
                                 <th className="px-6 py-4">Asset #</th>
                                 <th className="px-6 py-4">Name</th>
@@ -402,18 +402,18 @@ export function AssetsContent() {
                         <tbody className="divide-y divide-slate-100">
                             {assets.map((asset) => (
                                 <tr key={asset.id} className="hover:bg-slate-50 transition-colors group">
-                                    <td className="px-6 py-4 font-mono text-slate-400">{asset.asset_number}</td>
+                                    <td className="px-6 py-4 font-mono text-muted-foreground">{asset.asset_number}</td>
                                     <td className="px-6 py-4 font-bold text-slate-700">{asset.name}</td>
-                                    <td className="px-6 py-4 text-slate-500">
+                                    <td className="px-6 py-4 text-muted-foreground">
                                         <div className="flex items-center gap-2">
                                             <Calendar className="h-3 w-3" />
                                             {format(new Date(asset.purchase_date), 'MMM dd, yyyy')}
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4 text-right font-medium text-slate-600">
+                                    <td className="px-6 py-4 text-right font-medium text-muted-foreground">
                                         ${Number(asset.purchase_cost).toLocaleString()}
                                     </td>
-                                    <td className="px-6 py-4 text-right font-bold text-slate-900">
+                                    <td className="px-6 py-4 text-right font-bold text-foreground">
                                         ${Number(asset.current_book_value).toLocaleString()}
                                     </td>
                                     <td className="px-6 py-4">
@@ -422,7 +422,7 @@ export function AssetsContent() {
                                             className={cn(
                                                 "capitalize",
                                                 asset.status === 'active' ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
-                                                    asset.status === 'disposed' ? "bg-slate-100 text-slate-500 border-slate-200" :
+                                                    asset.status === 'disposed' ? "bg-muted text-muted-foreground border-border" :
                                                         "bg-red-50 text-red-600 border-red-100"
                                             )}
                                         >
@@ -432,7 +432,7 @@ export function AssetsContent() {
                                     <td className="px-6 py-4 text-right">
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 group-hover:text-slate-600">
+                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground group-hover:text-slate-600">
                                                     <MoreHorizontal className="h-4 w-4" />
                                                 </Button>
                                             </DropdownMenuTrigger>
@@ -448,7 +448,7 @@ export function AssetsContent() {
                             ))}
                             {assets.length === 0 && (
                                 <tr>
-                                    <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
+                                    <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
                                         No fixed assets registered yet.
                                     </td>
                                 </tr>

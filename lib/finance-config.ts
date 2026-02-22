@@ -466,6 +466,28 @@ export const DEFAULT_CONFIG_US: Partial<FinanceConfiguration> = {
   statutory_reports: ['1099', 'P&L', 'BALANCE_SHEET'],
 };
 
+export const DEFAULT_CONFIG_UAE: Partial<FinanceConfiguration> = {
+  accounting_standard: 'IFRS',
+  fiscal_year: {
+    start_month: 1, // January
+    start_day: 1,
+    label: '2024',
+  },
+  date_format: 'UK', // DD/MM/YYYY
+  tax_config: {
+    regime: 'VAT_UAE',
+    rates: VAT_UAE_RATES,
+    enable_tax_tracking: true,
+    tax_id: '',
+  },
+  currency_config: {
+    base_currency: 'AED',
+    enable_multi_currency: true,
+    exchange_rates: [],
+  },
+  statutory_reports: ['VAT_RETURN', 'P&L', 'BALANCE_SHEET'],
+};
+
 /**
  * Format date based on configuration
  */
@@ -663,6 +685,13 @@ export function formatCurrency(amount: number, currency: CurrencyCode): string {
   const currencyInfo = CURRENCIES[currency];
   const symbol = currencyInfo?.symbol || currency;
   return `${symbol}${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+/**
+ * Get UAE Emirates
+ */
+export function getUAEEmirates(): string[] {
+  return ['Abu Dhabi', 'Dubai', 'Sharjah', 'Ajman', 'Umm Al Quwain', 'Ras Al Khaimah', 'Fujairah'];
 }
 
 /**

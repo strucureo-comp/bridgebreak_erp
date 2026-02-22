@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { getVendors, getPurchaseRequests, createPurchaseOrder } from '@/lib/api';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -18,44 +18,78 @@ import {
     ClipboardList,
     Calculator,
     Hash,
-    RefreshCcw
+    RefreshCcw,
+    FileText,
+    Truck,
+    Package,
+    ShieldCheck,
+    Eye,
+    Settings
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import type { Vendor, PurchaseRequest } from '@/lib/db/types';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { POPreview } from '@/components/purchases/po-preview';
+import { useTenant } from '@/lib/tenant-context';
 
 export default function NewPurchaseOrderPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const requestId = searchParams.get('request_id');
+  const { companyProfile } = useTenant();
+
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [requests, setRequests] = useState<PurchaseRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [viewMode, setViewMode] = useState<'edit' | 'preview'>('edit');
 
   // Form State
   const [poNumber, setPoNumber] = useState(`PO-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`);
-  const [selectedVendor, setSelectedVendor] = useState('');
-  const [selectedRequest, setSelectedRequest] = useState('none');
-  const [lines, setLines] = useState([{ description: '', quantity: 1, unit_price: 0, tax_rate: 0 }]);
+  const [selectedVendorId, setSelectedVendor] = useState('');
+  const [selectedRequest, setSelectedRequest] = useState(requestId || 'none');
+  
+  // Dynamic Defaults from Settings
+  const defaultTaxRate = companyProfile?.taxConfig?.rates?.[0]?.rate || 5;
+  const [lines, setLines] = useState([{ description: '', quantity: 1, unit_price: 0, tax_rate: defaultTaxRate }]);
+  const [notes, setNotes] = useState('');
 
   useEffect(() => {
     fetchData();
   }, []);
 
+  const selectedVendor = useMemo(() => vendors.find(v => v.id === selectedVendorId) || null, [selectedVendorId, vendors]);
+
+  useEffect(() => {
+    if (selectedRequest !== 'none' && requests.length > 0) {
+        const req = requests.find(r => r.id === selectedRequest);
+        if (req) {
+            setLines([{ 
+                description: req.item_name, 
+                quantity: req.quantity, 
+                unit_price: 0, 
+                tax_rate: defaultTaxRate 
+            }]);
+        }
+    }
+  }, [selectedRequest, requests, defaultTaxRate]);
+
   const fetchData = async () => {
     try {
       const [v, r] = await Promise.all([getVendors(), getPurchaseRequests()]);
       setVendors(v || []);
-      setRequests(r.filter(req => req.status === 'pending') || []);
+      setRequests(r || []);
     } catch (e) {
       console.error(e);
-      toast.error('Failed to load initial data');
+      toast.error('Failed to load supply chain data');
     } finally {
       setLoading(false);
     }
   };
 
   const addLine = () => {
-    setLines([...lines, { description: '', quantity: 1, unit_price: 0, tax_rate: 0 }]);
+    setLines([...lines, { description: '', quantity: 1, unit_price: 0, tax_rate: defaultTaxRate }]);
   };
 
   const removeLine = (index: number) => {
@@ -81,15 +115,15 @@ export default function NewPurchaseOrderPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedVendor) return toast.error('Please select a vendor');
-    if (lines.some(l => !l.description || l.quantity <= 0)) return toast.error('Please fill all line items');
+    if (!selectedVendorId) return toast.error('Vendor selection required');
+    if (lines.some(l => !l.description || l.quantity <= 0)) return toast.error('Invalid line item specifications');
 
     try {
       setSaving(true);
       const payload = {
         po_number: poNumber,
-        vendor_id: selectedVendor,
-        purchase_request_id: selectedRequest,
+        vendor_id: selectedVendorId,
+        purchase_request_id: selectedRequest === 'none' ? null : selectedRequest,
         total_amount: totals.total,
         status: 'approved',
         lines: lines.map(l => ({
@@ -103,196 +137,281 @@ export default function NewPurchaseOrderPage() {
       };
 
       await createPurchaseOrder(payload);
-      toast.success('Purchase Order created successfully');
+      toast.success('Purchase Order Dispatched');
       router.push('/admin/purchases');
     } catch (e: any) {
-      toast.error(e.message || 'Failed to create Purchase Order');
+      toast.error(e.message || 'Failed to dispatch PO');
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading) return <div className="p-12 text-center font-bold">Loading Form...</div>;
+  if (loading) return (
+    <div className="flex flex-col items-center justify-center min-h-screen space-y-4">
+        <RefreshCcw className="h-10 w-10 animate-spin text-primary" />
+        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Initializing Procurement Document</p>
+    </div>
+  );
 
   return (
     <DashboardShell requireAdmin>
-      <div className="max-w-5xl mx-auto space-y-8 pb-12">
-        <div className="flex items-center justify-between">
-            <Button 
-                variant="ghost" 
-                className="rounded-xl font-bold text-slate-500 hover:text-slate-900"
-                onClick={() => router.back()}
-            >
-                <ChevronLeft className="mr-2 h-5 w-5" /> Cancel
-            </Button>
-            <h1 className="text-3xl font-black text-slate-900 tracking-tight">Create New Purchase Order</h1>
+      <div className="space-y-6 pb-12">
+        {/* Document Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6 bg-card -mx-4 px-4 sticky top-0 z-20">
+            <div className="flex items-center gap-4">
+                <Button 
+                    variant="ghost" 
+                    size="icon"
+                    className="h-10 w-10 rounded-md border border-border hover:bg-accent hover:text-accent-foreground"
+                    onClick={() => router.back()}
+                >
+                    <ChevronLeft className="h-5 w-5 text-muted-foreground" />
+                </Button>
+                <div className="space-y-0.5">
+                    <h1 className="text-xl font-bold tracking-tight text-foreground uppercase leading-none">Issue Purchase Order</h1>
+                    <div className="flex items-center gap-4">
+                        <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Procurement System</span>
+                        <div className="flex p-0.5 bg-muted rounded-md">
+                            <button 
+                                onClick={() => setViewMode('edit')}
+                                className={cn(
+                                    "flex items-center gap-1.5 px-3 py-1 rounded text-[9px] font-black uppercase tracking-widest transition-all",
+                                    viewMode === 'edit' ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-zinc-600"
+                                )}
+                            >
+                                <Settings size={10} /> Configuration
+                            </button>
+                            <button 
+                                onClick={() => setViewMode('preview')}
+                                className={cn(
+                                    "flex items-center gap-1.5 px-3 py-1 rounded text-[9px] font-black uppercase tracking-widest transition-all",
+                                    viewMode === 'preview' ? "bg-card text-primary shadow-sm" : "text-muted-foreground hover:text-zinc-600"
+                                )}
+                            >
+                                <Eye size={10} /> Live Preview
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div className="flex items-center gap-2">
+                <Button 
+                    variant="outline" 
+                    className="h-10 px-6 font-bold uppercase text-[10px] tracking-widest border-border"
+                    onClick={() => router.back()}
+                >
+                    Cancel
+                </Button>
+                <Button 
+                    onClick={handleSubmit}
+                    disabled={saving}
+                    className="h-10 px-8 gap-2 bg-primary hover:bg-primary/90 font-bold uppercase text-[10px] tracking-widest shadow-lg shadow-primary/20"
+                >
+                    {saving ? <RefreshCcw className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
+                    Confirm & Dispatch PO
+                </Button>
+            </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-8">
-            <div className="grid gap-8 md:grid-cols-2">
-                <Card className="rounded-[2.5rem] border-none shadow-sm bg-white p-8">
-                    <CardHeader className="p-0 pb-6">
-                        <CardTitle className="text-xl font-black flex items-center gap-2">
-                            <Hash size={20} className="text-primary" /> Basic Info
-                        </CardTitle>
-                    </CardHeader>
-                    <div className="space-y-4">
-                        <div className="space-y-2">
-                            <Label className="font-bold text-slate-500 ml-1">PO Number</Label>
-                            <Input 
-                                value={poNumber} 
-                                onChange={(e) => setPoNumber(e.target.value)}
-                                className="h-12 rounded-2xl border-2 border-slate-100 font-bold focus:border-primary outline-none"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label className="font-bold text-slate-500 ml-1">Related Purchase Request</Label>
-                            <select 
-                                className="w-full h-12 rounded-2xl border-2 border-slate-100 font-bold focus:border-primary outline-none px-4 bg-white"
-                                value={selectedRequest}
-                                onChange={(e) => setSelectedRequest(e.target.value)}
-                            >
-                                <option value="none">None / Direct Order</option>
-                                {requests.map(r => (
-                                    <option key={r.id} value={r.id}>{r.item_name} ({r.quantity} {r.unit})</option>
-                                ))}
-                            </select>
-                        </div>
-                    </div>
-                </Card>
+        {viewMode === 'edit' ? (
+            <form onSubmit={handleSubmit} className="space-y-6 animate-in fade-in duration-300">
+                <div className="grid gap-6 md:grid-cols-3">
+                    {/* Identification */}
+                    <Card className="border border-border shadow-sm rounded-md bg-card">
+                        <CardHeader className="border-b bg-muted/50 py-3">
+                            <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                                <Hash size={14} className="text-primary" /> Document Identity
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-5 space-y-4">
+                            <div className="space-y-1.5">
+                                <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">PO Control Number</Label>
+                                <Input 
+                                    value={poNumber} 
+                                    onChange={(e) => setPoNumber(e.target.value)}
+                                    className="h-10 border-border font-mono font-bold uppercase text-xs"
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Linked Requisition</Label>
+                                <Select value={selectedRequest} onValueChange={setSelectedRequest}>
+                                    <SelectTrigger className="h-10 border-border text-xs font-bold uppercase">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="none" className="text-xs font-bold uppercase">Direct / No MR Link</SelectItem>
+                                        {requests.map(r => (
+                                            <SelectItem key={r.id} value={r.id} className="text-xs font-bold uppercase">
+                                                MR-{r.id.slice(0, 4).toUpperCase()}: {r.item_name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </CardContent>
+                    </Card>
 
-                <Card className="rounded-[2.5rem] border-none shadow-sm bg-white p-8">
-                    <CardHeader className="p-0 pb-6">
-                        <CardTitle className="text-xl font-black flex items-center gap-2">
-                            <Store size={20} className="text-primary" /> Vendor Selection
-                        </CardTitle>
-                    </CardHeader>
-                    <div className="space-y-4">
-                        <div className="space-y-2">
-                            <Label className="font-bold text-slate-500 ml-1">Supplier / Vendor</Label>
-                            <select 
-                                className="w-full h-12 rounded-2xl border-2 border-slate-100 font-bold focus:border-primary outline-none px-4 bg-white"
-                                value={selectedVendor}
-                                onChange={(e) => setSelectedVendor(e.target.value)}
-                                required
-                            >
-                                <option value="">Select a vendor...</option>
-                                {vendors.map(v => (
-                                    <option key={v.id} value={v.id}>{v.name}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <p className="text-xs font-bold text-slate-400 px-1 italic">
-                            Cannot find vendor? Create one in the Master Data module.
-                        </p>
-                    </div>
-                </Card>
-            </div>
-
-            <Card className="rounded-[2.5rem] border-none shadow-sm bg-white overflow-hidden">
-                <CardHeader className="p-8 pb-4 flex flex-row items-center justify-between">
-                    <div>
-                        <CardTitle className="text-2xl font-black">Line Items</CardTitle>
-                        <CardDescription className="font-bold">Add materials or services to this order</CardDescription>
-                    </div>
-                    <Button type="button" onClick={addLine} variant="outline" className="rounded-xl font-black border-2 border-primary text-primary hover:bg-primary/5">
-                        <Plus className="mr-2 h-5 w-5" /> Add Item
-                    </Button>
-                </CardHeader>
-                <CardContent className="p-8 pt-4">
-                    <div className="space-y-4">
-                        {lines.map((line, idx) => (
-                            <div key={idx} className="flex flex-col md:flex-row gap-4 p-6 rounded-3xl bg-slate-50 border-2 border-slate-100 group">
-                                <div className="flex-1 space-y-2">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Description</Label>
-                                    <Input 
-                                        placeholder="Item description..."
-                                        value={line.description}
-                                        onChange={(e) => updateLine(idx, 'description', e.target.value)}
-                                        className="rounded-xl border-none shadow-sm font-bold h-11"
-                                    />
+                    {/* Supplier Hub */}
+                    <Card className="md:col-span-2 border border-border shadow-sm rounded-md bg-card">
+                        <CardHeader className="border-b bg-muted/50 py-3">
+                            <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                                <Store size={14} className="text-primary" /> Supplier Selection
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-5">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-1.5">
+                                    <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Target Vendor Entity</Label>
+                                    <Select value={selectedVendorId} onValueChange={setSelectedVendor}>
+                                        <SelectTrigger className="h-10 border-border text-xs font-bold uppercase">
+                                            <SelectValue placeholder="Select Supplier..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {vendors.map(v => (
+                                                <SelectItem key={v.id} value={v.id} className="text-xs font-bold uppercase">{v.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
-                                <div className="w-full md:w-24 space-y-2">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Qty</Label>
-                                    <Input 
-                                        type="number"
-                                        value={line.quantity}
-                                        onChange={(e) => updateLine(idx, 'quantity', parseFloat(e.target.value))}
-                                        className="rounded-xl border-none shadow-sm font-bold h-11"
-                                    />
-                                </div>
-                                <div className="w-full md:w-32 space-y-2">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Price</Label>
-                                    <Input 
-                                        type="number"
-                                        value={line.unit_price}
-                                        onChange={(e) => updateLine(idx, 'unit_price', parseFloat(e.target.value))}
-                                        className="rounded-xl border-none shadow-sm font-bold h-11"
-                                    />
-                                </div>
-                                <div className="w-full md:w-24 space-y-2">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Tax%</Label>
-                                    <Input 
-                                        type="number"
-                                        value={line.tax_rate}
-                                        onChange={(e) => updateLine(idx, 'tax_rate', parseFloat(e.target.value))}
-                                        className="rounded-xl border-none shadow-sm font-bold h-11"
-                                    />
-                                </div>
-                                <div className="w-full md:w-32 space-y-2">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Subtotal</Label>
-                                    <div className="h-11 flex items-center font-black text-slate-900 px-2">
-                                        ${(line.quantity * line.unit_price).toLocaleString()}
+                                <div className="flex items-center p-4 bg-muted rounded-md border border-border">
+                                    <div className="h-8 w-8 rounded bg-zinc-200 flex items-center justify-center text-muted-foreground mr-3">
+                                        <Truck size={16} />
+                                    </div>
+                                    <div className="space-y-0.5">
+                                        <p className="text-[8px] font-black uppercase text-muted-foreground">Logistics Mode</p>
+                                        <p className="text-[10px] font-bold text-foreground uppercase">Standard Delivery</p>
                                     </div>
                                 </div>
-                                <div className="flex items-end pb-1">
-                                    <Button 
-                                        type="button" 
-                                        variant="ghost" 
-                                        onClick={() => removeLine(idx)}
-                                        className="rounded-xl text-slate-300 hover:text-red-500 hover:bg-red-50"
-                                    >
-                                        <Trash2 size={20} />
-                                    </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Material Grid */}
+                <Card className="border border-border shadow-sm rounded-md bg-card overflow-hidden">
+                    <CardHeader className="border-b bg-muted/50 py-4 flex flex-row items-center justify-between">
+                        <div className="space-y-0.5">
+                            <CardTitle className="text-xs font-black uppercase tracking-widest text-foreground">Procurement Items</CardTitle>
+                            <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter">Line items for this purchase order</p>
+                        </div>
+                        <Button type="button" onClick={addLine} variant="outline" className="h-8 text-[9px] font-black uppercase tracking-widest border-primary/20 text-primary hover:bg-primary/5">
+                            <Plus className="mr-1.5 h-3 w-3" /> Add Material
+                        </Button>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left">
+                                <thead className="bg-muted/50 border-b border-border">
+                                    <tr>
+                                        <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground">Description</th>
+                                        <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground w-24">Qty</th>
+                                        <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground w-32">Price ({companyProfile?.baseCurrency || 'AED'})</th>
+                                        <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground w-24">Tax%</th>
+                                        <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground w-32 text-right">Total</th>
+                                        <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground w-16 text-right"></th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-border">
+                                    {lines.map((line, idx) => (
+                                        <tr key={idx} className="group hover:bg-zinc-50/50 transition-colors">
+                                            <td className="px-6 py-3">
+                                                <Input 
+                                                    placeholder="Material description..."
+                                                    value={line.description}
+                                                    onChange={(e) => updateLine(idx, 'description', e.target.value)}
+                                                    className="h-9 border-none shadow-none focus-visible:ring-1 focus-visible:ring-primary/20 bg-transparent font-bold text-xs uppercase"
+                                                />
+                                            </td>
+                                            <td className="px-6 py-3">
+                                                <Input 
+                                                    type="number"
+                                                    value={line.quantity}
+                                                    onChange={(e) => updateLine(idx, 'quantity', parseFloat(e.target.value))}
+                                                    className="h-9 border-border text-xs font-bold text-center"
+                                                />
+                                            </td>
+                                            <td className="px-6 py-3">
+                                                <Input 
+                                                    type="number"
+                                                    value={line.unit_price}
+                                                    onChange={(e) => updateLine(idx, 'unit_price', parseFloat(e.target.value))}
+                                                    className="h-9 border-border text-xs font-bold"
+                                                />
+                                            </td>
+                                            <td className="px-6 py-3">
+                                                <Input 
+                                                    type="number"
+                                                    value={line.tax_rate}
+                                                    onChange={(e) => updateLine(idx, 'tax_rate', parseFloat(e.target.value))}
+                                                    className="h-9 border-border text-xs font-bold"
+                                                />
+                                            </td>
+                                            <td className="px-6 py-3 text-right">
+                                                <span className="text-xs font-black text-foreground">
+                                                    {(line.quantity * line.unit_price).toLocaleString()}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-3 text-right">
+                                                <Button 
+                                                    type="button" 
+                                                    variant="ghost" 
+                                                    size="icon"
+                                                    onClick={() => removeLine(idx)}
+                                                    className="h-8 w-8 text-muted-foreground/60 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                >
+                                                    <Trash2 size={14} />
+                                                </Button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-12 bg-muted/30 border-t border-border">
+                            <div className="space-y-3">
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Technical Instructions</Label>
+                                <textarea 
+                                    className="w-full rounded-md p-4 bg-card border border-border shadow-sm min-h-[120px] outline-none text-xs font-medium resize-none focus:ring-1 focus:ring-primary/20 uppercase"
+                                    placeholder="Specify delivery timelines, QC requirements or site contact details..."
+                                    value={notes}
+                                    onChange={(e) => setNotes(e.target.value)}
+                                />
+                            </div>
+                            <div className="space-y-4">
+                                <div className="space-y-2 border-b border-border pb-4">
+                                    <div className="flex justify-between items-center text-xs">
+                                        <span className="font-bold text-muted-foreground uppercase tracking-widest">Subtotal</span>
+                                        <span className="font-black text-foreground">{companyProfile?.baseCurrency || 'AED'} {totals.subtotal.toLocaleString()}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-xs">
+                                        <span className="font-bold text-muted-foreground uppercase tracking-widest">VAT (Calculated)</span>
+                                        <span className="font-black text-foreground">{companyProfile?.baseCurrency || 'AED'} {totals.tax.toLocaleString()}</span>
+                                    </div>
+                                </div>
+                                <div className="flex justify-between items-center bg-foreground text-card-foreground p-6 rounded-md shadow-xl shadow-zinc-200">
+                                    <div className="space-y-0.5">
+                                        <p className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground">Order Commitment</p>
+                                        <p className="text-2xl font-black tracking-tighter">{companyProfile?.baseCurrency || 'AED'} {totals.total.toLocaleString()}</p>
+                                    </div>
+                                    <ShieldCheck className="h-8 w-8 text-primary opacity-50" />
                                 </div>
                             </div>
-                        ))}
-                    </div>
-
-                    <div className="mt-12 flex flex-col md:flex-row justify-between items-start gap-8">
-                        <div className="flex-1 p-6 rounded-[2rem] bg-slate-50 border-2 border-slate-100 w-full">
-                            <p className="font-black text-slate-900 mb-2">Order Notes</p>
-                            <textarea 
-                                className="w-full rounded-2xl p-4 bg-white border-none shadow-sm min-h-[100px] outline-none font-medium"
-                                placeholder="Special instructions for vendor..."
-                            />
                         </div>
-                        <div className="w-full md:w-80 space-y-4">
-                            <div className="flex justify-between items-center text-slate-500 font-bold">
-                                <span>Subtotal</span>
-                                <span>${totals.subtotal.toLocaleString()}</span>
-                            </div>
-                            <div className="flex justify-between items-center text-slate-500 font-bold">
-                                <span>Tax Amount</span>
-                                <span>${totals.tax.toLocaleString()}</span>
-                            </div>
-                            <div className="pt-4 border-t-2 border-slate-100 flex justify-between items-center">
-                                <span className="text-xl font-black text-slate-900 tracking-tight">Grand Total</span>
-                                <span className="text-2xl font-black text-primary tracking-tighter">${totals.total.toLocaleString()}</span>
-                            </div>
-                            <Button 
-                                type="submit" 
-                                disabled={saving}
-                                className="w-full h-14 rounded-2xl bg-primary text-lg font-black shadow-lg shadow-primary/20 hover:scale-[1.02] transition-transform mt-4"
-                            >
-                                {saving ? <RefreshCcw className="animate-spin mr-2" /> : <Save className="mr-2" />}
-                                Save Purchase Order
-                            </Button>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
-        </form>
+                    </CardContent>
+                </Card>
+            </form>
+        ) : (
+            <div className="animate-in zoom-in-95 duration-300 py-10 bg-muted rounded-md border-2 border-dashed border-border">
+                <POPreview 
+                    poNumber={poNumber}
+                    vendor={selectedVendor}
+                    lines={lines}
+                    totals={totals}
+                    notes={notes}
+                />
+            </div>
+        )}
       </div>
     </DashboardShell>
   );

@@ -85,29 +85,29 @@ export default function NewPaymentPage() {
             <div className="flex items-center justify-between">
                 <Button 
                     variant="ghost" 
-                    className="rounded-xl font-bold text-slate-500 hover:text-slate-900"
+                    className="rounded-xl font-bold text-muted-foreground hover:text-slate-900"
                     onClick={() => router.back()}
                 >
                     <ChevronLeft className="mr-2 h-5 w-5" /> Cancel
                 </Button>
-                <h1 className="text-3xl font-black text-slate-900 tracking-tight">Record Vendor Payment</h1>
+                <h1 className="text-3xl font-black text-foreground tracking-tight">Record Vendor Payment</h1>
             </div>
 
-            <Card className="rounded-[2.5rem] border-none shadow-sm bg-white overflow-hidden">
-                <CardHeader className="p-8 pb-6 bg-slate-50/50 border-b-2 border-slate-100">
+            <Card className="rounded-[2.5rem] border-none shadow-sm bg-card overflow-hidden">
+                <CardHeader className="p-8 pb-6 bg-slate-50/50 border-b-2 border-border">
                     <CardTitle className="text-xl font-black flex items-center gap-2">
                         <DollarSign size={24} className="text-emerald-600" /> Payment Details
                     </CardTitle>
-                    <CardDescription className="font-bold text-slate-400">
+                    <CardDescription className="font-bold text-muted-foreground">
                         Pay an outstanding vendor bill
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="p-8">
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <div className="space-y-2">
-                            <Label className="font-bold text-slate-500 ml-1">Select Bill to Pay</Label>
+                            <Label className="font-bold text-muted-foreground ml-1">Select Bill to Pay</Label>
                             <select 
-                                className="w-full h-12 rounded-2xl border-2 border-slate-100 font-bold focus:border-primary outline-none px-4 bg-white"
+                                className="w-full h-12 rounded-2xl border-2 border-border font-bold focus:border-primary outline-none px-4 bg-card"
                                 value={selectedBillId}
                                 onChange={(e) => handleBillSelect(e.target.value)}
                                 required
@@ -123,25 +123,25 @@ export default function NewPaymentPage() {
 
                         <div className="grid md:grid-cols-2 gap-6">
                             <div className="space-y-2">
-                                <Label className="font-bold text-slate-500 ml-1">Amount ($)</Label>
+                                <Label className="font-bold text-muted-foreground ml-1">Amount ($)</Label>
                                 <Input 
                                     type="number" 
                                     step="0.01"
                                     value={amount}
                                     onChange={(e) => setAmount(e.target.value)}
-                                    className="h-12 rounded-2xl border-2 border-slate-100 font-bold focus:border-primary outline-none text-lg"
+                                    className="h-12 rounded-2xl border-2 border-border font-bold focus:border-primary outline-none text-lg"
                                     required
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label className="font-bold text-slate-500 ml-1">Payment Date</Label>
+                                <Label className="font-bold text-muted-foreground ml-1">Payment Date</Label>
                                 <div className="relative">
-                                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
                                     <Input 
                                         type="date"
                                         value={date}
                                         onChange={(e) => setDate(e.target.value)}
-                                        className="h-12 pl-12 rounded-2xl border-2 border-slate-100 font-bold focus:border-primary outline-none"
+                                        className="h-12 pl-12 rounded-2xl border-2 border-border font-bold focus:border-primary outline-none"
                                         required
                                     />
                                 </div>
@@ -150,9 +150,9 @@ export default function NewPaymentPage() {
 
                         <div className="grid md:grid-cols-2 gap-6">
                             <div className="space-y-2">
-                                <Label className="font-bold text-slate-500 ml-1">Payment Method</Label>
+                                <Label className="font-bold text-muted-foreground ml-1">Payment Method</Label>
                                 <select 
-                                    className="w-full h-12 rounded-2xl border-2 border-slate-100 font-bold focus:border-primary outline-none px-4 bg-white"
+                                    className="w-full h-12 rounded-2xl border-2 border-border font-bold focus:border-primary outline-none px-4 bg-card"
                                     value={method}
                                     onChange={(e) => setMethod(e.target.value)}
                                 >
@@ -163,25 +163,25 @@ export default function NewPaymentPage() {
                                 </select>
                             </div>
                             <div className="space-y-2">
-                                <Label className="font-bold text-slate-500 ml-1">Reference No.</Label>
+                                <Label className="font-bold text-muted-foreground ml-1">Reference No.</Label>
                                 <div className="relative">
-                                    <CreditCard className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                                    <CreditCard className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
                                     <Input 
                                         value={ref}
                                         onChange={(e) => setRef(e.target.value)}
                                         placeholder="Check # / Transaction ID"
-                                        className="h-12 pl-12 rounded-2xl border-2 border-slate-100 font-bold focus:border-primary outline-none"
+                                        className="h-12 pl-12 rounded-2xl border-2 border-border font-bold focus:border-primary outline-none"
                                     />
                                 </div>
                             </div>
                         </div>
 
                         <div className="space-y-2">
-                            <Label className="font-bold text-slate-500 ml-1">Notes</Label>
+                            <Label className="font-bold text-muted-foreground ml-1">Notes</Label>
                             <Input 
                                 value={notes}
                                 onChange={(e) => setNotes(e.target.value)}
-                                className="h-12 rounded-2xl border-2 border-slate-100 font-bold focus:border-primary outline-none"
+                                className="h-12 rounded-2xl border-2 border-border font-bold focus:border-primary outline-none"
                             />
                         </div>
 

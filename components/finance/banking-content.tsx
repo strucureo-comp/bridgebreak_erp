@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import {
     Plus,
     Building2,
@@ -89,7 +90,7 @@ export function BankingContent() {
         return (
             <div className="flex flex-col items-center justify-center min-h-[40vh] space-y-4">
                 <RefreshCcw className="h-12 w-12 animate-spin text-primary" />
-                <p className="font-bold text-slate-900">Syncing Bank Balances...</p>
+                <p className="font-bold text-foreground">Syncing Bank Balances...</p>
             </div>
         );
     }
@@ -99,8 +100,8 @@ export function BankingContent() {
             {/* Visual Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div className="space-y-1">
-                    <h2 className="text-2xl font-black tracking-tight text-slate-900">Banks & Cash</h2>
-                    <p className="text-slate-500 font-medium flex items-center gap-2">
+                    <h2 className="text-2xl font-black tracking-tight text-foreground">Banks & Cash</h2>
+                    <p className="text-muted-foreground font-medium flex items-center gap-2">
                         <Landmark className="h-4 w-4 text-primary" />
                         Manage your company bank accounts and physical cash.
                     </p>
@@ -108,7 +109,7 @@ export function BankingContent() {
                 <div className="flex items-center gap-3">
                     <Dialog open={isAccountOpen} onOpenChange={setIsAccountOpen}>
                         <DialogTrigger asChild>
-                            <Button variant="outline" className="rounded-2xl border-slate-200 h-12 px-6 font-bold shadow-sm">
+                            <Button variant="outline" className="rounded-2xl border-border h-12 px-6 font-bold shadow-sm">
                                 <Plus className="h-4 w-4 mr-2" />
                                 Link Account
                             </Button>
@@ -133,24 +134,24 @@ export function BankingContent() {
             </div>
 
             {/* Global KPI Card */}
-            <Card className="rounded-[3rem] border-none shadow-sm bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white overflow-hidden p-12 relative group">
+            <Card className="rounded-[3rem] border-none shadow-sm bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-card-foreground overflow-hidden p-12 relative group">
                 <Landmark className="absolute -right-4 -bottom-4 h-48 w-48 text-white/5 group-hover:scale-110 transition-transform duration-700" />
                 <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-12">
                     <div className="space-y-3">
-                        <p className="text-xs font-black text-slate-400 uppercase tracking-[0.3em]">Total Cash in Hand</p>
+                        <p className="text-xs font-black text-muted-foreground uppercase tracking-[0.3em]">Total Cash in Hand</p>
                         <h2 className="text-6xl font-black tracking-tighter">${totalLiquidity.toLocaleString()}</h2>
                         <div className="flex items-center gap-3 pt-4">
-                            <Badge className="bg-emerald-500 text-white border-none px-3 py-1 text-[10px] font-black tracking-widest uppercase">Verified</Badge>
-                            <span className="text-sm text-slate-400 font-bold">Updated just now</span>
+                            <Badge className="bg-emerald-500 text-card-foreground border-none px-3 py-1 text-[10px] font-black tracking-widest uppercase">Verified</Badge>
+                            <span className="text-sm text-muted-foreground font-bold">Updated just now</span>
                         </div>
                     </div>
                     <div className="grid grid-cols-2 gap-12 md:border-l border-white/10 md:pl-12">
                         <div className="space-y-1">
-                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Active Links</p>
+                            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Active Links</p>
                             <p className="text-3xl font-black">{accounts.length}</p>
                         </div>
                         <div className="space-y-1">
-                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Movements</p>
+                            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Movements</p>
                             <p className="text-3xl font-black">{transactions.length}</p>
                         </div>
                     </div>
@@ -160,24 +161,24 @@ export function BankingContent() {
             {/* Account Cards */}
             <div className="grid gap-6 md:grid-cols-3">
                 {accounts.map(acc => (
-                    <Card key={acc.id} className="rounded-[2.5rem] border-none shadow-sm bg-white overflow-hidden group hover:shadow-xl transition-all duration-500">
+                    <Card key={acc.id} className="rounded-[2.5rem] border-none shadow-sm bg-card overflow-hidden group hover:shadow-xl transition-all duration-500">
                         <CardHeader className="p-8 pb-4">
                             <div className="flex items-center justify-between">
-                                <div className="h-14 w-14 rounded-3xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-primary group-hover:text-white transition-all duration-500">
+                                <div className="h-14 w-14 rounded-3xl bg-muted flex items-center justify-center text-muted-foreground group-hover:bg-primary group-hover:text-white transition-all duration-500">
                                     {acc.type === 'cash' ? <Wallet className="h-7 w-7" /> : <Building2 className="h-7 w-7" />}
                                 </div>
-                                <Badge variant="secondary" className="bg-slate-50 text-slate-400 border-none font-black text-[10px] tracking-widest px-3 py-1 rounded-full uppercase">{acc.type}</Badge>
+                                <Badge variant="secondary" className="bg-muted text-muted-foreground border-none font-black text-[10px] tracking-widest px-3 py-1 rounded-full uppercase">{acc.type}</Badge>
                             </div>
                         </CardHeader>
                         <CardContent className="p-8 pt-4">
                             <div className="space-y-1 mb-8">
-                                <h3 className="text-2xl font-black text-slate-900">{acc.name}</h3>
-                                <p className="text-sm text-slate-400 font-bold uppercase tracking-tight">{acc.bank_name || 'Physical'}</p>
+                                <h3 className="text-2xl font-black text-foreground">{acc.name}</h3>
+                                <p className="text-sm text-muted-foreground font-bold uppercase tracking-tight">{acc.bank_name || 'Physical'}</p>
                             </div>
-                            <div className="flex items-end justify-between p-6 bg-slate-50 rounded-[2rem] group-hover:bg-slate-100 transition-colors">
+                            <div className="flex items-end justify-between p-6 bg-muted rounded-[2rem] group-hover:bg-slate-100 transition-colors">
                                 <div className="space-y-1">
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Current Balance</p>
-                                    <p className="text-3xl font-black text-slate-900">${Number(acc.current_balance).toLocaleString()}</p>
+                                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Current Balance</p>
+                                    <p className="text-3xl font-black text-foreground">${Number(acc.current_balance).toLocaleString()}</p>
                                 </div>
                                 <ChevronRight className="h-6 w-6 text-slate-300 group-hover:text-slate-900 transition-transform group-hover:translate-x-1" />
                             </div>
@@ -185,11 +186,11 @@ export function BankingContent() {
                     </Card>
                 ))}
                 {accounts.length === 0 && (
-                    <Card className="rounded-[2.5rem] border-2 border-dashed border-slate-200 bg-slate-50/50 flex flex-col items-center justify-center p-12 text-center space-y-4 min-h-[300px]">
-                        <div className="h-16 w-16 rounded-full bg-white flex items-center justify-center shadow-sm">
+                    <Card className="rounded-[2.5rem] border-2 border-dashed border-border bg-slate-50/50 flex flex-col items-center justify-center p-12 text-center space-y-4 min-h-[300px]">
+                        <div className="h-16 w-16 rounded-full bg-card flex items-center justify-center shadow-sm">
                             <Plus className="h-8 w-8 text-slate-300" />
                         </div>
-                        <p className="font-black text-slate-400 uppercase tracking-widest text-xs">No accounts linked</p>
+                        <p className="font-black text-muted-foreground uppercase tracking-widest text-xs">No accounts linked</p>
                         <Button variant="outline" className="rounded-xl font-bold" onClick={() => setIsAccountOpen(true)}>Add First Account</Button>
                     </Card>
                 )}
@@ -197,17 +198,17 @@ export function BankingContent() {
 
             {/* Movement Table */}
             <div className="space-y-6">
-                <h2 className="text-2xl font-black text-slate-900 ml-2">Record of Movements</h2>
-                <Card className="rounded-[3rem] border-none shadow-sm bg-white overflow-hidden">
+                <h2 className="text-2xl font-black text-foreground ml-2">Record of Movements</h2>
+                <Card className="rounded-[3rem] border-none shadow-sm bg-card overflow-hidden">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
-                                <tr className="bg-slate-50/50 border-b border-slate-100">
-                                    <th className="p-8 text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">Activity</th>
-                                    <th className="p-8 text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">Account</th>
-                                    <th className="p-8 text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">Date</th>
-                                    <th className="p-8 text-[10px] font-black uppercase tracking-[0.25em] text-slate-400 text-right">Value</th>
-                                    <th className="p-8 text-[10px] font-black uppercase tracking-[0.25em] text-slate-400 text-center">Status</th>
+                                <tr className="bg-slate-50/50 border-b border-border">
+                                    <th className="p-8 text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground">Activity</th>
+                                    <th className="p-8 text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground">Account</th>
+                                    <th className="p-8 text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground">Date</th>
+                                    <th className="p-8 text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground text-right">Value</th>
+                                    <th className="p-8 text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground text-center">Status</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-50">
@@ -224,13 +225,13 @@ export function BankingContent() {
                                                     {tx.type === 'deposit' ? <ArrowUpRight className="h-6 w-6" strokeWidth={3} /> : <ArrowDownRight className="h-6 w-6" strokeWidth={3} />}
                                                 </div>
                                                 <div className="min-w-0">
-                                                    <p className="text-base font-bold text-slate-900 truncate max-w-[300px]">{tx.description}</p>
-                                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{tx.reference || 'INTERNAL'}</p>
+                                                    <p className="text-base font-bold text-foreground truncate max-w-[300px]">{tx.description}</p>
+                                                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{tx.reference || 'INTERNAL'}</p>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="p-8 text-sm font-bold text-slate-600">{tx.bank_account?.name}</td>
-                                        <td className="p-8 text-sm font-bold text-slate-500">{new Date(tx.date).toLocaleDateString()}</td>
+                                        <td className="p-8 text-sm font-bold text-muted-foreground">{tx.bank_account?.name}</td>
+                                        <td className="p-8 text-sm font-bold text-muted-foreground">{new Date(tx.date).toLocaleDateString()}</td>
                                         <td className="p-8 text-right font-black text-lg">
                                             {tx.type === 'deposit' ? '+' : '-'}${Number(tx.amount).toLocaleString()}
                                         </td>
@@ -268,7 +269,7 @@ function AccountForm({ onSuccess }: { onSuccess: () => void }) {
         <div className="space-y-8">
             <div className="space-y-2">
                 <h3 className="text-3xl font-black tracking-tight">Link Account</h3>
-                <p className="text-slate-500 font-medium">Add a new bank or cash vault.</p>
+                <p className="text-muted-foreground font-medium">Add a new bank or cash vault.</p>
             </div>
             <div className="grid gap-6">
                 <div className="space-y-2">
@@ -311,7 +312,9 @@ function TransactionForm({ accounts, glAccounts, onSuccess }: { accounts: BankAc
         type: 'deposit',
         reference: '',
         payee: '',
-        contra_account_id: ''
+        contra_account_id: '',
+        is_pdc: false,
+        pdc_clearance_date: ''
     });
 
     const handleSubmit = async () => {
@@ -330,7 +333,7 @@ function TransactionForm({ accounts, glAccounts, onSuccess }: { accounts: BankAc
         <div className="space-y-8">
             <div className="space-y-2">
                 <h3 className="text-3xl font-black tracking-tight">New Entry</h3>
-                <p className="text-slate-500 font-medium">Record a movement of money.</p>
+                <p className="text-muted-foreground font-medium">Record a movement of money.</p>
             </div>
             <div className="grid gap-6">
                 <div className="space-y-2">
@@ -355,9 +358,9 @@ function TransactionForm({ accounts, glAccounts, onSuccess }: { accounts: BankAc
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                         <Label className="font-bold ml-1">Direction</Label>
-                        <div className="flex p-1 bg-slate-100 rounded-2xl">
-                            <button className={cn("flex-1 py-2 text-[10px] font-black uppercase rounded-xl transition-all", formData.type === 'deposit' ? "bg-white shadow-sm text-emerald-600" : "text-slate-400")} onClick={() => setFormData({ ...formData, type: 'deposit' })}>IN +</button>
-                            <button className={cn("flex-1 py-2 text-[10px] font-black uppercase rounded-xl transition-all", formData.type === 'withdrawal' ? "bg-white shadow-sm text-rose-600" : "text-slate-400")} onClick={() => setFormData({ ...formData, type: 'withdrawal' })}>OUT -</button>
+                        <div className="flex p-1 bg-muted rounded-2xl">
+                            <button className={cn("flex-1 py-2 text-[10px] font-black uppercase rounded-xl transition-all", formData.type === 'deposit' ? "bg-card shadow-sm text-emerald-600" : "text-muted-foreground")} onClick={() => setFormData({ ...formData, type: 'deposit' })}>IN +</button>
+                            <button className={cn("flex-1 py-2 text-[10px] font-black uppercase rounded-xl transition-all", formData.type === 'withdrawal' ? "bg-card shadow-sm text-rose-600" : "text-muted-foreground")} onClick={() => setFormData({ ...formData, type: 'withdrawal' })}>OUT -</button>
                         </div>
                     </div>
                     <div className="space-y-2">
@@ -382,6 +385,32 @@ function TransactionForm({ accounts, glAccounts, onSuccess }: { accounts: BankAc
                     <Label className="font-bold ml-1">Short Description</Label>
                     <Input placeholder="e.g. Petty cash refill" className="h-12 rounded-2xl font-bold" value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} />
                 </div>
+
+                {formData.type === 'withdrawal' && (
+                    <div className="space-y-4 p-4 bg-amber-50/50 rounded-2xl border border-amber-100">
+                        <div className="flex items-center justify-between">
+                            <div className="space-y-0.5">
+                                <Label className="font-bold text-amber-900">Post-Dated Cheque (PDC)</Label>
+                                <p className="text-[10px] font-medium text-amber-600 uppercase tracking-wider">For UAE Cheque Management</p>
+                            </div>
+                            <Switch 
+                                checked={formData.is_pdc} 
+                                onCheckedChange={(checked) => setFormData({ ...formData, is_pdc: checked })} 
+                            />
+                        </div>
+                        {formData.is_pdc && (
+                            <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                                <Label className="text-xs font-black text-amber-700 uppercase tracking-widest ml-1">Expected Clearance Date</Label>
+                                <Input 
+                                    type="date" 
+                                    value={formData.pdc_clearance_date} 
+                                    onChange={e => setFormData({ ...formData, pdc_clearance_date: e.target.value })} 
+                                    className="h-11 rounded-xl bg-card border-amber-200 font-bold text-amber-900" 
+                                />
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
             <Button onClick={handleSubmit} className="w-full h-14 rounded-2xl bg-slate-900 font-black text-lg uppercase tracking-widest shadow-xl shadow-slate-200 transition-transform active:scale-95">Process Entry</Button>
         </div>

@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Users, CheckCircle2, DollarSign, TrendingUp, Calendar, Clock, UserPlus, AlertTriangle } from 'lucide-react';
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, AreaChart, Area, PieChart, Pie, Cell } from 'recharts';
+import { Users, CheckCircle2, DollarSign, TrendingUp, Calendar, Clock, AlertTriangle, ChevronRight, Activity } from 'lucide-react';
+import { ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, AreaChart, Area, PieChart, Pie, Cell } from 'recharts';
 import { cn } from '@/lib/utils';
 import type { Employee, Attendance, Payroll, Leave, Holiday } from '@/lib/db/types';
 
@@ -16,14 +16,23 @@ interface HRDashboardProps {
     holidays: Holiday[];
 }
 
+function fmt(n: number): string {
+    return new Intl.NumberFormat('en-AE', {
+        style: 'currency',
+        currency: 'AED',
+        maximumFractionDigits: 0
+    }).format(n);
+}
+
 export function HRDashboard({ employees, attendance, payrolls, leaves, holidays }: HRDashboardProps) {
     const stats = useMemo(() => ({
         total: employees.length,
         active: employees.filter(e => e.status === 'active').length,
         onDuty: attendance.filter(a => a.status === 'present').length,
         pendingLeaves: leaves.filter(l => l.status === 'pending').length,
-        monthlyCost: payrolls[0] ? Number(payrolls[0].total_amount) : employees.reduce((s, e) => s + Number(e.basic_salary), 0),
+        monthlyCost: payrolls[0] ? Number(payrolls[0].total_amount) : employees.reduce((s, e) => s + Number(e.basic_salary || 0), 0),
         upcomingHolidays: holidays.filter(h => new Date(h.date) >= new Date()).length,
+        growth: 4.2,
     }), [employees, attendance, payrolls, leaves, holidays]);
 
     const deptDistribution = useMemo(() => {
@@ -32,7 +41,7 @@ export function HRDashboard({ employees, attendance, payrolls, leaves, holidays 
             const dept = e.dept?.name || e.department || 'Unassigned';
             depts[dept] = (depts[dept] || 0) + 1;
         });
-        return Object.entries(depts).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 6);
+        return Object.entries(depts).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 5);
     }, [employees]);
 
     const typeDistribution = useMemo(() => {
@@ -41,126 +50,182 @@ export function HRDashboard({ employees, attendance, payrolls, leaves, holidays 
         return Object.entries(types).map(([name, value]) => ({ name, value }));
     }, [employees]);
 
-    const COLORS = ['#6366f1', '#22d3ee', '#f59e0b', '#ef4444', '#10b981', '#8b5cf6'];
+    const COLORS = ['#18181b', '#3f3f46', '#71717a', '#a1a1aa', '#d4d4d8'];
 
     const attendanceTrends = useMemo(() => [
-        { name: 'Mon', present: 42, absent: 3 }, { name: 'Tue', present: 45, absent: 1 },
-        { name: 'Wed', present: 44, absent: 2 }, { name: 'Thu', present: 48, absent: 0 },
-        { name: 'Fri', present: 40, absent: 5 }, { name: 'Sat', present: 35, absent: 0 },
+        { name: 'Mon', present: 42 }, { name: 'Tue', present: 45 },
+        { name: 'Wed', present: 44 }, { name: 'Thu', present: 48 },
+        { name: 'Fri', present: 40 }, { name: 'Sat', present: 35 },
     ], []);
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-6">
             {/* KPI Cards */}
-            <div className="grid gap-5 grid-cols-2 lg:grid-cols-4">
-                <KPI title="Total Employees" value={stats.total} icon={Users} color="indigo" subtitle={`${stats.active} active`} />
-                <KPI title="Present Today" value={stats.onDuty} icon={CheckCircle2} color="emerald" subtitle={`of ${stats.active}`} />
-                <KPI title="Monthly Payroll" value={`₹${(stats.monthlyCost / 1000).toFixed(0)}k`} icon={DollarSign} color="amber" subtitle="Estimated" />
-                <KPI title="Pending Leaves" value={stats.pendingLeaves} icon={AlertTriangle} color="rose" subtitle="Awaiting approval" />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <MetricCard 
+                    title="Workforce Size" 
+                    value={stats.total} 
+                    icon={Users} 
+                    trend={`+${stats.growth}%`}
+                    trendUp={true}
+                    description="Active employees" 
+                />
+                <MetricCard 
+                    title="Attendance" 
+                    value={`${((stats.onDuty / (stats.active || 1)) * 100).toFixed(0)}%`} 
+                    icon={CheckCircle2} 
+                    trend="Daily"
+                    description={`${stats.onDuty} staff on-site`} 
+                />
+                <MetricCard 
+                    title="Monthly Payroll" 
+                    value={fmt(stats.monthlyCost)} 
+                    icon={DollarSign} 
+                    trend="Est."
+                    description="Current cycle" 
+                />
+                <MetricCard 
+                    title="Leave Requests" 
+                    value={stats.pendingLeaves} 
+                    icon={AlertTriangle} 
+                    trend="Pending"
+                    trendUp={false}
+                    description="Requires review" 
+                />
             </div>
 
-            {/* Charts Row */}
-            <div className="grid gap-6 lg:grid-cols-2">
-                <Card className="rounded-3xl border-none shadow-sm bg-white p-6">
-                    <CardHeader className="p-0 pb-6">
-                        <CardTitle className="text-lg font-bold">Department Headcount</CardTitle>
-                        <CardDescription className="text-xs font-medium text-slate-400">Employee distribution by department</CardDescription>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <Card className="lg:col-span-2 border shadow-sm rounded-md">
+                    <CardHeader className="border-b bg-muted/50 py-4">
+                        <CardTitle className="text-sm font-bold flex items-center gap-2">
+                            <Activity className="h-4 w-4 text-primary" />
+                            Attendance Analytics
+                        </CardTitle>
                     </CardHeader>
-                    <div className="h-[220px] w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={deptDistribution}>
-                                <CartesianGrid vertical={false} stroke="#f1f5f9" />
-                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }} />
-                                <YAxis hide />
-                                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgb(0 0 0 / 0.08)', fontSize: '12px' }} />
-                                <Bar dataKey="value" fill="#6366f1" radius={[8, 8, 0, 0]} barSize={28} />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
-                </Card>
-
-                <Card className="rounded-3xl border-none shadow-sm bg-white p-6">
-                    <CardHeader className="p-0 pb-6">
-                        <CardTitle className="text-lg font-bold">Attendance Trend</CardTitle>
-                        <CardDescription className="text-xs font-medium text-slate-400">Weekly presence overview</CardDescription>
-                    </CardHeader>
-                    <div className="h-[220px] w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={attendanceTrends}>
-                                <defs>
-                                    <linearGradient id="colorPresent" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#10b981" stopOpacity={0.15} /><stop offset="95%" stopColor="#10b981" stopOpacity={0} /></linearGradient>
-                                </defs>
-                                <CartesianGrid vertical={false} stroke="#f1f5f9" />
-                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }} />
-                                <YAxis hide />
-                                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgb(0 0 0 / 0.08)', fontSize: '12px' }} />
-                                <Area type="monotone" dataKey="present" stroke="#10b981" strokeWidth={2.5} fillOpacity={1} fill="url(#colorPresent)" />
-                            </AreaChart>
-                        </ResponsiveContainer>
-                    </div>
-                </Card>
-            </div>
-
-            {/* Quick Info Row */}
-            <div className="grid gap-6 lg:grid-cols-3">
-                <Card className="rounded-3xl border-none shadow-sm bg-white p-6">
-                    <CardHeader className="p-0 pb-4">
-                        <CardTitle className="text-lg font-bold flex items-center gap-2"><Calendar className="h-4 w-4 text-indigo-500" /> Upcoming Holidays</CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-0 space-y-2">
-                        {holidays.filter(h => new Date(h.date) >= new Date()).slice(0, 4).map(h => (
-                            <div key={h.id} className="flex items-center justify-between py-2 border-b border-slate-50 last:border-0">
-                                <span className="text-sm font-medium text-slate-700">{h.name}</span>
-                                <Badge variant="outline" className="text-xs">{new Date(h.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</Badge>
-                            </div>
-                        ))}
-                        {holidays.filter(h => new Date(h.date) >= new Date()).length === 0 && (
-                            <p className="text-sm text-slate-400 text-center py-4">No upcoming holidays</p>
-                        )}
+                    <CardContent className="pt-6">
+                        <div className="h-[240px] w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={attendanceTrends}>
+                                    <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#f1f5f9" />
+                                    <XAxis 
+                                        dataKey="name" 
+                                        axisLine={false} 
+                                        tickLine={false} 
+                                        tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }} 
+                                        dy={10}
+                                    />
+                                    <YAxis hide />
+                                    <Tooltip 
+                                        contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: 'none', fontSize: '10px', fontWeight: 'bold' }} 
+                                    />
+                                    <Area 
+                                        type="monotone" 
+                                        dataKey="present" 
+                                        stroke="#09090b" 
+                                        strokeWidth={2} 
+                                        fill="#09090b" 
+                                        fillOpacity={0.05} 
+                                    />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        </div>
                     </CardContent>
                 </Card>
 
-                <Card className="rounded-3xl border-none shadow-sm bg-white p-6">
-                    <CardHeader className="p-0 pb-4">
-                        <CardTitle className="text-lg font-bold flex items-center gap-2"><Clock className="h-4 w-4 text-amber-500" /> Pending Leave Requests</CardTitle>
+                <Card className="border shadow-sm rounded-md">
+                    <CardHeader className="border-b bg-muted/50 py-4">
+                        <CardTitle className="text-sm font-bold">Department Matrix</CardTitle>
                     </CardHeader>
-                    <CardContent className="p-0 space-y-2">
-                        {leaves.filter(l => l.status === 'pending').slice(0, 4).map(l => (
-                            <div key={l.id} className="flex items-center justify-between py-2 border-b border-slate-50 last:border-0">
-                                <div>
-                                    <p className="text-sm font-medium text-slate-700">{l.employee?.name || 'Employee'}</p>
-                                    <p className="text-xs text-slate-400">{l.leave_type?.name} · {l.days} day(s)</p>
+                    <CardContent className="pt-6 space-y-4">
+                        {deptDistribution.map((dept) => (
+                            <div key={dept.name} className="space-y-2">
+                                <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                                    <span>{dept.name}</span>
+                                    <span>{dept.value} Units</span>
                                 </div>
-                                <Badge variant="outline" className="text-xs text-amber-600 border-amber-200 bg-amber-50">Pending</Badge>
+                                <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                                    <div 
+                                        className="h-full bg-primary transition-all duration-1000" 
+                                        style={{ width: `${(dept.value / stats.total) * 100}%` }} 
+                                    />
+                                </div>
+                            </div>
+                        ))}
+                    </CardContent>
+                </Card>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <Card className="border shadow-sm rounded-md overflow-hidden">
+                    <CardHeader className="border-b bg-muted/50 py-4 flex flex-row items-center justify-between">
+                        <CardTitle className="text-sm font-bold">Upcoming Holidays</CardTitle>
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <div className="divide-y">
+                        {holidays.filter(h => new Date(h.date) >= new Date()).slice(0, 4).map(h => (
+                            <div key={h.id} className="flex items-center justify-between p-4 hover:bg-accent hover:text-accent-foreground transition-colors">
+                                <span className="text-xs font-bold text-foreground">{h.name}</span>
+                                <span className="text-[10px] font-bold text-muted-foreground bg-muted px-2 py-0.5 rounded uppercase tracking-tighter">
+                                    {new Date(h.date).toLocaleDateString('en-AE', { day: 'numeric', month: 'short' })}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                </Card>
+
+                <Card className="border shadow-sm rounded-md overflow-hidden">
+                    <CardHeader className="border-b bg-muted/50 py-4 flex flex-row items-center justify-between">
+                        <CardTitle className="text-sm font-bold">Pending Leave</CardTitle>
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <div className="divide-y">
+                        {leaves.filter(l => l.status === 'pending').slice(0, 4).map(l => (
+                            <div key={l.id} className="flex items-center justify-between p-4 hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer group">
+                                <div>
+                                    <p className="text-xs font-bold text-foreground">{l.employee?.name}</p>
+                                    <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{l.leave_type?.name} · {l.days} days</p>
+                                </div>
+                                <ChevronRight className="h-3 w-3 text-muted-foreground/60 group-hover:text-primary transition-colors" />
                             </div>
                         ))}
                         {leaves.filter(l => l.status === 'pending').length === 0 && (
-                            <p className="text-sm text-slate-400 text-center py-4">No pending requests</p>
+                            <div className="p-8 text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 italic">Clear Pipeline</div>
                         )}
-                    </CardContent>
+                    </div>
                 </Card>
 
-                <Card className="rounded-3xl border-none shadow-sm bg-white p-6">
-                    <CardHeader className="p-0 pb-4">
-                        <CardTitle className="text-lg font-bold flex items-center gap-2"><UserPlus className="h-4 w-4 text-emerald-500" /> Employment Types</CardTitle>
+                <Card className="border shadow-sm rounded-md overflow-hidden">
+                    <CardHeader className="border-b bg-muted/50 py-4">
+                        <CardTitle className="text-sm font-bold">Workforce Mix</CardTitle>
                     </CardHeader>
-                    <CardContent className="p-0">
-                        <div className="h-[160px] w-full">
+                    <CardContent className="pt-4 flex flex-col items-center">
+                        <div className="h-[140px] w-full">
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
-                                    <Pie data={typeDistribution} cx="50%" cy="50%" innerRadius={40} outerRadius={65} dataKey="value" paddingAngle={4} stroke="none">
+                                    <Pie 
+                                        data={typeDistribution} 
+                                        cx="50%" 
+                                        cy="50%" 
+                                        innerRadius={45} 
+                                        outerRadius={60} 
+                                        dataKey="value" 
+                                        paddingAngle={4} 
+                                        stroke="none"
+                                    >
                                         {typeDistribution.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                                     </Pie>
-                                    <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgb(0 0 0 / 0.08)', fontSize: '12px' }} />
+                                    <Tooltip 
+                                        contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: 'none', fontSize: '10px' }} 
+                                    />
                                 </PieChart>
                             </ResponsiveContainer>
                         </div>
-                        <div className="flex flex-wrap gap-2 justify-center">
+                        <div className="grid grid-cols-2 gap-x-6 gap-y-2 mt-2 w-full">
                             {typeDistribution.map((t, i) => (
-                                <span key={t.name} className="flex items-center gap-1 text-[10px] font-semibold text-slate-500">
+                                <div key={t.name} className="flex items-center gap-2">
                                     <div className="h-2 w-2 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                                    {t.name} ({t.value})
-                                </span>
+                                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight">{t.name} ({t.value})</span>
+                                </div>
                             ))}
                         </div>
                     </CardContent>
@@ -170,25 +235,25 @@ export function HRDashboard({ employees, attendance, payrolls, leaves, holidays 
     );
 }
 
-function KPI({ title, value, icon: Icon, color, subtitle }: { title: string; value: any; icon: any; color: string; subtitle?: string }) {
-    const variants: Record<string, string> = {
-        indigo: 'bg-indigo-50 text-indigo-600',
-        emerald: 'bg-emerald-50 text-emerald-600',
-        amber: 'bg-amber-50 text-amber-600',
-        rose: 'bg-rose-50 text-rose-600',
-    };
+function MetricCard({ title, value, icon: Icon, trend, trendUp, description }: any) {
     return (
-        <Card className="rounded-3xl border-none shadow-sm bg-white p-6 group hover:shadow-lg transition-all duration-300">
-            <div className="flex items-center gap-4">
-                <div className={cn('h-11 w-11 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform', variants[color])}>
-                    <Icon size={20} strokeWidth={2.5} />
+        <Card className="border shadow-sm rounded-md">
+            <CardHeader className="pb-1 flex flex-row items-center justify-between space-y-0">
+                <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{title}</CardTitle>
+                <div className={cn(
+                    "text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded",
+                    trendUp ? "bg-emerald-50 text-emerald-600" : trendUp === false ? "bg-rose-50 text-rose-600" : "bg-muted text-muted-foreground"
+                )}>
+                    {trend}
                 </div>
-                <div>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{title}</p>
-                    <h3 className="text-2xl font-black text-slate-900 tracking-tight">{value}</h3>
-                    {subtitle && <p className="text-[10px] text-slate-400 font-medium">{subtitle}</p>}
+            </CardHeader>
+            <CardContent>
+                <div className="flex items-center gap-2">
+                    <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+                    <div className="text-xl font-bold tracking-tight text-foreground">{value}</div>
                 </div>
-            </div>
+                <p className="text-[10px] text-muted-foreground font-medium mt-1">{description}</p>
+            </CardContent>
         </Card>
     );
 }

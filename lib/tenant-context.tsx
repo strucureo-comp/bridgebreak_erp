@@ -1,88 +1,191 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import type { TenantSetupStatus, ModuleKey, ModuleAccess } from '@/lib/module-gate';
-import { checkModuleAccess, getNextSetupStep } from '@/lib/module-gate';
+import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
+import { getTenantStatus, getSettings } from '@/lib/api';
+import {
+  ModuleKey,
+  ModuleAccess,
+  checkModuleAccess,
+  getNextSetupStep,
+  TenantSetupStatus
+} from '@/lib/module-gate';
+import { useAuth } from '@/lib/auth/context';
 
-interface TenantContextValue {
-    tenantStatus: TenantSetupStatus | null;
-    loading: boolean;
-    checkAccess: (module: ModuleKey) => ModuleAccess;
-    setupProgress: ReturnType<typeof getNextSetupStep>;
-    refreshTenant: () => Promise<void>;
+interface BrandingConfig {
+  color: string;
+  template: 'modern' | 'classic' | 'mono';
+  headerAlign: 'left' | 'center' | 'right';
+  showWatermark: boolean;
+  terms: string;
+  footerNote: string;
+  logo: string | null;
 }
 
-const TenantContext = createContext<TenantContextValue | null>(null);
-
-export function TenantProvider({ children }: { children: ReactNode }) {
-    const [tenantStatus, setTenantStatus] = useState<TenantSetupStatus | null>(null);
-    const [loading, setLoading] = useState(true);
-
-    const fetchTenant = useCallback(async () => {
-        try {
-            const res = await fetch('/api/admin/tenant/status');
-            if (res.ok) {
-                const data = await res.json();
-                setTenantStatus(data);
-            } else {
-                // No tenant exists yet - first time setup
-                setTenantStatus(null);
-            }
-        } catch (err) {
-            console.error('Failed to fetch tenant status:', err);
-            // Fallback: treat as fully set up for development
-            setTenantStatus({
-                setup_stage: 'completed',
-                company_setup_complete: true,
-                finance_setup_complete: true,
-                roles_setup_complete: true,
-                module_finance: true,
-                module_sales: true,
-                module_operations: true,
-                module_hr: true,
-            });
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    useEffect(() => {
-        fetchTenant();
-    }, [fetchTenant]);
-
-    const checkAccess = useCallback((module: ModuleKey): ModuleAccess => {
-        return checkModuleAccess(module, tenantStatus);
-    }, [tenantStatus]);
-
-    const setupProgress = getNextSetupStep(tenantStatus);
-
-    return (
-        <TenantContext.Provider value={{ tenantStatus, loading, checkAccess, setupProgress, refreshTenant: fetchTenant }}>
-            {children}
-        </TenantContext.Provider>
-    );
+interface TaxConfig {
+  regime: string;
+  rates: Array<{ id: string; name: string; rate: number; type: string }>;
+  autoApply: boolean;
 }
 
-export function useTenant() {
-    const ctx = useContext(TenantContext);
-    if (!ctx) {
-        // Return a permissive fallback if not wrapped in TenantProvider
-        return {
-            tenantStatus: {
-                setup_stage: 'completed' as const,
-                company_setup_complete: true,
-                finance_setup_complete: true,
-                roles_setup_complete: true,
-                module_finance: true,
-                module_sales: true,
-                module_operations: true,
-                module_hr: true,
-            },
-            loading: false,
-            checkAccess: () => ({ accessible: true } as ModuleAccess),
-            setupProgress: getNextSetupStep(null),
-            refreshTenant: async () => { },
-        };
+interface CompanyProfile {
+  tradingName: string;
+  legalName: string;
+  baseCurrency: string;
+  taxId: string;
+  address?: string;
+  branding?: BrandingConfig;
+  taxConfig?: TaxConfig;
+  businessType?: string;
+  activeModules?: Record<string, boolean>;
+}
+
+interface TenantContextType {
+  tenantStatus: TenantSetupStatus | null;
+  companyProfile: CompanyProfile | null;
+  loading: boolean;
+  getModuleLabel: (moduleId: string) => string;
+  checkAccess: (module: ModuleKey) => ModuleAccess;
+  setupProgress: {
+    step: number;
+    total: number;
+    label: string;
+    path: string;
+    percentage: number;
+  };
+  refreshTenantStatus: () => Promise<void>;
+}
+
+const TenantContext = createContext<TenantContextType | undefined>(undefined);
+
+// ============================
+// GLOBAL SECTOR ENGINE
+// Maps modules to industry-specific terms
+// ============================
+const SECTOR_LABELS: Record<string, Record<string, string>> = {
+  manufacturing: {
+    inventory: 'Raw Materials',
+    manufacturing: 'Shop Floor',
+    operations: 'Production Control',
+    projects: 'Build Jobs',
+    purchases: 'Supply Chain'
+  },
+  construction: {
+    projects: 'Site Records',
+    manufacturing: 'Fabrication',
+    inventory: 'Material Store',
+    operations: 'Site Operations',
+    purchases: 'Procurement'
+  },
+  hospitality: {
+    inventory: 'Kitchen Stock',
+    sales: 'Reservations',
+    operations: 'Property Mgmt',
+    manufacturing: 'F&B Production'
+  },
+  retail: {
+    sales: 'POS Terminal',
+    inventory: 'Store Stock',
+    manufacturing: 'Custom Orders'
+  },
+  service: {
+    projects: 'Client Projects',
+    sales: 'Service CRM',
+    operations: 'Task Management',
+    manufacturing: 'Internal Ops'
+  },
+  trading: {
+    inventory: 'Warehouse',
+    operations: 'Logistics',
+    purchases: 'Vendor Supply'
+  }
+};
+
+const DEFAULT_LABELS: Record<string, string> = {
+  finance: 'Finance Hub',
+  sales: 'Sales CRM',
+  hr: 'Human Resources',
+  projects: 'Projects',
+  inventory: 'Inventory',
+  manufacturing: 'Production',
+  operations: 'Operations',
+  reports: 'Analytics',
+  settings: 'System Hub',
+  masters: 'Master Data',
+  purchases: 'Procurement'
+};
+
+export function TenantProvider({ children }: { children: React.ReactNode }) {
+  const [tenantStatus, setTenantStatus] = useState<TenantSetupStatus | null>(null);
+  const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+
+  const refreshTenantStatus = useCallback(async () => {
+    try {
+      const [status, profile] = await Promise.all([
+        getTenantStatus(),
+        getSettings<CompanyProfile>('company_profile')
+      ]);
+      setTenantStatus(status as any);
+      setCompanyProfile(profile);
+    } catch (error) {
+      console.error('Failed to load tenant context:', error);
+    } finally {
+      setLoading(false);
     }
-    return ctx;
+  }, []);
+
+  useEffect(() => {
+    refreshTenantStatus();
+  }, [refreshTenantStatus]);
+
+  const getModuleLabel = (moduleId: string) => {
+    const sector = companyProfile?.businessType || tenantStatus?.business_type || 'service';
+    // Clean key mapping
+    const keyMap: Record<string, string> = {
+      'purchases': 'purchases',
+      'inventory': 'inventory',
+      'manufacturing': 'manufacturing',
+      'operations': 'operations',
+      'projects': 'projects',
+      'sales': 'sales'
+    };
+
+    const lookupKey = keyMap[moduleId] || moduleId;
+    return SECTOR_LABELS[sector]?.[lookupKey] || DEFAULT_LABELS[lookupKey] || moduleId;
+  };
+
+  const checkAccess = (module: ModuleKey): ModuleAccess => {
+    if (module === 'dashboard' || module === 'settings') return { accessible: true };
+    if (companyProfile?.activeModules && module in companyProfile.activeModules) {
+      if (!companyProfile.activeModules[module]) {
+        return { accessible: false, reason: 'Module suspended by System Admin' };
+      }
+    }
+    return checkModuleAccess(module, tenantStatus, user?.role);
+  };
+
+  const setupProgress = useMemo(() => getNextSetupStep(tenantStatus), [tenantStatus]);
+
+  return (
+    <TenantContext.Provider value={{
+      tenantStatus,
+      companyProfile,
+      loading,
+      getModuleLabel,
+      checkAccess,
+      setupProgress,
+      refreshTenantStatus
+    }}>
+      {children}
+    </TenantContext.Provider>
+  );
 }
+
+export const useTenant = () => {
+  const context = useContext(TenantContext);
+  if (context === undefined) {
+    throw new Error('useTenant must be used within a TenantProvider');
+  }
+  return context;
+};

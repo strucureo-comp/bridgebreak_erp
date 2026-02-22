@@ -5,7 +5,7 @@
 
 import { Account, AccountType, AccountGroup } from './tally-engine';
 
-export type COATemplate = 'IFRS' | 'INDIA_AS' | 'US_GAAP' | 'BASIC';
+export type COATemplate = 'IFRS' | 'INDIA_AS' | 'US_GAAP' | 'UAE' | 'BASIC';
 
 /**
  * IFRS Chart of Accounts
@@ -150,6 +150,49 @@ export const US_GAAP_ACCOUNTS: Account[] = [
 ];
 
 /**
+ * UAE Chart of Accounts (IFRS based with VAT and PDC)
+ */
+export const UAE_ACCOUNTS: Account[] = [
+  // Assets (1000-1999)
+  { id: 'uae_1010', name: 'Cash in Hand', code: '1010', type: 'asset', group: 'Cash', is_active: true, opening_balance: 0, created_at: new Date().toISOString() },
+  { id: 'uae_1020', name: 'Bank Accounts', code: '1020', type: 'asset', group: 'Bank', is_active: true, opening_balance: 0, created_at: new Date().toISOString() },
+  { id: 'uae_1030', name: 'Trade Receivables', code: '1030', type: 'asset', group: 'Receivables', is_active: true, opening_balance: 0, created_at: new Date().toISOString() },
+  { id: 'uae_1040', name: 'VAT Input (Recoverable)', code: '1040', type: 'asset', group: 'Receivables', is_active: true, opening_balance: 0, created_at: new Date().toISOString() },
+  { id: 'uae_1050', name: 'PDC Receivable (Post Dated Cheques)', code: '1050', type: 'asset', group: 'Receivables', is_active: true, opening_balance: 0, created_at: new Date().toISOString() },
+  { id: 'uae_1060', name: 'Inventory', code: '1060', type: 'asset', group: 'Inventory', is_active: true, opening_balance: 0, created_at: new Date().toISOString() },
+  { id: 'uae_1070', name: 'Prepaid Expenses / DEWA Deposits', code: '1070', type: 'asset', group: 'Receivables', is_active: true, opening_balance: 0, created_at: new Date().toISOString() },
+  { id: 'uae_1500', name: 'Fixed Assets', code: '1500', type: 'asset', group: 'Fixed Assets', is_active: true, opening_balance: 0, created_at: new Date().toISOString() },
+  { id: 'uae_1510', name: 'Accumulated Depreciation', code: '1510', type: 'asset', group: 'Fixed Assets', is_active: true, opening_balance: 0, created_at: new Date().toISOString() },
+
+  // Liabilities (2000-2999)
+  { id: 'uae_2010', name: 'Trade Payables', code: '2010', type: 'liability', group: 'Payables', is_active: true, opening_balance: 0, created_at: new Date().toISOString() },
+  { id: 'uae_2020', name: 'VAT Output (Payable)', code: '2020', type: 'liability', group: 'Payables', is_active: true, opening_balance: 0, created_at: new Date().toISOString() },
+  { id: 'uae_2030', name: 'PDC Payable (Post Dated Cheques)', code: '2030', type: 'liability', group: 'Payables', is_active: true, opening_balance: 0, created_at: new Date().toISOString() },
+  { id: 'uae_2040', name: 'Accrued Gratuity (EOSB Provision)', code: '2040', type: 'liability', group: 'Payables', is_active: true, opening_balance: 0, created_at: new Date().toISOString() },
+  { id: 'uae_2050', name: 'Accrued Salaries (WPS Payable)', code: '2050', type: 'liability', group: 'Payables', is_active: true, opening_balance: 0, created_at: new Date().toISOString() },
+  { id: 'uae_2500', name: 'Bank Loans / Facilities', code: '2500', type: 'liability', group: 'Loans', is_active: true, opening_balance: 0, created_at: new Date().toISOString() },
+
+  // Equity (3000-3999)
+  { id: 'uae_3010', name: 'Capital Account', code: '3010', type: 'equity', group: 'Capital', is_active: true, opening_balance: 0, created_at: new Date().toISOString() },
+  { id: 'uae_3020', name: 'Retained Earnings', code: '3020', type: 'equity', group: 'Retained Earnings', is_active: true, opening_balance: 0, created_at: new Date().toISOString() },
+
+  // Income (4000-4999)
+  { id: 'uae_4010', name: 'Sales Revenue (Standard Rated)', code: '4010', type: 'income', group: 'Sales', is_active: true, opening_balance: 0, created_at: new Date().toISOString() },
+  { id: 'uae_4020', name: 'Sales Revenue (Zero Rated)', code: '4020', type: 'income', group: 'Sales', is_active: true, opening_balance: 0, created_at: new Date().toISOString() },
+  { id: 'uae_4030', name: 'Service Income', code: '4030', type: 'income', group: 'Sales', is_active: true, opening_balance: 0, created_at: new Date().toISOString() },
+
+  // Expenses (5000-5999)
+  { id: 'uae_5010', name: 'Purchases (Standard Rated)', code: '5010', type: 'expense', group: 'Cost of Goods', is_active: true, opening_balance: 0, created_at: new Date().toISOString() },
+  { id: 'uae_5020', name: 'Salaries & Benefits', code: '5020', type: 'expense', group: 'Operating Expenses', is_active: true, opening_balance: 0, created_at: new Date().toISOString() },
+  { id: 'uae_5030', name: 'Rent Expense', code: '5030', type: 'expense', group: 'Operating Expenses', is_active: true, opening_balance: 0, created_at: new Date().toISOString() },
+  { id: 'uae_5040', name: 'Visa & Immigration Expenses', code: '5040', type: 'expense', group: 'Operating Expenses', is_active: true, opening_balance: 0, created_at: new Date().toISOString() },
+  { id: 'uae_5050', name: 'Utility Expenses (DEWA/Etisalat)', code: '5050', type: 'expense', group: 'Operating Expenses', is_active: true, opening_balance: 0, created_at: new Date().toISOString() },
+  { id: 'uae_5060', name: 'EOSB / Gratuity Expense', code: '5060', type: 'expense', group: 'Operating Expenses', is_active: true, opening_balance: 0, created_at: new Date().toISOString() },
+  { id: 'uae_5070', name: 'Professional Fees (Audit/Legal)', code: '5070', type: 'expense', group: 'Operating Expenses', is_active: true, opening_balance: 0, created_at: new Date().toISOString() },
+  { id: 'uae_5080', name: 'Bank Charges', code: '5080', type: 'expense', group: 'Financial Expenses', is_active: true, opening_balance: 0, created_at: new Date().toISOString() },
+];
+
+/**
  * Get COA template by type
  */
 export function getCOATemplate(template: COATemplate): Account[] {
@@ -160,6 +203,8 @@ export function getCOATemplate(template: COATemplate): Account[] {
       return INDIA_AS_ACCOUNTS;
     case 'US_GAAP':
       return US_GAAP_ACCOUNTS;
+    case 'UAE':
+      return UAE_ACCOUNTS;
     case 'BASIC':
       return IFRS_ACCOUNTS; // Use IFRS as basic template
     default:
@@ -173,6 +218,7 @@ export function getCOATemplate(template: COATemplate): Account[] {
 export const COA_DESCRIPTIONS: Record<COATemplate, string> = {
   IFRS: 'International Financial Reporting Standards - Global standard for public companies',
   INDIA_AS: 'Indian Accounting Standards - Includes GST tracking and India-specific accounts',
-  US_GAAP: 'Generally Accepted Accounting Principles (US) - US-based companies',
+  US_GAAP: 'Generally Accepted Principles (US) - US-based companies',
+  UAE: 'UAE Statutory Chart of Accounts - Includes VAT (5%) and PDC management',
   BASIC: 'Basic Chart of Accounts - Simple structure for small businesses',
 };

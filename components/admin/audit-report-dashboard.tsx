@@ -526,44 +526,44 @@ export function AuditReportDashboard({
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="flex flex-col items-center justify-center p-4 rounded-xl bg-slate-50 border border-slate-100">
-                    <div className="mb-2 p-2 bg-white rounded-full shadow-sm">
+                  <div className="flex flex-col items-center justify-center p-4 rounded-xl bg-muted border border-border">
+                    <div className="mb-2 p-2 bg-card rounded-full shadow-sm">
                       {report.key_observations.revenue_trend === 'increasing' ? (
                         <TrendingUp className="h-5 w-5 text-green-500" />
                       ) : (
                         <TrendingDown className="h-5 w-5 text-red-500" />
                       )}
                     </div>
-                    <span className="text-xs font-medium text-slate-500 uppercase tracking-wider flex items-center gap-1">Revenue <TermHelp term="revenue_trend" /></span>
-                    <span className="font-bold capitalize text-slate-900">{report.key_observations.revenue_trend}</span>
+                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">Revenue <TermHelp term="revenue_trend" /></span>
+                    <span className="font-bold capitalize text-foreground">{report.key_observations.revenue_trend}</span>
                   </div>
 
-                  <div className="flex flex-col items-center justify-center p-4 rounded-xl bg-slate-50 border border-slate-100">
-                    <div className="mb-2 p-2 bg-white rounded-full shadow-sm">
+                  <div className="flex flex-col items-center justify-center p-4 rounded-xl bg-muted border border-border">
+                    <div className="mb-2 p-2 bg-card rounded-full shadow-sm">
                       {report.key_observations.expense_trend === 'increasing' ? (
                         <TrendingUp className="h-5 w-5 text-red-500" />
                       ) : (
                         <TrendingDown className="h-5 w-5 text-green-500" />
                       )}
                     </div>
-                    <span className="text-xs font-medium text-slate-500 uppercase tracking-wider flex items-center gap-1">Expenses <TermHelp term="expense_trend" /></span>
-                    <span className="font-bold capitalize text-slate-900">{report.key_observations.expense_trend}</span>
+                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">Expenses <TermHelp term="expense_trend" /></span>
+                    <span className="font-bold capitalize text-foreground">{report.key_observations.expense_trend}</span>
                   </div>
 
-                  <div className="flex flex-col items-center justify-center p-4 rounded-xl bg-slate-50 border border-slate-100">
-                    <div className="mb-2 p-2 bg-white rounded-full shadow-sm">
+                  <div className="flex flex-col items-center justify-center p-4 rounded-xl bg-muted border border-border">
+                    <div className="mb-2 p-2 bg-card rounded-full shadow-sm">
                       <DollarSign className="h-5 w-5 text-blue-500" />
                     </div>
-                    <span className="text-xs font-medium text-slate-500 uppercase tracking-wider flex items-center gap-1">Cash Position <TermHelp term="cash_position" /></span>
-                    <span className="font-bold capitalize text-slate-900">{report.key_observations.cash_position}</span>
+                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">Cash Position <TermHelp term="cash_position" /></span>
+                    <span className="font-bold capitalize text-foreground">{report.key_observations.cash_position}</span>
                   </div>
 
-                  <div className="flex flex-col items-center justify-center p-4 rounded-xl bg-slate-50 border border-slate-100">
-                    <div className="mb-2 p-2 bg-white rounded-full shadow-sm">
+                  <div className="flex flex-col items-center justify-center p-4 rounded-xl bg-muted border border-border">
+                    <div className="mb-2 p-2 bg-card rounded-full shadow-sm">
                       <Shield className="h-5 w-5 text-purple-500" />
                     </div>
-                    <span className="text-xs font-medium text-slate-500 uppercase tracking-wider flex items-center gap-1">Liquidity <TermHelp term="liquidity_status" /></span>
-                    <span className="font-bold capitalize text-slate-900">{report.key_observations.liquidity_status}</span>
+                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">Liquidity <TermHelp term="liquidity_status" /></span>
+                    <span className="font-bold capitalize text-foreground">{report.key_observations.liquidity_status}</span>
                   </div>
                 </div>
               </CardContent>
@@ -585,7 +585,7 @@ export function AuditReportDashboard({
                   report.recommendations.map((rec, idx) => (
                     <Card key={idx} className="bg-gradient-to-r from-blue-50 to-indigo-50 border-none shadow-sm hover:shadow-md transition-shadow">
                       <CardContent className="p-4 flex gap-4 items-start">
-                        <div className="mt-1 bg-white p-1.5 rounded-lg shadow-sm text-blue-600">
+                        <div className="mt-1 bg-card p-1.5 rounded-lg shadow-sm text-blue-600">
                           <Zap className="h-4 w-4" />
                         </div>
                         <p className="text-sm font-medium text-slate-700 leading-relaxed">{rec}</p>
@@ -633,8 +633,8 @@ export function AuditReportDashboard({
                     </Card>
                   ))
                 ) : (
-                  <Card className="bg-slate-50 border-dashed">
-                    <CardContent className="p-8 text-center text-slate-500">
+                  <Card className="bg-muted border-dashed">
+                    <CardContent className="p-8 text-center text-muted-foreground">
                       <Shield className="h-8 w-8 mx-auto mb-2 opacity-20" />
                       <p>No anomalies detected in the ledger.</p>
                     </CardContent>
@@ -659,7 +659,7 @@ export function AuditReportDashboard({
               <div className="rounded-md border">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-slate-50">
+                    <TableRow className="bg-muted">
                       <TableHead>Account Name</TableHead>
                       <TableHead>Type</TableHead>
                       <TableHead className="text-right">Balance</TableHead>
@@ -676,8 +676,8 @@ export function AuditReportDashboard({
                       return (
                         <TableRow key={account.account_id}>
                           <TableCell>
-                            <div className="font-medium text-slate-900">{account.account_name}</div>
-                            <div className="text-xs text-slate-500 font-mono">{account.account_code}</div>
+                            <div className="font-medium text-foreground">{account.account_name}</div>
+                            <div className="text-xs text-muted-foreground font-mono">{account.account_code}</div>
                           </TableCell>
                           <TableCell>
                             <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium capitalize 
@@ -693,11 +693,11 @@ export function AuditReportDashboard({
                             ${account.closing_balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </TableCell>
                           <TableCell className="text-right">
-                            <span className="text-xs text-slate-500">{account.transactions_count} txns</span>
+                            <span className="text-xs text-muted-foreground">{account.transactions_count} txns</span>
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
-                              <div className="h-2 flex-1 bg-slate-100 rounded-full overflow-hidden">
+                              <div className="h-2 flex-1 bg-muted rounded-full overflow-hidden">
                                 <div
                                   className={`h-full rounded-full ${account.closing_balance >= 0 ? 'bg-blue-500' : 'bg-red-500'}`}
                                   style={{ width: `${percent}%` }}

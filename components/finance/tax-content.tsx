@@ -2,11 +2,15 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/lib/auth/context';
-import { getSystemSetting, getInvoices, getTaxDatabaseStatus, getTaxJobHistory, triggerTaxDataCollection, setSystemSetting } from '@/lib/api';
+import { 
+    getInvoices, 
+    getTaxDatabaseStatus, 
+    getTaxJobHistory, 
+    triggerTaxDataCollection 
+} from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -20,58 +24,43 @@ import {
     FileText,
     Clock,
     Calendar,
-    Settings,
-    CheckCircle2,
-    Scale,
-    Info,
-    Calculator,
-    Save,
     Globe,
     Search,
-    ArrowRightLeft,
-    Building2,
-    CreditCard,
-    Shield,
-    Sparkles,
-    TrendingUp,
+    Calculator,
     Receipt,
     ArrowUpRight,
     ArrowDownRight,
     Landmark,
-    AlertCircle
+    AlertCircle,
+    Building2,
+    Shield,
+    ChevronRight,
+    ChevronDown,
+    Activity,
+    CheckCircle2
 } from 'lucide-react';
 import type { Invoice } from '@/lib/db/types';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { UAEVATReturnView } from './uae-vat-return-view';
 
 // Import comprehensive tax engine
-import {
-    calculateTax,
-    getTaxRatesForCountry,
-    getCountryTaxConfig,
-    getSupportedCountries,
-    validateTaxId,
-    COUNTRY_TAX_CONFIGS,
-    type TaxCalculationResult,
-    type TaxRateDefinition,
-    type CountryTaxConfig
-} from '@/lib/finance/tax-engine';
-
-// Build country list from tax configs
-const ALL_COUNTRIES = Object.entries(COUNTRY_TAX_CONFIGS)
-    .map(([code, config]) => ({ code, name: config.countryName }))
-    .sort((a, b) => a.name.localeCompare(b.name));
-
-// Group countries by region
-const COUNTRIES_BY_REGION = ALL_COUNTRIES.reduce((acc, country) => {
-    const region = getRegionForCountry(country.code);
-    if (!acc[region]) acc[region] = [];
-    acc[region].push(country);
-    return acc;
-}, {} as Record<string, typeof ALL_COUNTRIES>);
+type TaxCalculationResult = {
+    subtotal: number;
+    totalTax: number;
+    totalAmount: number;
+    currency?: string;
+    countryCode: string;
+    isReverseCharge: boolean;
+    breakdown: { rate: number; name: string; taxAmount: number }[];
+    lineItems?: any[];
+};
+type TaxRateDefinition = { id: string; code: string; name: string; rate: number; type: string; countryCode: string; region?: string; category: string; description?: string; isCompound: boolean };
+type CountryTaxConfig = { countryCode: string; countryName: string; currency: string; primaryTaxType: string; taxTypes: string[]; isFederalSystem: boolean; hasReverseCharge: boolean; registrationThreshold?: number; digitalServicesThreshold?: number };
 
 export function TaxContent() {
     const { user } = useAuth();
+    const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || '/api';
     const [loading, setLoading] = useState(true);
     const [syncing, setSyncing] = useState(false);
     const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -79,40 +68,32 @@ export function TaxContent() {
     const [isMounted, setIsMounted] = useState(false);
     const [activeTab, setActiveTab] = useState('overview');
 
-    // Calculator state
     const [calculationInput, setCalculationInput] = useState({
         amount: 1000,
-        countryCode: 'US',
+        countryCode: 'AE',
         region: '',
         isB2B: false,
         isTaxExempt: false,
         customerTaxId: '',
         category: 'standard',
     });
-    const [calculationResult, setCalculationResult] = useState<TaxCalculationResult | null>(null);
+    const [calculationResult, setCalculationResult] = useState<any | null>(null);
+    const [countries, setCountries] = useState<{ code: string; name: string }[]>([]);
+    const [strategicConfigs, setStrategicConfigs] = useState<Record<string, { config: CountryTaxConfig | null; rates: TaxRateDefinition[] }>>({});
+    const [ratesByCode, setRatesByCode] = useState<Record<string, number>>({});
 
-    // Country browser state
-    const [selectedCountry, setSelectedCountry] = useState('US');
     const [searchQuery, setSearchQuery] = useState('');
-    const [countryTaxConfig, setCountryTaxConfig] = useState<CountryTaxConfig | null>(null);
 
     useEffect(() => {
         setIsMounted(true);
         if (user?.role === 'admin') fetchData();
     }, [user]);
 
-    // Update country tax config when selection changes
-    useEffect(() => {
-        const config = getCountryTaxConfig(selectedCountry);
-        setCountryTaxConfig(config);
-    }, [selectedCountry]);
-
     const fetchData = async () => {
         try {
             setLoading(true);
-            const [invoicesData, statusData, historyData] = await Promise.all([
+            const [invoicesData, historyData] = await Promise.all([
                 getInvoices(),
-                getTaxDatabaseStatus(),
                 getTaxJobHistory()
             ]);
             setInvoices(invoicesData || []);
@@ -138,43 +119,68 @@ export function TaxContent() {
         }
     };
 
-    // Perform calculation
-    const performCalculation = () => {
+    useEffect(() => {
+        (async () => {
+            try {
+                const res = await fetch(`${apiBase}/finance/tax/calculate`, { credentials: 'include' });
+                const data = await res.json();
+                if (data?.countries) {
+                    setCountries(data.countries.map((c: any) => ({ code: c.code, name: c.name })));
+                }
+                const codes = ['AE', 'SA', 'GB', 'US'];
+                const results: Record<string, { config: CountryTaxConfig | null; rates: TaxRateDefinition[] }> = {};
+                await Promise.all(codes.map(async (code) => {
+                    const r = await fetch(`${apiBase}/finance/tax/calculate?countryCode=${code}`, { credentials: 'include' });
+                    const d = await r.json();
+                    results[code] = { config: d?.config || null, rates: d?.rates || [] };
+                }));
+                setStrategicConfigs(results);
+            } catch {}
+        })();
+    }, []);
+
+    useEffect(() => {
+        const loadRates = async () => {
+            const filtered = countries.filter((c) => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
+            const entries: Record<string, number> = {};
+            await Promise.all(filtered.map(async (c) => {
+                const r = await fetch(`${apiBase}/finance/tax/calculate?countryCode=${c.code}`, { credentials: 'include' });
+                const d = await r.json();
+                const std = (d?.rates || []).find((rr: any) => rr.category === 'standard')?.rate || 0;
+                entries[c.code] = std;
+            }));
+            setRatesByCode(entries);
+        };
+        if (countries.length > 0) loadRates();
+    }, [countries, searchQuery]);
+
+    const performCalculation = async () => {
         try {
-            const result = calculateTax({
-                amount: calculationInput.amount,
-                countryCode: calculationInput.countryCode,
-                region: calculationInput.region || undefined,
-                isB2B: calculationInput.isB2B,
-                isTaxExempt: calculationInput.isTaxExempt,
-                customerTaxId: calculationInput.customerTaxId || undefined,
+            const res = await fetch(`${apiBase}/finance/tax/calculate`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                    amount: calculationInput.amount,
+                    countryCode: calculationInput.countryCode,
+                    region: calculationInput.region || undefined,
+                    isB2B: calculationInput.isB2B,
+                    isTaxExempt: calculationInput.isTaxExempt,
+                    customerTaxId: calculationInput.customerTaxId || undefined,
+                }),
             });
-            setCalculationResult(result);
+            const data = await res.json();
+            if (!res.ok) throw new Error(data?.error || 'Calculation failed');
+            setCalculationResult(data);
         } catch (error) {
             toast.error('Calculation failed: ' + (error as Error).message);
         }
     };
 
-    // Filter countries by search
-    const filteredCountries = searchQuery
-        ? ALL_COUNTRIES.filter(c =>
-            c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            c.code.toLowerCase().includes(searchQuery.toLowerCase())
-        )
-        : ALL_COUNTRIES;
-
-    // Group filtered countries by region
-    const filteredCountriesByRegion = filteredCountries.reduce((acc, country) => {
-        const region = getRegionForCountry(country.code);
-        if (!acc[region]) acc[region] = [];
-        acc[region].push(country);
-        return acc;
-    }, {} as Record<string, typeof ALL_COUNTRIES>);
-
     const taxLiability = useMemo(() => {
         const paidInvoices = invoices.filter(i => i.status === 'paid');
         const totalTaxable = paidInvoices.reduce((sum, i) => sum + Number(i.amount), 0);
-        return totalTaxable * 0.05; // 5% estimate
+        return totalTaxable * 0.05; // 5% estimate for UAE
     }, [invoices]);
 
     if (!isMounted) return null;
@@ -182,480 +188,299 @@ export function TaxContent() {
     if (loading) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[40vh] space-y-4">
-                <RefreshCcw className="h-12 w-12 animate-spin text-primary" />
-                <p className="font-bold text-slate-900">Calculating Tax Records...</p>
+                <RefreshCcw className="h-10 w-10 animate-spin text-primary" />
+                <p className="font-bold text-foreground">Synchronizing Tax Records...</p>
             </div>
         );
     }
 
     return (
-        <div className="space-y-8 pb-12">
-            {/* Visual Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div className="space-y-1">
-                    <h2 className="text-2xl font-black tracking-tight text-slate-900 flex items-center gap-2">
-                        <Globe className="h-6 w-6 text-primary" />
-                        Global Tax Center
-                    </h2>
-                    <p className="text-slate-500 font-medium flex items-center gap-2">
-                        <Scale className="h-4 w-4 text-primary" />
-                        Calculate taxes for 150+ countries with real-time rates
-                    </p>
+        <div className="space-y-6">
+            {/* Header */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h2 className="text-2xl font-bold tracking-tight text-foreground">Tax Management</h2>
+                    <p className="text-sm text-muted-foreground mt-1">Compliance, VAT returns and global tax rate monitoring</p>
                 </div>
-                <div className="flex items-center gap-3">
-                    <Badge variant="secondary" className="rounded-full px-4 py-2 text-sm font-bold">
-                        <Sparkles className="h-4 w-4 mr-2 text-amber-500" />
-                        {ALL_COUNTRIES.length} Countries
-                    </Badge>
+                <div className="flex items-center gap-2">
                     <Button
                         variant="outline"
-                        className="rounded-2xl border-slate-200 h-12 px-6 font-bold shadow-sm"
+                        size="sm"
+                        className="h-9 gap-2"
                         onClick={handleRunSync}
                         disabled={syncing}
                     >
-                        <RefreshCcw className={cn("h-4 w-4 mr-2", syncing && "animate-spin")} />
-                        Sync Rates
+                        <RefreshCcw className={cn("h-3.5 w-3.5", syncing && "animate-spin")} />
+                        Hard Sync
+                    </Button>
+                    <Button size="sm" className="h-9 bg-primary hover:bg-primary/90">
+                        Export Report
                     </Button>
                 </div>
             </div>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-                <TabsList className="rounded-2xl bg-slate-100 p-1 w-full md:w-auto">
-                    <TabsTrigger value="overview" className="rounded-xl font-bold">
-                        <Scale className="h-4 w-4 mr-2" />
-                        Overview
-                    </TabsTrigger>
-                    <TabsTrigger value="calculator" className="rounded-xl font-bold">
-                        <Calculator className="h-4 w-4 mr-2" />
-                        Calculator
-                    </TabsTrigger>
-                    <TabsTrigger value="countries" className="rounded-xl font-bold">
-                        <Globe className="h-4 w-4 mr-2" />
-                        All Countries
-                    </TabsTrigger>
-                    <TabsTrigger value="guide" className="rounded-xl font-bold">
-                        <FileText className="h-4 w-4 mr-2" />
-                        Tax Guide
-                    </TabsTrigger>
+                <TabsList className="bg-muted/50 border h-10 p-0.5">
+                    <TabsTrigger value="overview" className="text-xs font-semibold px-6 h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">Overview</TabsTrigger>
+                    <TabsTrigger value="uae-return" className="text-xs font-semibold px-6 h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">FTA Form 201</TabsTrigger>
+                    <TabsTrigger value="calculator" className="text-xs font-semibold px-6 h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">Calculator</TabsTrigger>
+                    <TabsTrigger value="countries" className="text-xs font-semibold px-6 h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">Jurisdictions</TabsTrigger>
                 </TabsList>
 
                 {/* Overview Tab */}
                 <TabsContent value="overview" className="space-y-6">
-                    {/* High Impact KPIs */}
-                    <div className="grid gap-6 md:grid-cols-4">
-                        <Card className="rounded-[2.5rem] border-none shadow-sm bg-slate-900 text-white overflow-hidden p-10 relative group">
-                            <Percent className="absolute -right-4 -bottom-4 h-32 w-32 text-white/5 group-hover:scale-110 transition-transform duration-700" />
-                            <div className="relative z-10 space-y-6">
-                                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Estimated Tax Due</p>
-                                <h2 className="text-4xl font-black tracking-tighter">${taxLiability.toLocaleString()}</h2>
-                                <div className="flex items-center gap-3">
-                                    <div className="h-2 flex-1 bg-white/10 rounded-full overflow-hidden">
-                                        <div className="h-full bg-primary w-[65%] rounded-full" />
-                                    </div>
-                                    <span className="text-[10px] font-bold text-slate-400 uppercase">Q1 Progress</span>
-                                </div>
-                            </div>
-                        </Card>
-
-                        <Card className="rounded-[2.5rem] border-none shadow-sm bg-white overflow-hidden p-10 group hover:shadow-xl transition-all duration-500">
-                            <div className="flex items-center justify-between mb-8">
-                                <div className="h-14 w-14 rounded-3xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform duration-500">
-                                    <ShieldCheck className="h-7 w-7" strokeWidth={2.5} />
-                                </div>
-                                <Badge className="bg-emerald-50 text-emerald-600 border-none font-black text-[10px] tracking-widest px-4 py-1.5 rounded-full uppercase">Active</Badge>
-                            </div>
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Countries Supported</p>
-                            <h3 className="text-2xl font-black text-slate-900">{ALL_COUNTRIES.length}+</h3>
-                            <p className="text-xs font-bold text-slate-400 pt-2">Global coverage</p>
-                        </Card>
-
-                        <Card className="rounded-[2.5rem] border-none shadow-sm bg-white overflow-hidden p-10 group hover:shadow-xl transition-all duration-500">
-                            <div className="flex items-center justify-between mb-8">
-                                <div className="h-14 w-14 rounded-3xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform duration-500">
-                                    <Clock className="h-7 w-7" strokeWidth={2.5} />
-                                </div>
-                                <Badge className="bg-amber-50 text-amber-600 border-none font-black text-[10px] tracking-widest px-4 py-1.5 rounded-full uppercase">Upcoming</Badge>
-                            </div>
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Next Filing</p>
-                            <h3 className="text-2xl font-black text-slate-900">31 Mar 2026</h3>
-                            <div className="flex items-center gap-2 pt-2 text-xs font-bold text-slate-400">
-                                <Calendar size={14} /> 57 Days Remaining
-                            </div>
-                        </Card>
-
-                        <Card className="rounded-[2.5rem] border-none shadow-sm bg-white overflow-hidden p-10 group hover:shadow-xl transition-all duration-500">
-                            <div className="flex items-center justify-between mb-8">
-                                <div className="h-14 w-14 rounded-3xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform duration-500">
-                                    <Receipt className="h-7 w-7" strokeWidth={2.5} />
-                                </div>
-                                <Badge className="bg-blue-50 text-blue-600 border-none font-black text-[10px] tracking-widest px-4 py-1.5 rounded-full uppercase">Live</Badge>
-                            </div>
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tax Types</p>
-                            <h3 className="text-2xl font-black text-slate-900">8+</h3>
-                            <p className="text-xs font-bold text-slate-400 pt-2">VAT, GST, Sales Tax...</p>
-                        </Card>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <MetricCard
+                            title="VAT Payable"
+                            value={`AED ${taxLiability.toLocaleString()}`}
+                            description="Estimated for current period"
+                            trend="+4.2%"
+                            trendUp={false}
+                        />
+                        <MetricCard
+                            title="Countries Supported"
+                            value={countries.length.toString()}
+                            description="Global jurisdictions"
+                            trend="Live"
+                            trendUp={true}
+                        />
+                        <MetricCard
+                            title="Compliance Status"
+                            value="Compliant"
+                            description="Last audit 2 days ago"
+                            trend="Secure"
+                            trendUp={true}
+                        />
+                        <MetricCard
+                            title="Next Filing"
+                            value="Mar 31"
+                            description="57 Days remaining"
+                            trend="Upcoming"
+                            trendUp={true}
+                        />
                     </div>
 
-                    {/* Main Content Grid */}
-                    <div className="grid gap-8 lg:grid-cols-3">
-                        {/* Popular Countries */}
-                        <Card className="lg:col-span-2 rounded-[3rem] border-none shadow-sm bg-white overflow-hidden">
-                            <CardHeader className="p-10 border-b border-slate-50 flex flex-row items-center justify-between">
-                                <div>
-                                    <CardTitle className="text-2xl font-black">Popular Tax Jurisdictions</CardTitle>
-                                    <CardDescription className="font-medium text-slate-400">Quick access to common countries</CardDescription>
-                                </div>
-                                <Button variant="outline" className="rounded-xl" onClick={() => setActiveTab('countries')}>
-                                    View All
-                                </Button>
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <Card className="lg:col-span-2 border-border shadow-sm">
+                            <CardHeader className="border-b bg-muted/50">
+                                <CardTitle className="text-sm font-bold uppercase tracking-wider text-foreground">Strategic Jurisdictions</CardTitle>
                             </CardHeader>
-                            <div className="p-6">
-                                <div className="grid gap-4 md:grid-cols-2">
-                                    {['US', 'GB', 'DE', 'IN', 'AU', 'CA', 'SG', 'AE'].map((code) => {
-                                        const config = getCountryTaxConfig(code);
-                                        const rates = getTaxRatesForCountry(code);
-                                        const standardRate = rates.find(r => r.category === 'standard')?.rate || 0;
+                            <CardContent className="p-0">
+                                <div className="grid grid-cols-1 md:grid-cols-2">
+                                        {['AE', 'SA', 'GB', 'US'].map((code) => {
+                                            const cfg = strategicConfigs[code];
+                                            const standardRate = (cfg?.rates || []).find(r => r.category === 'standard')?.rate || 0;
                                         return (
                                             <div
                                                 key={code}
+                                                className="flex items-center justify-between p-4 border-b last:border-b-0 md:[&:nth-last-child(-n+2)]:border-b-0 hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
                                                 onClick={() => {
-                                                    setSelectedCountry(code);
                                                     setCalculationInput({ ...calculationInput, countryCode: code });
                                                     setActiveTab('calculator');
                                                 }}
-                                                className="p-4 bg-slate-50 rounded-2xl hover:bg-slate-100 cursor-pointer transition-colors group"
                                             >
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-3">
-                                                        <span className="text-2xl">{getCountryFlag(code)}</span>
-                                                        <div>
-                                                            <p className="font-bold text-slate-900">{config?.countryName || code}</p>
-                                                            <p className="text-xs text-slate-500">{config?.primaryTaxType}</p>
-                                                        </div>
+                                                <div className="flex items-center gap-3">
+                                                    <div className="text-2xl h-8 w-8 flex items-center justify-center bg-muted rounded-md">{getCountryFlag(code)}</div>
+                                                    <div>
+                                                            <p className="text-sm font-bold text-foreground">{cfg?.config?.countryName || code}</p>
+                                                            <p className="text-[10px] font-black uppercase text-muted-foreground tracking-tight">{cfg?.config?.primaryTaxType}</p>
                                                     </div>
-                                                    <div className="text-right">
-                                                        <p className="text-xl font-black text-slate-900">{standardRate}%</p>
-                                                        <p className="text-xs text-slate-500">Standard</p>
-                                                    </div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="text-sm font-black text-primary">{standardRate}%</p>
+                                                    <p className="text-[10px] font-bold text-muted-foreground uppercase">Standard</p>
                                                 </div>
                                             </div>
                                         );
                                     })}
                                 </div>
-                            </div>
+                            </CardContent>
                         </Card>
 
-                        {/* Side Panel */}
-                        <div className="space-y-6">
-                            <Card className="rounded-[2.5rem] border-none shadow-sm bg-white p-10 group">
-                                <div className="flex items-center justify-between mb-8">
-                                    <div className="h-14 w-14 rounded-3xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform duration-500">
-                                        <RefreshCcw className="h-7 w-7" strokeWidth={2.5} />
-                                    </div>
-                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Live Sync</span>
-                                </div>
-                                <div className="space-y-2 mb-8">
-                                    <h3 className="text-2xl font-black text-slate-900">Updates</h3>
-                                    <p className="text-sm font-medium text-slate-400 leading-relaxed">Tax rates are automatically synchronized every 10 days.</p>
-                                </div>
-                                <div className="space-y-4">
-                                    {jobHistory.slice(0, 3).map((job, i) => (
-                                        <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-transparent hover:border-slate-100 transition-all">
-                                            <div>
-                                                <p className="text-xs font-bold text-slate-900">{new Date(job.timestamp).toLocaleDateString()}</p>
-                                                <p className="text-[10px] font-black text-slate-400 uppercase">{job.countriesCollected} Countries</p>
-                                            </div>
-                                            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                        <Card className="border-border shadow-sm bg-foreground text-card-foreground">
+                            <CardHeader className="pb-4">
+                                <CardTitle className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">System Logs</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                {jobHistory.slice(0, 4).map((job, i) => (
+                                    <div key={i} className="flex items-center justify-between p-3 rounded-md bg-white/5 border border-white/10">
+                                        <div>
+                                            <p className="text-xs font-bold">{new Date(job.timestamp).toLocaleDateString()}</p>
+                                            <p className="text-[10px] font-medium text-muted-foreground">{job.countriesCollected} Jurisdictions Sync</p>
                                         </div>
-                                    ))}
-                                </div>
-                            </Card>
-
-                            <Card className="rounded-[2.5rem] border-none shadow-sm bg-slate-50 p-10 flex flex-col items-center justify-center text-center space-y-4">
-                                <FileText className="h-10 w-10 text-slate-200" />
-                                <div className="space-y-1">
-                                    <h4 className="text-lg font-black text-slate-900">Official Reports</h4>
-                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-tight">Download return summaries and liability history.</p>
-                                </div>
-                                <Button variant="outline" className="w-full rounded-xl border-slate-200 font-black text-[10px] uppercase tracking-widest h-11">Open Archive</Button>
-                            </Card>
-                        </div>
+                                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                                    </div>
+                                ))}
+                            </CardContent>
+                        </Card>
                     </div>
+                </TabsContent>
+
+                {/* UAE Return Tab */}
+                <TabsContent value="uae-return" className="space-y-6">
+                    <Card className="border-border shadow-sm">
+                        <CardHeader className="flex flex-row items-center justify-between border-b pb-4 bg-muted/50">
+                            <div className="flex items-center gap-3">
+                                <div className="h-8 w-8 rounded-md bg-primary text-card-foreground flex items-center justify-center">
+                                    <Landmark className="h-4 w-4" />
+                                </div>
+                                <div>
+                                    <CardTitle className="text-sm font-bold">FTA UAE VAT Return (Form 201)</CardTitle>
+                                    <p className="text-xs text-muted-foreground mt-0.5">Official reporting format for Federal Tax Authority</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Input type="date" className="h-8 w-36 text-xs font-bold" defaultValue="2026-01-01" />
+                                <span className="text-muted-foreground">to</span>
+                                <Input type="date" className="h-8 w-36 text-xs font-bold" defaultValue="2026-03-31" />
+                            </div>
+                        </CardHeader>
+                        <CardContent className="p-0">
+                            <UAEVATReturnView 
+                                trn="100123456789003" 
+                                fromDate="2026-01-01"
+                                toDate="2026-03-31"
+                                invoices={invoices}
+                                bills={[]}
+                            />
+                        </CardContent>
+                    </Card>
                 </TabsContent>
 
                 {/* Calculator Tab */}
                 <TabsContent value="calculator" className="space-y-6">
-                    <div className="grid gap-6 lg:grid-cols-2">
-                        {/* Input Card */}
-                        <Card className="rounded-[2.5rem] border-none shadow-sm">
-                            <CardHeader>
-                                <CardTitle className="text-xl font-black flex items-center gap-2">
-                                    <Calculator className="h-5 w-5" />
-                                    Tax Calculator
-                                </CardTitle>
-                                <CardDescription>Calculate tax for any country with full rate categories</CardDescription>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <Card className="border-border shadow-sm">
+                            <CardHeader className="border-b bg-muted/50">
+                                <CardTitle className="text-sm font-bold uppercase tracking-wider">Engine Inputs</CardTitle>
                             </CardHeader>
-                            <CardContent className="space-y-6">
-                                {/* Amount */}
-                                <div className="space-y-2">
-                                    <Label className="font-bold flex items-center gap-2">
-                                        <CreditCard className="h-4 w-4" />
-                                        Transaction Amount
-                                    </Label>
-                                    <Input
-                                        type="number"
-                                        value={calculationInput.amount}
-                                        onChange={(e) => setCalculationInput({ ...calculationInput, amount: Number(e.target.value) })}
-                                        className="rounded-xl text-lg font-bold"
-                                        placeholder="Enter amount..."
-                                    />
-                                </div>
-
-                                {/* Country */}
-                                <div className="space-y-2">
-                                    <Label className="font-bold flex items-center gap-2">
-                                        <Globe className="h-4 w-4" />
-                                        Country
-                                    </Label>
-                                    <Select
-                                        value={calculationInput.countryCode}
-                                        onValueChange={(value) => setCalculationInput({ ...calculationInput, countryCode: value })}
-                                    >
-                                        <SelectTrigger className="rounded-xl">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent className="rounded-xl max-h-[300px]">
-                                            {Object.entries(COUNTRIES_BY_REGION).map(([region, countries]) => (
-                                                <div key={region}>
-                                                    <div className="px-2 py-1.5 text-xs font-bold text-slate-500 uppercase bg-slate-50">
-                                                        {region}
-                                                    </div>
-                                                    {countries.map((country) => (
-                                                        <SelectItem key={country.code} value={country.code}>
-                                                            <span className="mr-2">{getCountryFlag(country.code)}</span> {country.name}
-                                                        </SelectItem>
-                                                    ))}
-                                                </div>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-
-                                {/* Region/State */}
-                                {['US', 'CA', 'AU', 'BR', 'IN'].includes(calculationInput.countryCode) && (
+                            <CardContent className="pt-6 space-y-4">
+                                <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <Label className="font-bold flex items-center gap-2">
-                                            <Landmark className="h-4 w-4" />
-                                            State/Region
-                                        </Label>
+                                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Country</Label>
+                                        <Select
+                                            value={calculationInput.countryCode}
+                                            onValueChange={(v) => setCalculationInput({ ...calculationInput, countryCode: v })}
+                                        >
+                                            <SelectTrigger className="h-10 rounded-md border-border">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {countries.map(c => (
+                                                    <SelectItem key={c.code} value={c.code}>{getCountryFlag(c.code)} {c.name}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Amount (AED/USD)</Label>
                                         <Input
-                                            value={calculationInput.region}
-                                            onChange={(e) => setCalculationInput({ ...calculationInput, region: e.target.value })}
-                                            className="rounded-xl"
-                                            placeholder={`e.g., ${getRegionPlaceholder(calculationInput.countryCode)}`}
+                                            type="number"
+                                            value={calculationInput.amount}
+                                            onChange={(e) => setCalculationInput({ ...calculationInput, amount: Number(e.target.value) })}
+                                            className="h-10 rounded-md border-border font-bold"
                                         />
                                     </div>
-                                )}
+                                </div>
 
-                                {/* Category */}
                                 <div className="space-y-2">
-                                    <Label className="font-bold flex items-center gap-2">
-                                        <Receipt className="h-4 w-4" />
-                                        Product/Service Category
-                                    </Label>
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Tax Category</Label>
                                     <Select
                                         value={calculationInput.category}
-                                        onValueChange={(value) => setCalculationInput({ ...calculationInput, category: value })}
+                                        onValueChange={(v) => setCalculationInput({ ...calculationInput, category: v })}
                                     >
-                                        <SelectTrigger className="rounded-xl">
+                                        <SelectTrigger className="h-10 rounded-md border-border">
                                             <SelectValue />
                                         </SelectTrigger>
-                                        <SelectContent className="rounded-xl">
+                                        <SelectContent>
                                             <SelectItem value="standard">Standard Rate</SelectItem>
                                             <SelectItem value="reduced">Reduced Rate</SelectItem>
                                             <SelectItem value="zero">Zero Rated</SelectItem>
                                             <SelectItem value="exempt">Exempt</SelectItem>
                                             <SelectItem value="digital">Digital Services</SelectItem>
-                                            <SelectItem value="luxury">Luxury Goods</SelectItem>
-                                            <SelectItem value="food">Food/Beverage</SelectItem>
-                                            <SelectItem value="medical">Medical/Health</SelectItem>
-                                            <SelectItem value="education">Education</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
 
-                                {/* Toggles */}
-                                <div className="space-y-4 p-4 bg-slate-50 rounded-2xl">
+                                <div className="p-4 bg-muted border border-border rounded-md space-y-4">
                                     <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <Building2 className="h-5 w-5 text-slate-500" />
-                                            <div>
-                                                <Label className="font-bold cursor-pointer" htmlFor="b2b-toggle">B2B Transaction</Label>
-                                                <p className="text-xs text-slate-500">Reverse charge may apply</p>
-                                            </div>
+                                        <div className="space-y-0.5">
+                                            <Label className="text-xs font-bold text-foreground">B2B Transaction</Label>
+                                            <p className="text-[10px] text-muted-foreground">Enable reverse charge logic</p>
                                         </div>
                                         <Switch
-                                            id="b2b-toggle"
                                             checked={calculationInput.isB2B}
-                                            onCheckedChange={(checked) => setCalculationInput({ ...calculationInput, isB2B: checked })}
+                                            onCheckedChange={(v) => setCalculationInput({ ...calculationInput, isB2B: v })}
                                         />
                                     </div>
-
-                                    <Separator />
-
+                                    <Separator className="bg-zinc-200" />
                                     <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <Shield className="h-5 w-5 text-slate-500" />
-                                            <div>
-                                                <Label className="font-bold cursor-pointer" htmlFor="exempt-toggle">Tax Exempt</Label>
-                                                <p className="text-xs text-slate-500">No tax will be applied</p>
-                                            </div>
+                                        <div className="space-y-0.5">
+                                            <Label className="text-xs font-bold text-foreground">Tax Exempt</Label>
+                                            <p className="text-[10px] text-muted-foreground">Apply exemption rules</p>
                                         </div>
                                         <Switch
-                                            id="exempt-toggle"
                                             checked={calculationInput.isTaxExempt}
-                                            onCheckedChange={(checked) => setCalculationInput({ ...calculationInput, isTaxExempt: checked })}
+                                            onCheckedChange={(v) => setCalculationInput({ ...calculationInput, isTaxExempt: v })}
                                         />
                                     </div>
                                 </div>
 
-                                {/* Tax ID for B2B */}
-                                {calculationInput.isB2B && (
-                                    <div className="space-y-2">
-                                        <Label className="font-bold flex items-center gap-2">
-                                            <FileText className="h-4 w-4" />
-                                            Customer Tax ID / VAT Number
-                                        </Label>
-                                        <Input
-                                            value={calculationInput.customerTaxId}
-                                            onChange={(e) => setCalculationInput({ ...calculationInput, customerTaxId: e.target.value })}
-                                            className="rounded-xl font-mono"
-                                            placeholder="e.g., GB123456789 or EU123456789"
-                                        />
-                                        <p className="text-xs text-slate-500">
-                                            Validates the tax ID format for {COUNTRY_TAX_CONFIGS[calculationInput.countryCode]?.countryName || calculationInput.countryCode}
-                                        </p>
-                                    </div>
-                                )}
-
-                                <Button
+                                <Button 
+                                    className="w-full h-11 bg-primary hover:bg-primary/90 rounded-md font-bold uppercase tracking-widest text-xs"
                                     onClick={performCalculation}
-                                    className="w-full h-14 rounded-2xl bg-slate-900 font-black text-lg shadow-xl shadow-slate-200"
                                 >
-                                    <Calculator className="h-5 w-5 mr-2" />
-                                    Calculate Tax
+                                    <Calculator className="h-4 w-4 mr-2" />
+                                    Calculate Liability
                                 </Button>
                             </CardContent>
                         </Card>
 
-                        {/* Results Card */}
                         <Card className={cn(
-                            "rounded-[2.5rem] border-none shadow-sm",
-                            calculationResult ? "bg-gradient-to-br from-slate-900 to-slate-800 text-white" : "bg-slate-50"
+                            "border-border shadow-sm",
+                            calculationResult ? "bg-foreground text-card-foreground" : "bg-muted/50"
                         )}>
-                            <CardHeader>
-                                <CardTitle className={cn(
-                                    "text-xl font-black flex items-center gap-2",
-                                    !calculationResult && "text-slate-900"
-                                )}>
-                                    <Receipt className="h-5 w-5" />
-                                    Calculation Result
-                                </CardTitle>
-                                <CardDescription className={!calculationResult ? "text-slate-500" : "text-slate-400"}>
-                                    Tax breakdown for your transaction
-                                </CardDescription>
+                            <CardHeader className="border-b border-zinc-800">
+                                <CardTitle className="text-sm font-bold uppercase tracking-wider">Engine Analysis</CardTitle>
                             </CardHeader>
-                            <CardContent>
+                            <CardContent className="pt-8">
                                 {calculationResult ? (
-                                    <div className="space-y-6">
-                                        {/* Main Result */}
-                                        <div className="text-center py-6">
-                                            <p className="text-sm text-slate-400 mb-2">Total Amount with Tax</p>
-                                            <p className="text-5xl font-black">
-                                                ${calculationResult.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                            </p>
-                                            <div className="flex items-center justify-center gap-4 mt-4 text-sm">
-                                                <span className="text-slate-400">
-                                                    Subtotal: ${calculationResult.subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                                </span>
-                                                <span className="text-emerald-400">
-                                                    + Tax: ${calculationResult.totalTax.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                                </span>
+                                    <div className="space-y-8">
+                                        <div className="text-center">
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">Total Tax Inclusive</p>
+                                            <h3 className="text-5xl font-black tracking-tighter">
+                                                {calculationResult.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                            </h3>
+                                            <div className="flex items-center justify-center gap-4 mt-6">
+                                                <div className="text-center">
+                                                    <p className="text-[10px] font-bold text-muted-foreground uppercase">Subtotal</p>
+                                                    <p className="text-sm font-bold">{calculationResult.subtotal.toLocaleString()}</p>
+                                                </div>
+                                                <div className="w-px h-8 bg-primary/90" />
+                                                <div className="text-center">
+                                                    <p className="text-[10px] font-bold text-primary uppercase">Tax Applied</p>
+                                                    <p className="text-sm font-bold text-primary">+{calculationResult.totalTax.toLocaleString()}</p>
+                                                </div>
                                             </div>
                                         </div>
 
-                                        <Separator className="bg-slate-700" />
-
-                                        {/* Tax Breakdown */}
-                                        {calculationResult.breakdown.length > 0 && (
-                                            <div className="space-y-3">
-                                                <p className="text-sm font-bold text-slate-400 uppercase tracking-wider">Tax Breakdown</p>
-                                                {calculationResult.breakdown.map((item, index) => (
-                                                    <div key={index} className="flex items-center justify-between py-2 px-4 bg-slate-800/50 rounded-xl">
-                                                        <div className="flex items-center gap-3">
-                                                            <Badge variant="secondary" className="bg-slate-700 text-white border-none">
-                                                                {item.rate}%
-                                                            </Badge>
-                                                            <span className="text-sm">{item.name}</span>
-                                                        </div>
-                                                        <span className="font-bold">${item.taxAmount.toFixed(2)}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-
-                                        {/* Info */}
                                         <div className="space-y-3">
-                                            <p className="text-sm font-bold text-slate-400 uppercase tracking-wider">Tax Information</p>
-                                            <div className="grid grid-cols-2 gap-3">
-                                                <div className="p-3 bg-slate-800/50 rounded-xl">
-                                                    <p className="text-xs text-slate-500">Primary Tax</p>
-                                                    <p className="font-bold">{calculationResult.breakdown[0]?.taxType || 'N/A'}</p>
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Breakdown</p>
+                                            {calculationResult.breakdown.map((item: any, idx: number) => (
+                                                <div key={idx} className="flex items-center justify-between p-3 rounded-md bg-white/5 border border-white/10">
+                                                    <div className="flex items-center gap-3">
+                                                        <Badge variant="outline" className="text-[10px] border-zinc-700 text-muted-foreground">{item.rate}%</Badge>
+                                                        <span className="text-xs font-bold">{item.name}</span>
+                                                    </div>
+                                                    <span className="text-xs font-black">+{item.taxAmount.toFixed(2)}</span>
                                                 </div>
-                                                <div className="p-3 bg-slate-800/50 rounded-xl">
-                                                    <p className="text-xs text-slate-500">Total Rate</p>
-                                                    <p className="font-bold">
-                                                        {calculationResult.breakdown.reduce((sum, b) => sum + b.rate, 0)}%
-                                                    </p>
-                                                </div>
-                                                <div className="p-3 bg-slate-800/50 rounded-xl">
-                                                    <p className="text-xs text-slate-500">Country</p>
-                                                    <p className="font-bold">{COUNTRY_TAX_CONFIGS[calculationResult.countryCode]?.countryName || calculationResult.countryCode}</p>
-                                                </div>
-                                                <div className="p-3 bg-slate-800/50 rounded-xl">
-                                                    <p className="text-xs text-slate-500">Currency</p>
-                                                    <p className="font-bold">{calculationResult.currency || 'USD'}</p>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Special Indicators */}
-                                        <div className="flex flex-wrap gap-2">
-                                            {calculationResult.isReverseCharge && (
-                                                <Badge className="bg-amber-500 text-white border-none rounded-full">
-                                                    <ArrowRightLeft className="h-3 w-3 mr-1" />
-                                                    Reverse Charge
-                                                </Badge>
-                                            )}
-                                            {calculationResult.totalTax === 0 && calculationResult.subtotal > 0 && (
-                                                <Badge className="bg-emerald-500 text-white border-none rounded-full">
-                                                    <Shield className="h-3 w-3 mr-1" />
-                                                    Tax Exempt
-                                                </Badge>
-                                            )}
-                                            {calculationInput.isB2B && calculationInput.customerTaxId && (
-                                                <Badge className="bg-blue-500 text-white border-none rounded-full">
-                                                    <CheckCircle2 className="h-3 w-3 mr-1" />
-                                                    B2B Validated
-                                                </Badge>
-                                            )}
+                                            ))}
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="flex flex-col items-center justify-center py-12 text-slate-400">
-                                        <Calculator className="h-16 w-16 mb-4 opacity-20" />
-                                        <p className="font-medium">Enter details and click Calculate</p>
-                                        <p className="text-sm mt-1">Results will appear here</p>
+                                    <div className="flex flex-col items-center justify-center py-12 text-muted-foreground italic">
+                                        <Calculator className="h-10 w-10 mb-4 opacity-20" />
+                                        <p className="text-sm font-medium">Engine idle. Provide inputs to begin.</p>
                                     </div>
                                 )}
                             </CardContent>
@@ -663,213 +488,40 @@ export function TaxContent() {
                     </div>
                 </TabsContent>
 
-                {/* Countries Tab */}
+                {/* Jurisdictions Tab */}
                 <TabsContent value="countries" className="space-y-6">
-                    <Card className="rounded-[2.5rem] border-none shadow-sm">
-                        <CardHeader>
-                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                <div>
-                                    <CardTitle className="text-xl font-black flex items-center gap-2">
-                                        <Globe className="h-5 w-5" />
-                                        All Countries & Tax Rates
-                                    </CardTitle>
-                                    <CardDescription>Browse {ALL_COUNTRIES.length}+ countries with their tax configurations</CardDescription>
-                                </div>
-                                <div className="relative">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                                    <Input
-                                        placeholder="Search countries..."
-                                        value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="pl-10 rounded-xl w-full md:w-80"
-                                    />
-                                </div>
+                    <Card className="border-border shadow-sm">
+                        <CardHeader className="border-b bg-muted/50 flex flex-row items-center justify-between pb-4">
+                            <div>
+                                <CardTitle className="text-sm font-bold">Global Jurisdictions</CardTitle>
+                                <p className="text-xs text-muted-foreground">Monitor rates for {countries.length} countries</p>
+                            </div>
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                                <Input
+                                    placeholder="Search..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="pl-9 h-8 w-64 text-xs rounded-md"
+                                />
                             </div>
                         </CardHeader>
-                        <CardContent>
-                            <div className="space-y-8">
-                                {Object.entries(filteredCountriesByRegion).map(([region, countries]) => (
-                                    <div key={region}>
-                                        <h3 className="text-sm font-black text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-                                            <Globe className="h-4 w-4" />
-                                            {region}
-                                        </h3>
-                                        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                                            {countries.map((country) => {
-                                                const config = getCountryTaxConfig(country.code);
-                                                const rates = getTaxRatesForCountry(country.code);
-                                                const standardRate = rates.find(r => r.category === 'standard')?.rate || 0;
-                                                const reducedRate = rates.find(r => r.category === 'reduced')?.rate;
-                                                return (
-                                                    <div
-                                                        key={country.code}
-                                                        onClick={() => {
-                                                            setSelectedCountry(country.code);
-                                                            setCalculationInput({ ...calculationInput, countryCode: country.code });
-                                                            setActiveTab('calculator');
-                                                        }}
-                                                        className="p-4 bg-slate-50 rounded-2xl hover:bg-slate-100 cursor-pointer transition-colors group border border-transparent hover:border-slate-200"
-                                                    >
-                                                        <div className="flex items-center justify-between mb-3">
-                                                            <div className="flex items-center gap-3">
-                                                                <span className="text-2xl">{getCountryFlag(country.code)}</span>
-                                                                <div>
-                                                                    <p className="font-bold text-slate-900">{country.name}</p>
-                                                                    <p className="text-xs text-slate-500">{config?.primaryTaxType}</p>
-                                                                </div>
-                                                            </div>
-                                                            <div className="text-right">
-                                                                <p className="text-xl font-black text-slate-900">{standardRate}%</p>
-                                                                <p className="text-xs text-slate-500">Standard</p>
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex flex-wrap gap-2">
-                                                            {reducedRate && (
-                                                                <Badge variant="secondary" className="text-xs rounded-full bg-emerald-100 text-emerald-700 border-none">
-                                                                    Reduced: {reducedRate}%
-                                                                </Badge>
-                                                            )}
-                                                            {rates.filter(r => r.category !== 'standard' && r.category !== 'reduced').slice(0, 2).map((rate: TaxRateDefinition, i: number) => (
-                                                                <Badge key={i} variant="secondary" className="text-xs rounded-full">
-                                                                    {rate.category}: {rate.rate}%
-                                                                </Badge>
-                                                            ))}
-                                                            {rates.length > 3 && (
-                                                                <Badge variant="secondary" className="text-xs rounded-full">
-                                                                    +{rates.length - 3} more
-                                                                </Badge>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
+                        <CardContent className="p-0">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
+                                {countries.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase())).map(c => {
+                                    const std = ratesByCode[c.code] ?? 0;
+                                    return (
+                                        <div key={c.code} className="p-4 border-b border-r last:border-r-0 hover:bg-accent hover:text-accent-foreground transition-colors">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-lg">{getCountryFlag(c.code)}</span>
+                                                    <span className="text-xs font-bold text-foreground truncate w-24">{c.name}</span>
+                                                </div>
+                                                <span className="text-xs font-black text-primary">{std}%</span>
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </CardContent>
-                    </Card>
-                </TabsContent>
-
-                {/* Tax Guide Tab */}
-                <TabsContent value="guide" className="space-y-6">
-                    <div className="grid gap-6 md:grid-cols-2">
-                        <Card className="rounded-[2.5rem] border-none shadow-sm">
-                            <CardHeader>
-                                <CardTitle className="text-xl font-black flex items-center gap-2">
-                                    <Receipt className="h-5 w-5" />
-                                    Tax Types Explained
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                <div className="p-4 bg-slate-50 rounded-2xl">
-                                    <div className="flex items-center gap-3 mb-2">
-                                        <Badge className="bg-blue-500 text-white">VAT</Badge>
-                                        <p className="font-bold">Value Added Tax</p>
-                                    </div>
-                                    <p className="text-sm text-slate-600">
-                                        Applied at each stage of production. Common in EU, UK, and many other countries.
-                                        Businesses can reclaim VAT on purchases.
-                                    </p>
-                                </div>
-                                <div className="p-4 bg-slate-50 rounded-2xl">
-                                    <div className="flex items-center gap-3 mb-2">
-                                        <Badge className="bg-emerald-500 text-white">GST</Badge>
-                                        <p className="font-bold">Goods & Services Tax</p>
-                                    </div>
-                                    <p className="text-sm text-slate-600">
-                                        Single-stage tax applied at point of sale. Used in India, Australia, Singapore, etc.
-                                    </p>
-                                </div>
-                                <div className="p-4 bg-slate-50 rounded-2xl">
-                                    <div className="flex items-center gap-3 mb-2">
-                                        <Badge className="bg-amber-500 text-white">Sales Tax</Badge>
-                                        <p className="font-bold">Sales Tax</p>
-                                    </div>
-                                    <p className="text-sm text-slate-600">
-                                        Applied only at final sale to consumer. Used in USA (state-level) and some other countries.
-                                    </p>
-                                </div>
-                                <div className="p-4 bg-slate-50 rounded-2xl">
-                                    <div className="flex items-center gap-3 mb-2">
-                                        <Badge className="bg-purple-500 text-white">CT</Badge>
-                                        <p className="font-bold">Consumption Tax</p>
-                                    </div>
-                                    <p className="text-sm text-slate-600">
-                                        Applied in Japan and some other countries. Similar to VAT but with different rules.
-                                    </p>
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        <Card className="rounded-[2.5rem] border-none shadow-sm">
-                            <CardHeader>
-                                <CardTitle className="text-xl font-black flex items-center gap-2">
-                                    <Percent className="h-5 w-5" />
-                                    Rate Categories
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
-                                    <div className="flex items-center gap-3">
-                                        <ArrowUpRight className="h-5 w-5 text-slate-500" />
-                                        <p className="font-bold">Standard Rate</p>
-                                    </div>
-                                    <p className="text-sm text-slate-600 text-right">Default rate for most goods and services</p>
-                                </div>
-                                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
-                                    <div className="flex items-center gap-3">
-                                        <ArrowDownRight className="h-5 w-5 text-emerald-500" />
-                                        <p className="font-bold">Reduced Rate</p>
-                                    </div>
-                                    <p className="text-sm text-slate-600 text-right">Lower rate for essential goods</p>
-                                </div>
-                                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
-                                    <div className="flex items-center gap-3">
-                                        <Percent className="h-5 w-5 text-amber-500" />
-                                        <p className="font-bold">Zero Rated</p>
-                                    </div>
-                                    <p className="text-sm text-slate-600 text-right">0% rate - input tax can be reclaimed</p>
-                                </div>
-                                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
-                                    <div className="flex items-center gap-3">
-                                        <Shield className="h-5 w-5 text-blue-500" />
-                                        <p className="font-bold">Exempt</p>
-                                    </div>
-                                    <p className="text-sm text-slate-600 text-right">No tax - input tax cannot be reclaimed</p>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </div>
-
-                    <Card className="rounded-[2.5rem] border-none shadow-sm">
-                        <CardHeader>
-                            <CardTitle className="text-xl font-black flex items-center gap-2">
-                                <ArrowRightLeft className="h-5 w-5" />
-                                Reverse Charge Mechanism
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <p className="text-slate-600 mb-4">
-                                The reverse charge mechanism shifts the responsibility for reporting and paying VAT/GST
-                                from the seller to the buyer. This commonly applies to:
-                            </p>
-                            <div className="grid gap-4 md:grid-cols-3">
-                                <div className="p-4 bg-slate-50 rounded-2xl">
-                                    <Building2 className="h-6 w-6 text-blue-500 mb-3" />
-                                    <p className="font-bold mb-1">B2B Cross-border</p>
-                                    <p className="text-sm text-slate-600">Transactions between businesses in different countries</p>
-                                </div>
-                                <div className="p-4 bg-slate-50 rounded-2xl">
-                                    <Receipt className="h-6 w-6 text-emerald-500 mb-3" />
-                                    <p className="font-bold mb-1">Digital Services</p>
-                                    <p className="text-sm text-slate-600">B2B digital service transactions in the EU</p>
-                                </div>
-                                <div className="p-4 bg-slate-50 rounded-2xl">
-                                    <Landmark className="h-6 w-6 text-amber-500 mb-3" />
-                                    <p className="font-bold mb-1">Intra-community</p>
-                                    <p className="text-sm text-slate-600">Goods/services between EU member states</p>
-                                </div>
+                                    );
+                                })}
                             </div>
                         </CardContent>
                     </Card>
@@ -879,33 +531,43 @@ export function TaxContent() {
     );
 }
 
-// Helper functions
-function getRegionForCountry(code: string): string {
-    const regions: Record<string, string> = {
-        'US': 'North America', 'CA': 'North America', 'MX': 'North America',
-        'GB': 'Europe', 'DE': 'Europe', 'FR': 'Europe', 'IT': 'Europe', 'ES': 'Europe',
-        'NL': 'Europe', 'BE': 'Europe', 'AT': 'Europe', 'CH': 'Europe', 'PL': 'Europe',
-        'IN': 'Asia Pacific', 'CN': 'Asia Pacific', 'JP': 'Asia Pacific', 'KR': 'Asia Pacific',
-        'SG': 'Asia Pacific', 'AU': 'Asia Pacific', 'NZ': 'Asia Pacific', 'TH': 'Asia Pacific',
-        'AE': 'Middle East & Africa', 'SA': 'Middle East & Africa', 'ZA': 'Middle East & Africa',
-        'BR': 'South America', 'AR': 'South America', 'CL': 'South America', 'CO': 'South America',
-    };
-    return regions[code] || 'Other';
+function MetricCard({ title, value, description, trend, trendUp }: any) {
+    return (
+        <Card className="border-border shadow-sm hover:border-primary/50 transition-colors">
+            <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+                <CardTitle className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">
+                    {title}
+                </CardTitle>
+                <div className={cn(
+                    "text-[8px] font-bold px-1.5 py-0.5 rounded uppercase tracking-widest",
+                    trendUp ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"
+                )}>
+                    {trend}
+                </div>
+            </CardHeader>
+            <CardContent>
+                <div className="text-xl font-bold tracking-tight text-foreground">{value}</div>
+                <p className="text-[10px] text-muted-foreground mt-1 font-medium">{description}</p>
+            </CardContent>
+        </Card>
+    );
 }
 
-function getRegionPlaceholder(code: string): string {
-    const placeholders: Record<string, string> = {
-        'US': 'CA, NY, TX',
-        'CA': 'ON, BC, AB',
-        'AU': 'NSW, VIC, QLD',
-        'BR': 'SP, RJ, MG',
-        'IN': 'MH, KA, DL',
-    };
-    return placeholders[code] || 'Region code';
+function HealthIndicator({ label, percent }: any) {
+    return (
+        <div className="space-y-2">
+            <div className="flex items-center justify-between px-0.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{label}</span>
+                <span className="text-xs font-bold text-foreground">{percent}%</span>
+            </div>
+            <div className="h-1 bg-muted rounded-full overflow-hidden">
+                <div className="h-full bg-primary" style={{ width: `${percent}%` }} />
+            </div>
+        </div>
+    );
 }
 
 function getCountryFlag(code: string): string {
-    // Convert country code to emoji flag
     const codePoints = code
         .toUpperCase()
         .split('')

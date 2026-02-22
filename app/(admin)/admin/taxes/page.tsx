@@ -85,7 +85,7 @@ export default function TaxesPage() {
       <DashboardShell requireAdmin>
         <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
           <RefreshCcw className="h-12 w-12 animate-spin text-primary" />
-          <p className="font-bold text-slate-900">Calculating Tax Records...</p>
+          <p className="font-bold text-foreground">Calculating Tax Records...</p>
         </div>
       </DashboardShell>
     );
@@ -99,8 +99,8 @@ export default function TaxesPage() {
         {/* Visual Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-1">
-            <h1 className="text-4xl font-black tracking-tight text-slate-900">Tax Center</h1>
-            <p className="text-slate-500 font-medium flex items-center gap-2">
+            <h1 className="text-4xl font-black tracking-tight text-foreground">Tax Center</h1>
+            <p className="text-muted-foreground font-medium flex items-center gap-2">
               <Scale className="h-4 w-4 text-primary" />
               Monitor your VAT, GST and official filings.
             </p>
@@ -108,7 +108,7 @@ export default function TaxesPage() {
           <div className="flex items-center gap-3">
             <Button 
               variant="outline" 
-              className="rounded-2xl border-slate-200 h-12 px-6 font-bold shadow-sm"
+              className="rounded-2xl border-border h-12 px-6 font-bold shadow-sm"
               onClick={handleRunSync}
               disabled={syncing}
             >
@@ -116,7 +116,7 @@ export default function TaxesPage() {
               Update Rates
             </Button>
             <Link href="/admin/finance/settings">
-                <Button variant="outline" size="icon" className="h-12 w-12 rounded-2xl border-slate-200">
+                <Button variant="outline" size="icon" className="h-12 w-12 rounded-2xl border-border">
                     <Settings className="h-5 w-5" />
                 </Button>
             </Link>
@@ -125,42 +125,42 @@ export default function TaxesPage() {
 
         {/* High Impact KPIs */}
         <div className="grid gap-6 md:grid-cols-3">
-            <Card className="rounded-[2.5rem] border-none shadow-sm bg-slate-900 text-white overflow-hidden p-10 relative group">
+            <Card className="rounded-[2.5rem] border-none shadow-sm bg-slate-900 text-card-foreground overflow-hidden p-10 relative group">
                 <Percent className="absolute -right-4 -bottom-4 h-32 w-32 text-white/5 group-hover:scale-110 transition-transform duration-700" />
                 <div className="relative z-10 space-y-6">
-                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Estimated Tax Due</p>
+                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">Estimated Tax Due</p>
                     <h2 className="text-5xl font-black tracking-tighter">${taxLiability.toLocaleString()}</h2>
                     <div className="flex items-center gap-3">
                         <div className="h-2 flex-1 bg-white/10 rounded-full overflow-hidden">
                             <div className="h-full bg-primary w-[65%] rounded-full" />
                         </div>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase">Q1 Progress</span>
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase">Q1 Progress</span>
                     </div>
                 </div>
             </Card>
 
-            <Card className="rounded-[2.5rem] border-none shadow-sm bg-white overflow-hidden p-10 group hover:shadow-xl transition-all duration-500">
+            <Card className="rounded-[2.5rem] border-none shadow-sm bg-card overflow-hidden p-10 group hover:shadow-xl transition-all duration-500">
                 <div className="flex items-center justify-between mb-8">
                     <div className="h-14 w-14 rounded-3xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform duration-500">
                         <ShieldCheck className="h-7 w-7" strokeWidth={2.5} />
                     </div>
                     <Badge className="bg-emerald-50 text-emerald-600 border-none font-black text-[10px] tracking-widest px-4 py-1.5 rounded-full uppercase">Secure</Badge>
                 </div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Regime</p>
-                <h3 className="text-2xl font-black text-slate-900">{taxConfig?.regime?.replace(/_/g, ' ') || 'Generic VAT'}</h3>
-                <p className="text-xs font-bold text-slate-400 pt-2 font-mono uppercase truncate">{taxConfig?.tax_id || 'ID NOT SET'}</p>
+                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Active Regime</p>
+                <h3 className="text-2xl font-black text-foreground">{taxConfig?.regime?.replace(/_/g, ' ') || 'Generic VAT'}</h3>
+                <p className="text-xs font-bold text-muted-foreground pt-2 font-mono uppercase truncate">{taxConfig?.tax_id || 'ID NOT SET'}</p>
             </Card>
 
-            <Card className="rounded-[2.5rem] border-none shadow-sm bg-white overflow-hidden p-10 group hover:shadow-xl transition-all duration-500">
+            <Card className="rounded-[2.5rem] border-none shadow-sm bg-card overflow-hidden p-10 group hover:shadow-xl transition-all duration-500">
                 <div className="flex items-center justify-between mb-8">
                     <div className="h-14 w-14 rounded-3xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform duration-500">
                         <Clock className="h-7 w-7" strokeWidth={2.5} />
                     </div>
                     <Badge className="bg-amber-50 text-amber-600 border-none font-black text-[10px] tracking-widest px-4 py-1.5 rounded-full uppercase">Upcoming</Badge>
                 </div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Next Filing</p>
-                <h3 className="text-2xl font-black text-slate-900">31 Mar 2026</h3>
-                <div className="flex items-center gap-2 pt-2 text-xs font-bold text-slate-400">
+                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Next Filing</p>
+                <h3 className="text-2xl font-black text-foreground">31 Mar 2026</h3>
+                <div className="flex items-center gap-2 pt-2 text-xs font-bold text-muted-foreground">
                     <Calendar size={14} /> 57 Days Remaining
                 </div>
             </Card>
@@ -169,24 +169,24 @@ export default function TaxesPage() {
         {/* Details Grid */}
         <div className="grid gap-8 lg:grid-cols-3">
             {/* Rates Table */}
-            <Card className="lg:col-span-2 rounded-[3rem] border-none shadow-sm bg-white overflow-hidden">
+            <Card className="lg:col-span-2 rounded-[3rem] border-none shadow-sm bg-card overflow-hidden">
                 <CardHeader className="p-10 border-b border-slate-50 flex flex-row items-center justify-between">
                     <div>
                         <CardTitle className="text-2xl font-black">Official Rates</CardTitle>
-                        <CardDescription className="font-medium text-slate-400">Current percentages for your region</CardDescription>
+                        <CardDescription className="font-medium text-muted-foreground">Current percentages for your region</CardDescription>
                     </div>
-                    <div className="h-12 w-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-300">
+                    <div className="h-12 w-12 rounded-2xl bg-muted flex items-center justify-center text-slate-300">
                         <Info size={20} />
                     </div>
                 </CardHeader>
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
-                            <tr className="bg-slate-50/50 border-b border-slate-100">
-                                <th className="p-8 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Label</th>
-                                <th className="p-8 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Type</th>
-                                <th className="p-8 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 text-right">Rate</th>
-                                <th className="p-8 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 text-center">Status</th>
+                            <tr className="bg-slate-50/50 border-b border-border">
+                                <th className="p-8 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Label</th>
+                                <th className="p-8 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Type</th>
+                                <th className="p-8 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground text-right">Rate</th>
+                                <th className="p-8 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground text-center">Status</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
@@ -194,14 +194,14 @@ export default function TaxesPage() {
                                 <tr key={rate.id} className="hover:bg-slate-50/50 transition-colors group">
                                     <td className="p-8">
                                         <div className="flex items-center gap-4">
-                                            <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 font-black text-xs">
+                                            <div className="h-10 w-10 rounded-xl bg-muted flex items-center justify-center text-muted-foreground font-black text-xs">
                                                 {rate.name.charAt(0)}
                                             </div>
-                                            <span className="text-base font-bold text-slate-900">{rate.name}</span>
+                                            <span className="text-base font-bold text-foreground">{rate.name}</span>
                                         </div>
                                     </td>
                                     <td className="p-8">
-                                        <Badge variant="secondary" className="rounded-lg px-3 py-1 bg-slate-100 text-slate-500 font-bold text-[10px] uppercase border-none">
+                                        <Badge variant="secondary" className="rounded-lg px-3 py-1 bg-muted text-muted-foreground font-bold text-[10px] uppercase border-none">
                                             {rate.type}
                                         </Badge>
                                     </td>
@@ -223,23 +223,23 @@ export default function TaxesPage() {
 
             {/* Side Logs */}
             <div className="space-y-6">
-                <Card className="rounded-[2.5rem] border-none shadow-sm bg-white p-10 group">
+                <Card className="rounded-[2.5rem] border-none shadow-sm bg-card p-10 group">
                     <div className="flex items-center justify-between mb-8">
                         <div className="h-14 w-14 rounded-3xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform duration-500">
                             <RefreshCcw className="h-7 w-7" strokeWidth={2.5} />
                         </div>
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Live Sync</span>
+                        <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Live Sync</span>
                     </div>
                     <div className="space-y-2 mb-8">
-                        <h3 className="text-2xl font-black text-slate-900">Updates</h3>
-                        <p className="text-sm font-medium text-slate-400 leading-relaxed">Tax rates are automatically synchronized every 10 days.</p>
+                        <h3 className="text-2xl font-black text-foreground">Updates</h3>
+                        <p className="text-sm font-medium text-muted-foreground leading-relaxed">Tax rates are automatically synchronized every 10 days.</p>
                     </div>
                     <div className="space-y-4">
                         {jobHistory.slice(0, 3).map((job, i) => (
-                            <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-transparent hover:border-slate-100 transition-all">
+                            <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-muted border border-transparent hover:border-slate-100 transition-all">
                                 <div>
-                                    <p className="text-xs font-bold text-slate-900">{new Date(job.timestamp).toLocaleDateString()}</p>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase">{job.countriesCollected} Countries</p>
+                                    <p className="text-xs font-bold text-foreground">{new Date(job.timestamp).toLocaleDateString()}</p>
+                                    <p className="text-[10px] font-black text-muted-foreground uppercase">{job.countriesCollected} Countries</p>
                                 </div>
                                 <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                             </div>
@@ -247,13 +247,13 @@ export default function TaxesPage() {
                     </div>
                 </Card>
 
-                <Card className="rounded-[2.5rem] border-none shadow-sm bg-slate-50 p-10 flex flex-col items-center justify-center text-center space-y-4">
+                <Card className="rounded-[2.5rem] border-none shadow-sm bg-muted p-10 flex flex-col items-center justify-center text-center space-y-4">
                     <FileText className="h-10 w-10 text-slate-200" />
                     <div className="space-y-1">
-                        <h4 className="text-lg font-black text-slate-900">Official Reports</h4>
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-tight">Download return summaries and liability history.</p>
+                        <h4 className="text-lg font-black text-foreground">Official Reports</h4>
+                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-tight">Download return summaries and liability history.</p>
                     </div>
-                    <Button variant="outline" className="w-full rounded-xl border-slate-200 font-black text-[10px] uppercase tracking-widest h-11">Open Archive</Button>
+                    <Button variant="outline" className="w-full rounded-xl border-border font-black text-[10px] uppercase tracking-widest h-11">Open Archive</Button>
                 </Card>
             </div>
         </div>

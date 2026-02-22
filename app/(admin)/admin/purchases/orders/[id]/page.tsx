@@ -53,7 +53,7 @@ export default function PurchaseOrderDetailPage() {
       <DashboardShell requireAdmin>
         <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
           <RefreshCcw className="h-12 w-12 animate-spin text-primary" />
-          <p className="font-bold text-slate-900">Loading Order Details...</p>
+          <p className="font-bold text-foreground">Loading Order Details...</p>
         </div>
       </DashboardShell>
     );
@@ -63,7 +63,7 @@ export default function PurchaseOrderDetailPage() {
     return (
       <DashboardShell requireAdmin>
         <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
-          <p className="text-xl font-bold text-slate-900">Purchase Order Not Found</p>
+          <p className="text-xl font-bold text-foreground">Purchase Order Not Found</p>
           <Button onClick={() => router.back()}>Go Back</Button>
         </div>
       </DashboardShell>
@@ -76,7 +76,7 @@ export default function PurchaseOrderDetailPage() {
         <div className="flex items-center justify-between">
             <Button 
                 variant="ghost" 
-                className="rounded-xl font-bold text-slate-500 hover:text-slate-900"
+                className="rounded-xl font-bold text-muted-foreground hover:text-slate-900"
                 onClick={() => router.push('/admin/purchases')}
             >
                 <ChevronLeft className="mr-2 h-5 w-5" /> Back to Purchases
@@ -94,7 +94,7 @@ export default function PurchaseOrderDetailPage() {
         <div className="grid gap-8 lg:grid-cols-3">
             <div className="lg:col-span-2 space-y-8">
                 {/* Header Information */}
-                <Card className="rounded-[2.5rem] border-none shadow-sm bg-white p-8">
+                <Card className="rounded-[2.5rem] border-none shadow-sm bg-card p-8">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                         <div className="space-y-2">
                             <div className="flex items-center gap-3">
@@ -105,13 +105,13 @@ export default function PurchaseOrderDetailPage() {
                                     "rounded-lg px-3 py-1 font-black text-[10px] uppercase tracking-wider",
                                     order.status === 'received' ? "bg-emerald-50 text-emerald-600" :
                                     order.status === 'ordered' ? "bg-blue-50 text-blue-600" :
-                                    "bg-slate-100 text-slate-600"
+                                    "bg-muted text-muted-foreground"
                                 )}>
                                     {order.status}
                                 </Badge>
                             </div>
-                            <h1 className="text-4xl font-black text-slate-900 tracking-tight">{order.po_number}</h1>
-                            <div className="flex items-center gap-4 text-slate-400 font-bold text-sm">
+                            <h1 className="text-4xl font-black text-foreground tracking-tight">{order.po_number}</h1>
+                            <div className="flex items-center gap-4 text-muted-foreground font-bold text-sm">
                                 <div className="flex items-center gap-1.5">
                                     <Calendar size={16} />
                                     {new Date(order.created_at).toLocaleDateString(undefined, { dateStyle: 'long' })}
@@ -123,7 +123,7 @@ export default function PurchaseOrderDetailPage() {
                             </div>
                         </div>
                         <div className="text-right">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Amount</p>
+                            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Total Amount</p>
                             <h2 className="text-5xl font-black text-primary tracking-tighter">
                                 ${Number(order.total_amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                             </h2>
@@ -132,7 +132,7 @@ export default function PurchaseOrderDetailPage() {
                 </Card>
 
                 {/* Line Items */}
-                <Card className="rounded-[2.5rem] border-none shadow-sm bg-white overflow-hidden">
+                <Card className="rounded-[2.5rem] border-none shadow-sm bg-card overflow-hidden">
                     <CardHeader className="p-8 pb-0">
                         <CardTitle className="text-2xl font-black">Order Items</CardTitle>
                     </CardHeader>
@@ -141,37 +141,37 @@ export default function PurchaseOrderDetailPage() {
                             <table className="w-full">
                                 <thead className="border-b-2 border-slate-50">
                                     <tr>
-                                        <th className="pb-4 text-left text-xs font-black text-slate-400 uppercase tracking-widest">Description</th>
-                                        <th className="pb-4 text-center text-xs font-black text-slate-400 uppercase tracking-widest">Quantity</th>
-                                        <th className="pb-4 text-right text-xs font-black text-slate-400 uppercase tracking-widest">Price</th>
-                                        <th className="pb-4 text-right text-xs font-black text-slate-400 uppercase tracking-widest">Tax</th>
-                                        <th className="pb-4 text-right text-xs font-black text-slate-400 uppercase tracking-widest">Total</th>
+                                        <th className="pb-4 text-left text-xs font-black text-muted-foreground uppercase tracking-widest">Description</th>
+                                        <th className="pb-4 text-center text-xs font-black text-muted-foreground uppercase tracking-widest">Quantity</th>
+                                        <th className="pb-4 text-right text-xs font-black text-muted-foreground uppercase tracking-widest">Price</th>
+                                        <th className="pb-4 text-right text-xs font-black text-muted-foreground uppercase tracking-widest">Tax</th>
+                                        <th className="pb-4 text-right text-xs font-black text-muted-foreground uppercase tracking-widest">Total</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y-2 divide-slate-50">
                                     {order.lines && order.lines.length > 0 ? order.lines.map((line: any, idx: number) => (
                                         <tr key={line.id || idx}>
                                             <td className="py-6 pr-4">
-                                                <p className="font-bold text-slate-900">{line.description}</p>
+                                                <p className="font-bold text-foreground">{line.description}</p>
                                             </td>
                                             <td className="py-6 text-center">
-                                                <Badge variant="outline" className="rounded-lg font-black text-slate-500 border-slate-200">
+                                                <Badge variant="outline" className="rounded-lg font-black text-muted-foreground border-border">
                                                     {line.quantity} units
                                                 </Badge>
                                             </td>
                                             <td className="py-6 text-right font-bold text-slate-700">
                                                 ${Number(line.unit_price).toLocaleString()}
                                             </td>
-                                            <td className="py-6 text-right font-bold text-slate-500">
+                                            <td className="py-6 text-right font-bold text-muted-foreground">
                                                 ${Number(line.tax_amount || 0).toLocaleString()}
                                             </td>
-                                            <td className="py-6 text-right font-black text-slate-900">
+                                            <td className="py-6 text-right font-black text-foreground">
                                                 ${Number(line.total_amount).toLocaleString()}
                                             </td>
                                         </tr>
                                     )) : (
                                         <tr>
-                                            <td colSpan={5} className="py-12 text-center text-slate-400 font-bold italic">
+                                            <td colSpan={5} className="py-12 text-center text-muted-foreground font-bold italic">
                                                 No items found in this order.
                                             </td>
                                         </tr>
@@ -182,16 +182,16 @@ export default function PurchaseOrderDetailPage() {
 
                         <div className="mt-8 pt-8 border-t-2 border-slate-50 flex justify-end">
                             <div className="w-64 space-y-3">
-                                <div className="flex justify-between text-sm font-bold text-slate-400">
+                                <div className="flex justify-between text-sm font-bold text-muted-foreground">
                                     <span>Subtotal</span>
                                     <span>${(Number(order.total_amount) - order.lines.reduce((acc: number, l: any) => acc + Number(l.tax_amount || 0), 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                 </div>
-                                <div className="flex justify-between text-sm font-bold text-slate-400">
+                                <div className="flex justify-between text-sm font-bold text-muted-foreground">
                                     <span>Tax Amount</span>
                                     <span>${order.lines.reduce((acc: number, l: any) => acc + Number(l.tax_amount || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                 </div>
                                 <div className="flex justify-between pt-3 border-t-2 border-slate-50">
-                                    <span className="text-lg font-black text-slate-900">Grand Total</span>
+                                    <span className="text-lg font-black text-foreground">Grand Total</span>
                                     <span className="text-lg font-black text-primary">${Number(order.total_amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                 </div>
                             </div>
@@ -202,22 +202,22 @@ export default function PurchaseOrderDetailPage() {
 
             <div className="space-y-8">
                 {/* Supplier Card */}
-                <Card className="rounded-[2.5rem] border-none shadow-sm bg-white p-8">
+                <Card className="rounded-[2.5rem] border-none shadow-sm bg-card p-8">
                     <CardHeader className="p-0 pb-6">
                         <CardTitle className="text-xl font-black flex items-center gap-2">
                             <Store className="text-primary" size={20} /> Supplier
                         </CardTitle>
                     </CardHeader>
                     <div className="space-y-4">
-                        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                            <p className="font-black text-slate-900 text-lg leading-tight">{order.vendor?.name}</p>
-                            <p className="text-sm font-bold text-slate-500 mt-1">{order.vendor?.contact_person}</p>
+                        <div className="p-4 rounded-2xl bg-muted border border-border">
+                            <p className="font-black text-foreground text-lg leading-tight">{order.vendor?.name}</p>
+                            <p className="text-sm font-bold text-muted-foreground mt-1">{order.vendor?.contact_person}</p>
                         </div>
                         <div className="space-y-2 px-1">
-                            <p className="text-sm font-bold text-slate-400 flex items-center gap-2">
+                            <p className="text-sm font-bold text-muted-foreground flex items-center gap-2">
                                 <FileText size={14} /> {order.vendor?.email || 'No email provided'}
                             </p>
-                            <p className="text-sm font-bold text-slate-400 flex items-center gap-2">
+                            <p className="text-sm font-bold text-muted-foreground flex items-center gap-2">
                                 <Truck size={14} /> {order.vendor?.address || 'No address provided'}
                             </p>
                         </div>
@@ -228,7 +228,7 @@ export default function PurchaseOrderDetailPage() {
                 </Card>
 
                 {/* Workflow Status */}
-                <Card className="rounded-[2.5rem] border-none shadow-sm bg-white p-8">
+                <Card className="rounded-[2.5rem] border-none shadow-sm bg-card p-8">
                     <CardHeader className="p-0 pb-6">
                         <CardTitle className="text-xl font-black flex items-center gap-2">
                             <CheckCircle2 className="text-primary" size={20} /> Order Status
@@ -293,8 +293,8 @@ function StatusStep({ title, date, completed, last }: { title: string; date?: st
                 completed ? "bg-primary" : "bg-slate-200"
             )} />
             <div>
-                <p className={cn("text-sm font-black", completed ? "text-slate-900" : "text-slate-400")}>{title}</p>
-                {date && <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{date}</p>}
+                <p className={cn("text-sm font-black", completed ? "text-foreground" : "text-muted-foreground")}>{title}</p>
+                {date && <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{date}</p>}
             </div>
         </div>
     );

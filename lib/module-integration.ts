@@ -20,6 +20,8 @@ interface IntegrationResponse {
   errors?: string[];
 }
 
+const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || '/api';
+
 /**
  * File Upload Integration
  * Handles file uploads and associates them with appropriate modules
@@ -38,9 +40,10 @@ export async function integrateFileUpload(
     }
 
     // Create file reference in database
-    const response = await fetch('/api/projects/upload-files', {
+    const response = await fetch(`${apiBase}/projects/upload-files`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({
         project_id: projectId,
         module_type: module,
@@ -68,8 +71,9 @@ export async function integrateFileUpload(
  */
 export async function syncLabourCosts(projectId: string): Promise<IntegrationResponse> {
   try {
-    const response = await fetch(`/api/projects/${projectId}/team`, {
+    const response = await fetch(`${apiBase}/projects/${projectId}/team`, {
       method: 'GET',
+      credentials: 'include',
     });
 
     if (!response.ok) {
@@ -79,8 +83,9 @@ export async function syncLabourCosts(projectId: string): Promise<IntegrationRes
     const labourData = await response.json();
 
     // Auto-update project financials
-    const financialResponse = await fetch(`/api/projects/${projectId}/financials`, {
+    const financialResponse = await fetch(`${apiBase}/projects/${projectId}/financials`, {
       method: 'GET',
+      credentials: 'include',
     });
 
     const financials = await financialResponse.json();
@@ -102,8 +107,9 @@ export async function syncLabourCosts(projectId: string): Promise<IntegrationRes
 export async function syncInventoryCosts(projectId: string): Promise<IntegrationResponse> {
   try {
     // Get project inventory data
-    const response = await fetch(`/api/projects/${projectId}/financials`, {
+    const response = await fetch(`${apiBase}/projects/${projectId}/financials`, {
       method: 'GET',
+      credentials: 'include',
     });
 
     if (!response.ok) {
@@ -113,8 +119,9 @@ export async function syncInventoryCosts(projectId: string): Promise<Integration
     const data = await response.json();
 
     // Check for low stock items
-    const lowStockResponse = await fetch('/api/inventory/auto-purchase-requests', {
+    const lowStockResponse = await fetch(`${apiBase}/inventory/auto-purchase-requests`, {
       method: 'GET',
+      credentials: 'include',
     });
 
     const lowStockItems = await lowStockResponse.json();
@@ -136,16 +143,18 @@ export async function syncInventoryCosts(projectId: string): Promise<Integration
 export async function syncToGeneralLedger(projectId: string): Promise<IntegrationResponse> {
   try {
     // Get project financials
-    const financialResponse = await fetch(`/api/projects/${projectId}/financials`, {
+    const financialResponse = await fetch(`${apiBase}/projects/${projectId}/financials`, {
       method: 'GET',
+      credentials: 'include',
     });
 
     const financials = await financialResponse.json();
 
     // Post to GL
-    const glResponse = await fetch('/api/finance/general-ledger', {
+    const glResponse = await fetch(`${apiBase}/finance/general-ledger`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({
         project_id: projectId,
         entries: [
@@ -185,8 +194,9 @@ export async function syncToGeneralLedger(projectId: string): Promise<Integratio
  */
 export async function updateExecutiveDashboard(): Promise<IntegrationResponse> {
   try {
-    const response = await fetch('/api/dashboard/executive-summary', {
+    const response = await fetch(`${apiBase}/dashboard/executive-summary`, {
       method: 'GET',
+      credentials: 'include',
     });
 
     if (!response.ok) {
@@ -212,8 +222,9 @@ export async function updateExecutiveDashboard(): Promise<IntegrationResponse> {
 export async function syncPayrollToGL(payrollId: string): Promise<IntegrationResponse> {
   try {
     // Get payroll GL entries
-    const response = await fetch(`/api/payroll/${payrollId}/ledger`, {
+    const response = await fetch(`${apiBase}/payroll/${payrollId}/ledger`, {
       method: 'GET',
+      credentials: 'include',
     });
 
     if (!response.ok) {
@@ -223,8 +234,9 @@ export async function syncPayrollToGL(payrollId: string): Promise<IntegrationRes
     const entries = await response.json();
 
     // Post to GL
-    const postResponse = await fetch(`/api/payroll/${payrollId}/ledger`, {
+    const postResponse = await fetch(`${apiBase}/payroll/${payrollId}/ledger`, {
       method: 'POST',
+      credentials: 'include',
     });
 
     if (!postResponse.ok) {
@@ -247,9 +259,10 @@ export async function syncPayrollToGL(payrollId: string): Promise<IntegrationRes
  */
 export async function triggerAutoPurchaseOrders(): Promise<IntegrationResponse> {
   try {
-    const response = await fetch('/api/inventory/auto-purchase-requests', {
+    const response = await fetch(`${apiBase}/inventory/auto-purchase-requests`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ auto_generate_po: true }),
     });
 
@@ -312,10 +325,10 @@ export async function getIntegrationStatus(
 ): Promise<IntegrationResponse> {
   try {
     const modules = await Promise.all([
-      fetch(`/api/projects/${projectId}/financials`).then((r) => r.json()),
-      fetch(`/api/projects/${projectId}/team`).then((r) => r.json()),
-      fetch('/api/finance/general-ledger').then((r) => r.json()),
-      fetch('/api/dashboard/executive-summary').then((r) => r.json()),
+      fetch(`${apiBase}/projects/${projectId}/financials`, { credentials: 'include' }).then((r) => r.json()),
+      fetch(`${apiBase}/projects/${projectId}/team`, { credentials: 'include' }).then((r) => r.json()),
+      fetch(`${apiBase}/finance/general-ledger`, { credentials: 'include' }).then((r) => r.json()),
+      fetch(`${apiBase}/dashboard/executive-summary`, { credentials: 'include' }).then((r) => r.json()),
     ]);
 
     const [financials, team, ledger, dashboard] = modules;

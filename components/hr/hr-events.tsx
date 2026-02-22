@@ -1,13 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, UserPlus, Star, ArrowRightLeft, LogOut, AlertCircle, Award, TrendingUp } from 'lucide-react';
+import { Plus, UserPlus, Star, ArrowRightLeft, LogOut, AlertCircle, Award, Calendar, Zap, MessageSquare, ChevronRight, Activity } from 'lucide-react';
 import { toast } from 'sonner';
 import { createHREvent } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -20,18 +20,18 @@ interface HREventsProps {
 }
 
 const eventIcons: Record<string, any> = {
-    hiring: UserPlus, appraisal: Star, promotion: TrendingUp, transfer: ArrowRightLeft,
+    hiring: UserPlus, appraisal: Star, promotion: Award, transfer: ArrowRightLeft,
     warning: AlertCircle, layoff: LogOut, exit: LogOut,
 };
 
 const eventColors: Record<string, string> = {
-    hiring: 'bg-emerald-50 text-emerald-600 border-emerald-200',
-    appraisal: 'bg-amber-50 text-amber-600 border-amber-200',
-    promotion: 'bg-blue-50 text-blue-600 border-blue-200',
-    transfer: 'bg-indigo-50 text-indigo-600 border-indigo-200',
-    warning: 'bg-orange-50 text-orange-600 border-orange-200',
-    layoff: 'bg-red-50 text-red-600 border-red-200',
-    exit: 'bg-slate-50 text-slate-600 border-slate-200',
+    hiring: 'bg-muted text-foreground',
+    appraisal: 'bg-primary/10 text-primary',
+    promotion: 'bg-primary text-card-foreground',
+    transfer: 'bg-muted text-muted-foreground',
+    warning: 'bg-rose-50 text-rose-600',
+    layoff: 'bg-rose-100 text-rose-700',
+    exit: 'bg-muted text-muted-foreground',
 };
 
 export function HREvents({ employees, events, onRefresh }: HREventsProps) {
@@ -45,14 +45,14 @@ export function HREvents({ employees, events, onRefresh }: HREventsProps) {
         const fd = new FormData(e.currentTarget);
         try {
             await createHREvent({
-                employee_id: fd.get('employee_id'),
-                type: fd.get('type'),
-                title: fd.get('title'),
-                description: fd.get('description'),
-                event_date: fd.get('event_date'),
-                effective_date: fd.get('effective_date') || undefined,
+                employee_id: fd.get('employee_id') as string,
+                type: fd.get('type') as string,
+                title: fd.get('title') as string,
+                description: (fd.get('description') as string) || undefined,
+                event_date: fd.get('event_date') as string,
+                effective_date: (fd.get('effective_date') as string) || undefined,
             });
-            toast.success('HR Event recorded');
+            toast.success('Lifecycle event recorded');
             setOpen(false);
             onRefresh();
         } catch { toast.error('Failed to create event'); }
@@ -60,73 +60,123 @@ export function HREvents({ employees, events, onRefresh }: HREventsProps) {
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center justify-between flex-wrap gap-3">
-                <Select value={typeFilter} onValueChange={setTypeFilter}>
-                    <SelectTrigger className="w-44 rounded-xl h-10 bg-white"><SelectValue placeholder="Filter by type" /></SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">All Events</SelectItem>
-                        {['hiring', 'appraisal', 'promotion', 'transfer', 'warning', 'layoff', 'exit'].map(t => (
-                            <SelectItem key={t} value={t} className="capitalize">{t}</SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
+            {/* Toolbar */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-2">
+                    <Select value={typeFilter} onValueChange={setTypeFilter}>
+                        <SelectTrigger className="w-full md:w-48 h-9 rounded-md border-border text-xs font-bold uppercase tracking-widest">
+                            <SelectValue placeholder="All Events" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Events</SelectItem>
+                            {['hiring', 'appraisal', 'promotion', 'transfer', 'warning', 'layoff', 'exit'].map(t => (
+                                <SelectItem key={t} value={t} className="capitalize">{t}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+
                 <Dialog open={open} onOpenChange={setOpen}>
-                    <DialogTrigger asChild><Button className="rounded-xl gap-2 bg-indigo-600 hover:bg-indigo-700 text-xs"><Plus className="h-3.5 w-3.5" /> Record Event</Button></DialogTrigger>
-                    <DialogContent className="max-w-md rounded-3xl">
-                        <DialogHeader><DialogTitle>Record HR Event</DialogTitle><DialogDescription>Log a lifecycle event for an employee</DialogDescription></DialogHeader>
-                        <form onSubmit={handleCreate} className="space-y-3 mt-2">
-                            <select name="employee_id" required className="w-full h-10 rounded-xl border border-slate-200 px-3 text-sm bg-white">
-                                <option value="">Select Employee</option>
-                                {employees.map(e => <option key={e.id} value={e.id}>{e.name} ({e.employee_id})</option>)}
-                            </select>
-                            <select name="type" required className="w-full h-10 rounded-xl border border-slate-200 px-3 text-sm bg-white">
-                                <option value="">Event Type</option>
-                                {['hiring', 'appraisal', 'promotion', 'transfer', 'warning', 'layoff', 'exit'].map(t => (
-                                    <option key={t} value={t} className="capitalize">{t.charAt(0).toUpperCase() + t.slice(1)}</option>
-                                ))}
-                            </select>
-                            <Input name="title" placeholder="Title" required className="rounded-xl" />
-                            <Input name="description" placeholder="Description (optional)" className="rounded-xl" />
-                            <div className="grid grid-cols-2 gap-3">
-                                <Input name="event_date" type="date" required className="rounded-xl" />
-                                <Input name="effective_date" type="date" placeholder="Effective Date" className="rounded-xl" />
+                    <DialogTrigger asChild>
+                        <Button size="sm" className="h-9 gap-2 bg-primary hover:bg-primary/90 font-bold uppercase tracking-widest text-[10px]">
+                            <Plus className="h-3.5 w-3.5" /> Record Event
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-md">
+                        <DialogHeader>
+                            <DialogTitle>Log Lifecycle Event</DialogTitle>
+                            <DialogDescription>Milestones and administrative actions</DialogDescription>
+                        </DialogHeader>
+                        <form onSubmit={handleCreate} className="space-y-4">
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Employee</label>
+                                <select name="employee_id" required className="flex h-10 w-full rounded-md border border-border bg-card px-3 py-2 text-sm">
+                                    <option value="">Select...</option>
+                                    {employees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+                                </select>
                             </div>
-                            <Button type="submit" className="w-full rounded-xl bg-indigo-600 hover:bg-indigo-700">Record</Button>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Category</label>
+                                    <select name="type" required className="flex h-10 w-full rounded-md border border-border bg-card px-3 py-2 text-sm">
+                                        <option value="hiring">Hiring</option>
+                                        <option value="appraisal">Appraisal</option>
+                                        <option value="promotion">Promotion</option>
+                                        <option value="transfer">Transfer</option>
+                                        <option value="warning">Warning</option>
+                                        <option value="exit">Exit</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Date</label>
+                                    <Input name="event_date" type="date" required className="h-10" />
+                                </div>
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Title</label>
+                                <Input name="title" required className="h-10" />
+                            </div>
+                            <Button type="submit" className="w-full bg-primary h-10 font-bold uppercase tracking-widest text-[10px]">Commit Event</Button>
                         </form>
                     </DialogContent>
                 </Dialog>
             </div>
 
             {/* Timeline */}
-            <div className="relative">
-                <div className="absolute left-6 top-0 bottom-0 w-px bg-slate-200" />
-                <div className="space-y-4">
-                    {filtered.map(event => {
-                        const Icon = eventIcons[event.type] || Award;
-                        return (
-                            <div key={event.id} className="relative pl-14">
-                                <div className={cn('absolute left-2 top-4 h-8 w-8 rounded-lg flex items-center justify-center z-10 border', eventColors[event.type] || 'bg-slate-50')}>
-                                    <Icon className="h-4 w-4" />
-                                </div>
-                                <Card className="rounded-2xl border-none shadow-sm bg-white hover:shadow-lg transition-all">
-                                    <CardContent className="p-5">
-                                        <div className="flex items-start justify-between gap-3 flex-wrap">
-                                            <div>
-                                                <h4 className="font-bold text-sm text-slate-800">{event.title}</h4>
-                                                <p className="text-[11px] text-slate-400 mt-0.5">
-                                                    {event.employee?.name} · {new Date(event.event_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                                                </p>
-                                                {event.description && <p className="text-xs text-slate-500 mt-1">{event.description}</p>}
+            <div className="relative space-y-4 before:absolute before:left-4 before:top-0 before:bottom-0 before:w-px before:bg-zinc-200">
+                {filtered.map(event => {
+                    const Icon = eventIcons[event.type] || Award;
+                    return (
+                        <div key={event.id} className="relative pl-10 group">
+                            <div className={cn(
+                                'absolute left-2 top-4 h-4 w-4 rounded-full border-2 border-white dark:border-black z-10 transition-transform group-hover:scale-125 shadow-sm',
+                                event.type === 'promotion' || event.type === 'appraisal' ? 'bg-primary' : 'bg-zinc-400'
+                            )} />
+                            
+                            <Card className="border shadow-sm rounded-md overflow-hidden bg-card hover:border-primary/50 transition-colors">
+                                <CardContent className="p-4">
+                                    <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                                        <div className="flex items-start gap-4 flex-1">
+                                            <div className={cn(
+                                                "h-10 w-10 rounded-md flex items-center justify-center shrink-0 shadow-inner",
+                                                eventColors[event.type] || 'bg-muted'
+                                            )}>
+                                                <Icon className="h-5 w-5" />
                                             </div>
-                                            <Badge variant="outline" className={cn('text-[10px] capitalize', eventColors[event.type])}>{event.type}</Badge>
+                                            <div className="min-w-0">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <h4 className="text-sm font-bold text-foreground truncate">{event.title}</h4>
+                                                    <Badge variant="outline" className="text-[8px] font-black uppercase tracking-widest">{event.type}</Badge>
+                                                </div>
+                                                <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-tight">{event.employee?.name}</p>
+                                                <p className="text-[10px] font-medium text-muted-foreground uppercase mt-1 flex items-center gap-1.5">
+                                                    <Calendar size={12} className="text-muted-foreground/60" />
+                                                    {new Date(event.event_date).toLocaleDateString('en-AE')}
+                                                </p>
+                                                {event.description && (
+                                                    <div className="mt-3 p-3 bg-muted border border-border rounded text-[10px] font-medium text-muted-foreground italic">
+                                                        "{event.description}"
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
-                                    </CardContent>
-                                </Card>
-                            </div>
-                        );
-                    })}
-                    {filtered.length === 0 && <p className="text-sm text-slate-400 text-center py-12 pl-14">No events recorded</p>}
-                </div>
+                                        {event.effective_date && (
+                                            <div className="md:text-right border-t md:border-t-0 pt-3 md:pt-0">
+                                                <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest">Effective</p>
+                                                <p className="text-[10px] font-black text-foreground mt-0.5">{new Date(event.effective_date).toLocaleDateString('en-AE')}</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
+                    );
+                })}
+                {filtered.length === 0 && (
+                    <div className="p-12 text-center text-muted-foreground italic bg-muted border border-dashed rounded-md ml-10">
+                        <p className="text-xs font-medium uppercase tracking-widest">No events in log</p>
+                    </div>
+                )}
             </div>
         </div>
     );
