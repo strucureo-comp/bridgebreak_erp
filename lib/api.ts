@@ -18,19 +18,24 @@ async function mockDelay<T>(data: T, ms = 300): Promise<T> {
 }
 
 // --- PROJECTS ---
-export async function getProjects() { return mockDelay(MOCK_PROJECTS); }
-export async function getProject(id: string) { return mockDelay(MOCK_PROJECTS.find(p => p.id === id) || null); }
+export async function getProjects(): Promise<any[]> { return mockDelay(MOCK_PROJECTS); }
+export async function getProject(id: string): Promise<any> { return mockDelay(MOCK_PROJECTS.find(p => p.id === id) || null); }
 export async function createProject(data: any) { return mockDelay({ id: `p-${Math.random()}`, ...data }); }
 export async function updateProject(id: string, data: any) { return mockDelay(true); }
 
 // --- SALES & CRM ---
-export async function getLeads() { return mockDelay(MOCK_CRM.leads); }
-export async function createLead(data: any) { return mockDelay(data); }
+export async function getLeads(): Promise<any[]> { return mockDelay(MOCK_CRM.leads); }
+export async function createLead(data: any): Promise<any> { return mockDelay(data); }
 export async function updateLead(id: string, data: any) { return mockDelay(true); }
 export async function getOpportunities() { return mockDelay(MOCK_CRM.opportunities); }
 export async function createOpportunity(data: any) { return mockDelay(data); }
-export async function getCustomers() { return mockDelay(MOCK_CRM.customers); }
-export async function createCustomer(data: any) { return mockDelay(data); }
+export async function getCustomers(): Promise<any[]> { return mockDelay(MOCK_CRM.customers); }
+export async function createCustomer(data: any): Promise<any> { return mockDelay(data); }
+export async function updateCustomer(id: string, data: any) { return mockDelay(true); }
+export async function deleteCustomer(id: string) { return mockDelay(true); }
+export async function deleteLead(id: string) { return mockDelay(true); }
+export async function updateOpportunity(id: string, data: any) { return mockDelay(true); }
+export async function deleteOpportunity(id: string) { return mockDelay(true); }
 export async function getQuotes() { return mockDelay([]); }
 export async function createQuote(data: any) { return mockDelay(data); }
 export async function createQuotation(data: any) { return mockDelay(data); }
@@ -196,8 +201,8 @@ export async function getSystemSetting(key: string) { return mockDelay(null); }
 export async function setSystemSetting(key: string, val: any) { return mockDelay(true); }
 
 // --- USERS ---
-export async function getUsers() { return mockDelay([]); }
-export async function getUser(id: string) { return mockDelay(null); }
+export async function getUsers(): Promise<any[]> { return mockDelay([]); }
+export async function getUser(id: string): Promise<any> { return mockDelay(null); }
 
 // --- BANKING ---
 export async function getBankAccounts() { return mockDelay([]); }

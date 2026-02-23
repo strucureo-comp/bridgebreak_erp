@@ -13,16 +13,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { 
-    Loader2, 
-    ChevronLeft, 
-    Plus, 
-    Trash2, 
-    ShieldCheck, 
-    Eye, 
-    Settings, 
-    User, 
-    Briefcase, 
+import {
+    Loader2,
+    ChevronLeft,
+    Plus,
+    Trash2,
+    ShieldCheck,
+    Eye,
+    Settings,
+    User,
+    Briefcase,
     Hash,
     RefreshCcw,
     FileText,
@@ -41,7 +41,7 @@ export default function NewQuotationPage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [viewMode, setViewMode] = useState<'edit' | 'preview'>('edit');
-    
+
     const [users, setUsers] = useState<UserType[]>([]);
     const [projects, setProjects] = useState<Project[]>([]);
 
@@ -94,8 +94,8 @@ export default function NewQuotationPage() {
                 getUsers(),
                 getProjects(),
             ]);
-            setUsers(usersData.filter(u => u.role === 'client'));
-            setProjects(projectsData);
+            setUsers((usersData as any[]).filter(u => u.role === 'client'));
+            setProjects(projectsData as any || []);
         } catch (error) {
             toast.error('Failed to fetch CRM data');
         } finally {
@@ -195,11 +195,11 @@ export default function NewQuotationPage() {
                                 <CardContent className="p-5 space-y-4">
                                     <div className="space-y-1.5">
                                         <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Quotation Number</Label>
-                                        <Input value={formData.quotation_number} onChange={e => setFormData({...formData, quotation_number: e.target.value})} className="h-9 border-border font-mono font-bold uppercase text-xs" />
+                                        <Input value={formData.quotation_number} onChange={e => setFormData({ ...formData, quotation_number: e.target.value })} className="h-9 border-border font-mono font-bold uppercase text-xs" />
                                     </div>
                                     <div className="space-y-1.5">
                                         <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Valid Until</Label>
-                                        <Input type="date" value={formData.valid_until} onChange={e => setFormData({...formData, valid_until: e.target.value})} className="h-9 border-border text-xs font-bold" />
+                                        <Input type="date" value={formData.valid_until} onChange={e => setFormData({ ...formData, valid_until: e.target.value })} className="h-9 border-border text-xs font-bold" />
                                     </div>
                                 </CardContent>
                             </Card>
@@ -217,12 +217,12 @@ export default function NewQuotationPage() {
                                 <CardContent className="p-5 space-y-4">
                                     {isManual ? (
                                         <div className="space-y-3">
-                                            <Input placeholder="Company Name" value={formData.client_company} onChange={e => setFormData({...formData, client_company: e.target.value})} className="h-9 border-border text-xs font-bold" />
-                                            <Input placeholder="Email Address" value={formData.client_email} onChange={e => setFormData({...formData, client_email: e.target.value})} className="h-9 border-border text-xs" />
-                                            <Textarea placeholder="Physical Address" value={formData.client_address} onChange={e => setFormData({...formData, client_address: e.target.value})} className="min-h-[60px] text-xs border-border" />
+                                            <Input placeholder="Company Name" value={formData.client_company} onChange={e => setFormData({ ...formData, client_company: e.target.value })} className="h-9 border-border text-xs font-bold" />
+                                            <Input placeholder="Email Address" value={formData.client_email} onChange={e => setFormData({ ...formData, client_email: e.target.value })} className="h-9 border-border text-xs" />
+                                            <Textarea placeholder="Physical Address" value={formData.client_address} onChange={e => setFormData({ ...formData, client_address: e.target.value })} className="min-h-[60px] text-xs border-border" />
                                         </div>
                                     ) : (
-                                        <Select value={formData.client_id} onValueChange={v => setFormData({...formData, client_id: v})}>
+                                        <Select value={formData.client_id} onValueChange={v => setFormData({ ...formData, client_id: v })}>
                                             <SelectTrigger className="h-9 border-border text-xs font-bold uppercase"><SelectValue placeholder="Select Client..." /></SelectTrigger>
                                             <SelectContent>
                                                 {users.map(u => <SelectItem key={u.id} value={u.id} className="text-xs uppercase font-bold">{u.full_name}</SelectItem>)}
@@ -251,7 +251,7 @@ export default function NewQuotationPage() {
                                             <thead className="bg-muted/50 border-b border-border">
                                                 <tr>
                                                     <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground">Description</th>
-                                                    <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground w-20">Qty</th>
+                                                    <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground w-24">Quantity</th>
                                                     <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground w-32">Unit Price</th>
                                                     <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground w-28 text-right">Total</th>
                                                     <th className="px-6 py-3 w-12"></th>
@@ -275,7 +275,7 @@ export default function NewQuotationPage() {
                                     <div className="p-8 bg-muted/30 border-t border-border grid md:grid-cols-2 gap-12">
                                         <div className="space-y-3">
                                             <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Internal Notes</Label>
-                                            <Textarea value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} className="min-h-[100px] border-border text-xs resize-none" placeholder="Administrative notes..." />
+                                            <Textarea value={formData.notes} onChange={e => setFormData({ ...formData, notes: e.target.value })} className="min-h-[100px] border-border text-xs resize-none" placeholder="Administrative notes..." />
                                         </div>
                                         <div className="space-y-4">
                                             <div className="flex justify-between border-b pb-4">
@@ -297,7 +297,7 @@ export default function NewQuotationPage() {
                     </div>
                 ) : (
                     <div className="animate-in zoom-in-95 duration-300 py-10 bg-muted rounded-md border-2 border-dashed border-border">
-                        <BrandedDocumentPreview 
+                        <BrandedDocumentPreview
                             type="quotation"
                             number={formData.quotation_number}
                             entityName={selectedClient.name || undefined}

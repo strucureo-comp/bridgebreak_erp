@@ -2,80 +2,107 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/lib/auth/context';
-import { getOpportunities, createOpportunity, getCustomers } from '@/lib/api';
+import { getOpportunities, createOpportunity, updateOpportunity, deleteOpportunity, getCustomers } from '@/lib/api';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
-    Briefcase,
-    Search,
-    RefreshCcw,
-    ChevronRight,
-    Plus,
-    DollarSign,
-    Calendar,
-    Target
+    Briefcase, Search, Plus, DollarSign, Calendar, Target, ChevronRight, Edit2, Trash2, AlertCircle, Clock
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger
+    Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger
 } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from 'sonner';
-import type { Opportunity, CustomerAccount } from '@/lib/db/types';
+import type { Opportunity, CustomerAccount, FollowUp, OpportunityStage } from '@/lib/db/types';
 import { cn } from '@/lib/utils';
+import { useTenant } from '@/lib/tenant-context';
+import { ModuleGuard } from '@/components/layout/module-guard';
+
+function isOverdue(dateStr: string) {
+    const d = new Date(dateStr);
+    const today = new Date();
+    return d < today && d.toDateString() !== today.toDateString();
+}
+
+function isToday(dateStr: string) {
+    return new Date(dateStr).toDateString() === new Date().toDateString();
+}
+
+function isClosingSoon(dateStr: string) {
+    if (!dateStr) return false;
+    const d = new Date(dateStr);
+    const today = new Date();
+    const diffTime = d.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays >= 0 && diffDays <= 3;
+}
 
 export default function SalesOpportunitiesPage() {
     const { user } = useAuth();
+    const { companyProfile } = useTenant();
     const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
     const [customers, setCustomers] = useState<CustomerAccount[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
-    const [isMounted, setIsMounted] = useState(false);
     const [isCreateOpen, setIsCreateOpen] = useState(false);
+    const [editingId, setEditingId] = useState<string | null>(null);
+
+    const isRetail = companyProfile?.businessType === 'b2c_retail';
 
     const [formData, setFormData] = useState({
-        name: '',
-        account_id: '',
-        amount: 0,
-        stage: 'prospecting',
-        probability: 10,
-        close_date: ''
+        name: '', account_id: '', amount: 0, stage: 'new_lead' as OpportunityStage, probability: 10, close_date: '',
+        followUps: [] as FollowUp[]
+    });
+
+    const [newFollowUp, setNewFollowUp] = useState({
+        type: 'Call' as 'Call' | 'Email' | 'Meeting' | 'Site Visit',
+        scheduledAt: '',
+        status: 'Pending' as 'Pending' | 'Completed' | 'Missed',
+        notes: '',
+        priority: 'Medium' as 'Low' | 'Medium' | 'High'
     });
 
     useEffect(() => {
-        setIsMounted(true);
         if (user?.role === 'admin') fetchData();
     }, [user]);
 
     const fetchData = async () => {
         try {
             setLoading(true);
-            const [opps, custs] = await Promise.all([
-                getOpportunities(),
-                getCustomers()
-            ]);
-            setOpportunities(opps || []);
+            const [opps, custs] = await Promise.all([getOpportunities(), getCustomers()]);
+            // Auto mark missed logic could be put here before setting state
+            const mappedOpps = (opps || []).map((o: any) => {
+                if (o.followUps) {
+                    o.followUps = o.followUps.map((f: FollowUp) => {
+                        if (f.status === 'Pending' && isOverdue(f.scheduledAt)) {
+                            return { ...f, status: 'Missed' };
+                        }
+                        return f;
+                    });
+                }
+                return o;
+            });
+            setOpportunities(mappedOpps as any);
             setCustomers(custs || []);
-        } catch (e) { console.error(e); }
-        finally { setLoading(false); }
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const STAGES = [
-        { id: 'prospecting', label: 'Prospecting', color: 'bg-blue-500', light: 'bg-blue-50 text-blue-600' },
-        { id: 'qualification', label: 'Qualification', color: 'bg-indigo-500', light: 'bg-indigo-50 text-indigo-600' },
-        { id: 'proposal', label: 'Proposal', color: 'bg-purple-500', light: 'bg-purple-50 text-purple-600' },
-        { id: 'negotiation', label: 'Negotiation', color: 'bg-orange-500', light: 'bg-orange-50 text-orange-600' },
-        { id: 'closed_won', label: 'Closed Won', color: 'bg-emerald-500', light: 'bg-emerald-50 text-emerald-600' },
-        { id: 'closed_lost', label: 'Closed Lost', color: 'bg-red-500', light: 'bg-red-50 text-red-600' },
+        { id: 'new_lead', label: 'New Lead', color: 'bg-zinc-400' },
+        { id: 'contacted', label: 'Contacted', color: 'bg-blue-400' },
+        { id: 'qualified', label: 'Qualified', color: 'bg-indigo-500' },
+        { id: 'proposal_sent', label: 'Proposal Sent', color: 'bg-primary/70' },
+        { id: 'negotiation', label: 'Negotiation', color: 'bg-primary' },
+        { id: 'won', label: 'Won', color: 'bg-emerald-500' },
+        { id: 'lost', label: 'Lost', color: 'bg-red-500' },
     ];
 
     const filteredOpportunities = useMemo(() => {
@@ -85,27 +112,112 @@ export default function SalesOpportunitiesPage() {
         );
     }, [opportunities, searchQuery]);
 
+    const kpiStats = useMemo(() => {
+        let totalVal = 0;
+        let weightedVal = 0;
+        let closingThisMonth = 0;
+
+        const today = new Date();
+        const thisMonth = today.getMonth();
+        const thisYear = today.getFullYear();
+
+        filteredOpportunities.forEach(o => {
+            if (o.stage !== 'lost') {
+                totalVal += Number(o.amount) || 0;
+                weightedVal += (Number(o.amount) || 0) * ((o.probability || 0) / 100);
+                if (o.close_date) {
+                    const cd = new Date(o.close_date);
+                    if (cd.getMonth() === thisMonth && cd.getFullYear() === thisYear) {
+                        closingThisMonth++;
+                    }
+                }
+            }
+        });
+
+        return { totalVal, weightedVal, closingThisMonth };
+    }, [filteredOpportunities]);
+
     const handleSubmit = async () => {
         if (!formData.name || !formData.account_id) return toast.error('Name and Account are required');
         try {
-            await createOpportunity(formData);
-            toast.success('Opportunity created');
+            if (editingId) {
+                await updateOpportunity(editingId, formData);
+                toast.success('Deal updated');
+            } else {
+                await createOpportunity(formData);
+                toast.success('Deal created');
+            }
             setIsCreateOpen(false);
+            setEditingId(null);
             fetchData();
-            setFormData({ name: '', account_id: '', amount: 0, stage: 'prospecting', probability: 10, close_date: '' });
-        } catch { toast.error('Failed to create opportunity'); }
+            setFormData({ name: '', account_id: '', amount: 0, stage: 'new_lead', probability: 10, close_date: '', followUps: [] });
+        } catch { toast.error(editingId ? 'Failed to update deal' : 'Failed to create deal'); }
+    };
+
+    const handleEdit = (opp: Opportunity) => {
+        setFormData({
+            name: opp.name,
+            account_id: opp.account_id || '',
+            amount: Number(opp.amount) || 0,
+            stage: opp.stage,
+            probability: opp.probability || 10,
+            close_date: opp.close_date || '',
+            followUps: [...(opp.followUps || [])]
+        });
+        setEditingId(opp.id);
+        setIsCreateOpen(true);
+    };
+
+    const handleDelete = async (id: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!confirm('Are you sure you want to delete this deal?')) return;
+        try {
+            await deleteOpportunity(id);
+            toast.success('Deal deleted');
+            fetchData();
+        } catch { toast.error('Failed to delete deal'); }
+    };
+
+    const handleOpenChange = (open: boolean) => {
+        setIsCreateOpen(open);
+        if (!open) {
+            setEditingId(null);
+            setFormData({ name: '', account_id: '', amount: 0, stage: 'new_lead', probability: 10, close_date: '', followUps: [] });
+            setNewFollowUp({ type: 'Call', scheduledAt: '', status: 'Pending', notes: '', priority: 'Medium' });
+        }
+    };
+
+    const addFollowUp = () => {
+        if (!newFollowUp.scheduledAt || !newFollowUp.type) return toast.error('Type and Date required');
+        setFormData(prev => ({
+            ...prev,
+            followUps: [...prev.followUps, { ...newFollowUp, id: `f-${Math.random()}` }]
+        }));
+        setNewFollowUp({ type: 'Call', scheduledAt: '', status: 'Pending', notes: '', priority: 'Medium' });
+    };
+
+    const removeFollowUp = (id: string) => {
+        setFormData(prev => ({
+            ...prev,
+            followUps: prev.followUps.filter(f => f.id !== id)
+        }));
     };
 
     const getStageOpps = (stageId: string) => filteredOpportunities.filter(o => o.stage === stageId);
 
-    if (!isMounted) return null;
+    const formatCurrency = (n: number) => {
+        return new Intl.NumberFormat('en-AE', { style: 'currency', currency: companyProfile?.baseCurrency || 'AED', maximumFractionDigits: 0 }).format(n);
+    };
 
-    if (loading) {
+    if (loading) return null;
+
+    if (isRetail) {
         return (
             <DashboardShell requireAdmin>
-                <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
-                    <RefreshCcw className="h-12 w-12 animate-spin text-primary" />
-                    <p className="font-bold text-foreground">Syncing Pipeline Data...</p>
+                <div className="flex flex-col items-center justify-center min-h-[50vh] text-center">
+                    <Target className="h-12 w-12 text-muted-foreground mb-4" />
+                    <h2 className="text-xl font-bold">Not Applicable</h2>
+                    <p className="text-muted-foreground mt-2">Opportunities pipeline is disabled for Retail/B2C operations.</p>
                 </div>
             </DashboardShell>
         );
@@ -113,120 +225,325 @@ export default function SalesOpportunitiesPage() {
 
     return (
         <DashboardShell requireAdmin>
-            <div className="space-y-8 pb-12 w-full overflow-x-auto">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 min-w-[300px]">
-                    <div className="space-y-1">
-                        <h1 className="text-4xl font-black tracking-tight text-foreground">Opportunities</h1>
-                        <p className="text-muted-foreground font-medium flex items-center gap-2">
-                            <Briefcase className="h-4 w-4 text-primary" />
-                            Manage your sales pipeline and forecast revenue.
-                        </p>
-                    </div>
-                    <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-                        <DialogTrigger asChild>
-                            <Button className="rounded-2xl bg-slate-900 h-12 px-8 font-bold shadow-xl shadow-slate-200 hover:scale-[1.02] transition-transform">
-                                <Plus className="h-5 w-5 mr-2" /> New Deal
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-xl rounded-[2.5rem] p-8">
-                            <DialogHeader>
-                                <DialogTitle className="text-2xl font-black">Create Opportunity</DialogTitle>
-                                <DialogDescription>Add a new deal to the pipeline.</DialogDescription>
-                            </DialogHeader>
-                            <div className="grid gap-4 py-4">
-                                <div className="space-y-2">
-                                    <Label>Opportunity Name</Label>
-                                    <Input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="rounded-xl" placeholder="Q3 License Deal" />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label>Account</Label>
-                                    <Select onValueChange={v => setFormData({ ...formData, account_id: v })}>
-                                        <SelectTrigger className="rounded-xl h-12">
-                                            <SelectValue placeholder="Select Account" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {customers.map(c => (
-                                                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label>Estimated Amount</Label>
-                                        <Input type="number" value={formData.amount} onChange={e => setFormData({ ...formData, amount: Number(e.target.value) })} className="rounded-xl" />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Probability (%)</Label>
-                                        <Input type="number" value={formData.probability} onChange={e => setFormData({ ...formData, probability: Number(e.target.value) })} className="rounded-xl" />
-                                    </div>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label>Close Date</Label>
-                                    <Input type="date" value={formData.close_date} onChange={e => setFormData({ ...formData, close_date: e.target.value })} className="rounded-xl" />
-                                </div>
+            <ModuleGuard module="sales">
+                <div className="space-y-6 max-w-7xl mx-auto pb-12">
+                    {/* Header */}
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
+                        <div>
+                            <h1 className="text-3xl font-black tracking-tight text-foreground">Pipeline View</h1>
+                            <p className="text-muted-foreground mt-1">Manage sales opportunities across all stages.</p>
+                        </div>
+
+                        <div className="flex items-center gap-4">
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input placeholder="Search deals..." className="pl-9 h-10 w-64 border-border bg-background" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
                             </div>
-                            <DialogFooter>
-                                <Button onClick={handleSubmit} className="w-full rounded-xl h-12 bg-primary font-bold">Create Deal</Button>
-                            </DialogFooter>
-                        </DialogContent>
-                    </Dialog>
-                </div>
 
-                <div className="flex gap-6 pb-6 overflow-x-auto min-w-full">
-                    {STAGES.map(stage => {
-                        const stageOpps = getStageOpps(stage.id);
-                        const totalValue = stageOpps.reduce((sum, o) => sum + Number(o.amount || 0), 0);
-
-                        return (
-                            <div key={stage.id} className="min-w-[320px] w-[320px] flex flex-col gap-4">
-                                <div className="flex items-center justify-between px-2">
-                                    <div className="flex items-center gap-2">
-                                        <div className={cn("h-3 w-3 rounded-full", stage.color)} />
-                                        <span className="font-bold text-sm text-foreground uppercase tracking-wide">{stage.label}</span>
-                                    </div>
-                                    <span className="text-xs font-black text-muted-foreground">{stageOpps.length}</span>
-                                </div>
-                                <div className="px-2 pb-2 border-b-2 border-border flex justify-between items-end">
-                                    <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Total Value</span>
-                                    <span className="text-sm font-black text-slate-700">${totalValue.toLocaleString()}</span>
-                                </div>
-
-                                <div className="flex flex-col gap-3">
-                                    {stageOpps.map(opp => (
-                                        <Card key={opp.id} className="rounded-[1.5rem] border-none shadow-sm bg-card hover:shadow-md transition-shadow cursor-pointer group">
-                                            <CardContent className="p-5 space-y-3">
-                                                <div className="space-y-1">
-                                                    <h4 className="font-bold text-foreground group-hover:text-primary transition-colors">{opp.name}</h4>
-                                                    <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                                                        <Briefcase size={10} />
-                                                        {opp.account?.name}
-                                                    </p>
-                                                </div>
-                                                <div className="flex items-center justify-between pt-2 border-t border-slate-50">
-                                                    <div className="flex items-center gap-1 text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md">
-                                                        <DollarSign size={12} strokeWidth={3} />
-                                                        <span className="text-xs font-black">{Number(opp.amount).toLocaleString()}</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-1 text-muted-foreground">
-                                                        <Target size={12} />
-                                                        <span className="text-xs font-bold">{opp.probability}%</span>
-                                                    </div>
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-                                    ))}
-                                    {stageOpps.length === 0 && (
-                                        <div className="h-24 border-2 border-dashed border-border rounded-2xl flex items-center justify-center">
-                                            <span className="text-xs font-bold text-slate-300 uppercase">No Deals</span>
+                            <Dialog open={isCreateOpen} onOpenChange={handleOpenChange}>
+                                <DialogTrigger asChild>
+                                    <Button size="sm" className="h-10 gap-2 font-bold shadow-sm">
+                                        <Plus className="h-4 w-4" /> New Deal
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent className="max-w-2xl p-0 border-none shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                                    <div className="bg-background flex-1 overflow-y-auto w-full flex flex-col">
+                                        <div className="p-6 border-b border-border shrink-0">
+                                            <h3 className="text-xl font-bold tracking-tight text-foreground">{editingId ? 'Edit Deal' : 'Create Opportunity'}</h3>
+                                            <p className="text-muted-foreground text-xs mt-0.5">{editingId ? 'Update deal details and follow-ups' : 'Add a new deal to the pipeline'}</p>
                                         </div>
-                                    )}
+                                        <div className="p-6 space-y-6 flex-1">
+
+                                            {/* DEAL DETAILS SECTION */}
+                                            <div className="space-y-4">
+                                                <h4 className="font-bold text-sm text-foreground flex items-center border-b border-border pb-2">Deal Information</h4>
+
+                                                <div className="space-y-1.5">
+                                                    <Label className="text-xs font-bold">Opportunity Name</Label>
+                                                    <Input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="h-10 bg-background" placeholder="Q3 License Deal" />
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="space-y-1.5">
+                                                        <Label className="text-xs font-bold">Customer Account</Label>
+                                                        <Select value={formData.account_id} onValueChange={v => setFormData({ ...formData, account_id: v })}>
+                                                            <SelectTrigger className="h-10 bg-background text-sm">
+                                                                <SelectValue placeholder="Select Account" />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                {customers.map(c => (
+                                                                    <SelectItem key={c.id} value={c.id} className="text-sm">{c.name}</SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+                                                    <div className="space-y-1.5">
+                                                        <Label className="text-xs font-bold">Pipeline Stage</Label>
+                                                        <Select value={formData.stage} onValueChange={v => setFormData({ ...formData, stage: v as OpportunityStage })}>
+                                                            <SelectTrigger className="h-10 bg-background text-sm">
+                                                                <SelectValue placeholder="Select Stage" />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                {STAGES.map(s => (
+                                                                    <SelectItem key={s.id} value={s.id} className="text-sm">{s.label}</SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid grid-cols-3 gap-4">
+                                                    <div className="space-y-1.5">
+                                                        <Label className="text-xs font-bold">Amount ({companyProfile?.baseCurrency || 'AED'})</Label>
+                                                        <Input type="number" value={formData.amount || ''} onChange={e => setFormData({ ...formData, amount: Number(e.target.value) })} className="h-10 bg-background" />
+                                                    </div>
+                                                    <div className="space-y-1.5">
+                                                        <Label className="text-xs font-bold">Probability (%)</Label>
+                                                        <Input type="number" value={formData.probability || ''} onChange={e => setFormData({ ...formData, probability: Number(e.target.value) })} className="h-10 bg-background" />
+                                                    </div>
+                                                    <div className="space-y-1.5">
+                                                        <Label className="text-xs font-bold">Close Date</Label>
+                                                        <Input type="date" value={formData.close_date} onChange={e => setFormData({ ...formData, close_date: e.target.value })} className="h-10 bg-background" />
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* FOLLOW-UP TIMELINE SECTION */}
+                                            <div className="space-y-4 pt-4 border-t border-border">
+                                                <h4 className="font-bold text-sm text-foreground flex items-center border-b border-border pb-2">Follow-Up Workflow</h4>
+
+                                                {/* Pending Add Form */}
+                                                <div className="bg-muted/30 p-3 rounded-md border border-border flex items-end gap-2">
+                                                    <div className="space-y-1.5 flex-1">
+                                                        <Label className="text-xs font-bold">Type</Label>
+                                                        <Select value={newFollowUp.type} onValueChange={v => setNewFollowUp({ ...newFollowUp, type: v as any })}>
+                                                            <SelectTrigger className="h-8 text-xs bg-background"><SelectValue /></SelectTrigger>
+                                                            <SelectContent>
+                                                                {['Call', 'Email', 'Meeting', 'Site Visit'].map(t => <SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>)}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+                                                    <div className="space-y-1.5 flex-1">
+                                                        <Label className="text-xs font-bold">Date/Time</Label>
+                                                        <Input type="datetime-local" className="h-8 text-xs bg-background" value={newFollowUp.scheduledAt} onChange={e => setNewFollowUp({ ...newFollowUp, scheduledAt: e.target.value })} />
+                                                    </div>
+                                                    <div className="space-y-1.5 flex-1 w-full max-w-[200px]">
+                                                        <Label className="text-xs font-bold">Notes</Label>
+                                                        <Input placeholder="Short note..." className="h-8 text-xs bg-background" value={newFollowUp.notes} onChange={e => setNewFollowUp({ ...newFollowUp, notes: e.target.value })} />
+                                                    </div>
+                                                    <Button size="sm" onClick={addFollowUp} className="h-8 font-bold whitespace-nowrap shadow-sm text-xs px-3 bg-foreground text-background hover:bg-foreground/80">Add Follow-up</Button>
+                                                </div>
+
+                                                {/* Timeline */}
+                                                <div className="space-y-2 mt-4 max-h-[200px] overflow-y-auto">
+                                                    {formData.followUps.length === 0 ? (
+                                                        <p className="text-xs text-muted-foreground italic">No follow-ups recorded.</p>
+                                                    ) : (
+                                                        [...formData.followUps].sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime()).map(f => (
+                                                            <div key={f.id} className="flex items-center justify-between bg-card border border-border p-2 rounded-sm text-xs shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+                                                                <div className="flex items-center gap-3">
+                                                                    <div className={cn("px-2 py-0.5 rounded-full text-[10px] font-bold uppercase",
+                                                                        f.status === 'Pending' ? 'bg-amber-500/10 text-amber-500' :
+                                                                            f.status === 'Completed' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'
+                                                                    )}>
+                                                                        {f.status}
+                                                                    </div>
+                                                                    <div className="flex gap-2">
+                                                                        <span className="font-bold text-foreground">{f.type}</span>
+                                                                        <span className="text-muted-foreground">{new Date(f.scheduledAt).toLocaleString()}</span>
+                                                                    </div>
+                                                                    {f.notes && <span className="text-muted-foreground truncate max-w-[150px]">— {f.notes}</span>}
+                                                                </div>
+                                                                <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive" onClick={() => removeFollowUp(f.id)}>
+                                                                    <Trash2 className="h-3 w-3" />
+                                                                </Button>
+                                                            </div>
+                                                        ))
+                                                    )}
+                                                </div>
+
+                                            </div>
+
+                                        </div>
+                                        <div className="p-6 border-t border-border flex justify-end shrink-0">
+                                            <Button onClick={handleSubmit} className="h-10 px-8 font-bold text-sm">{editingId ? 'Save Deal Changes' : 'Create Deal'}</Button>
+                                        </div>
+                                    </div>
+                                </DialogContent>
+                            </Dialog>
+                        </div>
+                    </div>
+
+                    {/* KPI Bar */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <Card className="border-border shadow-sm">
+                            <CardContent className="p-4 flex items-center justify-between">
+                                <div>
+                                    <p className="text-xs font-bold text-muted-foreground mb-1">Total Pipeline Value</p>
+                                    <p className="text-2xl font-black text-foreground">{formatCurrency(kpiStats.totalVal)}</p>
                                 </div>
-                            </div>
-                        );
-                    })}
+                                <div className="h-10 w-10 bg-primary/10 text-primary rounded-full flex items-center justify-center">
+                                    <DollarSign className="h-5 w-5" />
+                                </div>
+                            </CardContent>
+                        </Card>
+                        <Card className="border-border shadow-sm">
+                            <CardContent className="p-4 flex items-center justify-between">
+                                <div>
+                                    <p className="text-xs font-bold text-muted-foreground mb-1">Weighted Pipeline</p>
+                                    <p className="text-2xl font-black text-foreground">{formatCurrency(kpiStats.weightedVal)}</p>
+                                </div>
+                                <div className="h-10 w-10 bg-blue-500/10 text-blue-500 rounded-full flex items-center justify-center">
+                                    <Target className="h-5 w-5" />
+                                </div>
+                            </CardContent>
+                        </Card>
+                        <Card className="border-border shadow-sm">
+                            <CardContent className="p-4 flex items-center justify-between">
+                                <div>
+                                    <p className="text-xs font-bold text-muted-foreground mb-1">Deals Closing This Month</p>
+                                    <p className="text-2xl font-black text-foreground">{kpiStats.closingThisMonth}</p>
+                                </div>
+                                <div className="h-10 w-10 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center">
+                                    <Calendar className="h-5 w-5" />
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    {/* Kanban Board */}
+                    <div className="flex gap-6 overflow-x-auto pb-6">
+                        {STAGES.map(stage => {
+                            const stageOpps = getStageOpps(stage.id);
+                            const totalValue = stageOpps.reduce((sum, o) => sum + Number(o.amount || 0), 0);
+
+                            // Determine column header styling
+                            const isLost = stage.id === 'lost';
+                            const isWon = stage.id === 'won';
+
+                            return (
+                                <div key={stage.id} className="w-[320px] flex-shrink-0 flex flex-col gap-4">
+                                    <div className={cn(
+                                        "flex flex-col gap-2 p-3 rounded-md border",
+                                        isWon ? "bg-emerald-500/5 border-emerald-500/20" :
+                                            isLost ? "bg-red-500/5 border-red-500/20" : "bg-muted/10 border-border"
+                                    )}>
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <div className={cn("h-2.5 w-2.5 rounded-full", stage.color)} />
+                                                <span className="font-black text-sm text-foreground uppercase tracking-widest">{stage.label}</span>
+                                            </div>
+                                            <Badge variant="secondary" className="text-[10px] font-bold bg-background">{stageOpps.length}</Badge>
+                                        </div>
+                                        <div className="flex justify-between items-center pt-1 mt-1 border-t border-border/50">
+                                            <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Pipeline Val</span>
+                                            <span className={cn(
+                                                "text-xs font-black",
+                                                isWon ? "text-emerald-600 dark:text-emerald-400" :
+                                                    isLost ? "text-red-600 dark:text-red-400" : "text-foreground"
+                                            )}>{formatCurrency(totalValue)}</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-col gap-3 min-h-[300px]">
+                                        {stageOpps.map((opp, idx) => {
+
+                                            const closingSoon = isClosingSoon(opp.close_date || '');
+
+                                            // Handle Follow Up Badge logic
+                                            let pendingFollowUp = null;
+                                            if (opp.followUps && opp.followUps.length > 0) {
+                                                const pendings = opp.followUps.filter(f => f.status === 'Pending' || f.status === 'Missed');
+                                                if (pendings.length > 0) {
+                                                    // Get nearest
+                                                    pendingFollowUp = pendings.sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime())[0];
+                                                }
+                                            }
+
+                                            let badgeColor = "bg-muted text-muted-foreground";
+                                            let badgeLabel = "No Action Set";
+
+                                            if (pendingFollowUp) {
+                                                if (pendingFollowUp.status === 'Missed' || isOverdue(pendingFollowUp.scheduledAt)) {
+                                                    badgeColor = "bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20";
+                                                    badgeLabel = "Overdue Action";
+                                                } else if (isToday(pendingFollowUp.scheduledAt)) {
+                                                    badgeColor = "bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20";
+                                                    badgeLabel = "Action Today";
+                                                } else {
+                                                    badgeColor = "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20";
+                                                    badgeLabel = `Action on ${new Date(pendingFollowUp.scheduledAt).toLocaleDateString()}`;
+                                                }
+                                            }
+
+                                            const isCardOverdue = pendingFollowUp && (pendingFollowUp.status === 'Missed' || isOverdue(pendingFollowUp.scheduledAt));
+
+                                            return (
+                                                <Card
+                                                    key={opp.id}
+                                                    className={cn(
+                                                        "border-border shadow-sm bg-card transition-all group overflow-hidden",
+                                                        isCardOverdue ? "border-red-500/50 hover:border-red-500" : "hover:border-primary/40"
+                                                    )}
+                                                >
+                                                    {isCardOverdue && <div className="h-1 w-full bg-red-500" />}
+                                                    <CardContent className="p-4 space-y-4">
+
+                                                        {/* Top Row: Name and Closing Warning */}
+                                                        <div className="flex justify-between items-start gap-2">
+                                                            <div className="space-y-1 w-full">
+                                                                <h4 className="font-bold text-sm text-foreground leading-tight">{opp.name}</h4>
+                                                                <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-1">
+                                                                    <Briefcase size={10} className="shrink-0" />
+                                                                    <span className="truncate">{opp.account?.name || 'Unknown Account'}</span>
+                                                                </p>
+                                                            </div>
+                                                            {closingSoon && !isWon && !isLost && (
+                                                                <div className="flex-shrink-0 bg-amber-500/10 p-1.5 rounded-full" title="Closing inside 3 days">
+                                                                    <AlertCircle className="h-4 w-4 text-amber-500" />
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Follow-up Badge */}
+                                                        <div className="flex items-center">
+                                                            <div className={cn("text-[10px] px-2 py-0.5 rounded-sm font-bold flex items-center gap-1.5", badgeColor)}>
+                                                                <Clock className="h-3 w-3" />
+                                                                {badgeLabel}
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Bottom Stats & Actions */}
+                                                        <div className="flex items-center justify-between pt-3 border-t border-border/40 mt-3">
+                                                            <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                                                                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-sm bg-muted/40 hover:bg-muted" onClick={(e) => { e.stopPropagation(); handleEdit(opp); }}>
+                                                                    <Edit2 size={12} className="text-muted-foreground hover:text-primary" />
+                                                                </Button>
+                                                                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-sm bg-muted/40 hover:bg-muted" onClick={(e) => handleDelete(opp.id, e)}>
+                                                                    <Trash2 size={12} className="text-muted-foreground hover:text-destructive" />
+                                                                </Button>
+                                                            </div>
+                                                            <div className="flex items-center gap-2 ml-auto text-right">
+                                                                <Badge variant="outline" className="text-[10px] font-bold px-1.5 py-0 bg-transparent border-border text-muted-foreground">{opp.probability}%</Badge>
+                                                                <span className="text-sm font-black text-foreground">{formatCurrency(Number(opp.amount))}</span>
+                                                            </div>
+                                                        </div>
+
+                                                    </CardContent>
+                                                </Card>
+                                            )
+                                        })}
+                                        {stageOpps.length === 0 && (
+                                            <div className="h-28 border border-dashed border-border rounded-lg flex items-center justify-center bg-muted/10">
+                                                <span className="text-xs font-medium text-muted-foreground">No Deals Here</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
                 </div>
-            </div>
+            </ModuleGuard>
         </DashboardShell>
     );
 }

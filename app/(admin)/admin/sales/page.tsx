@@ -10,10 +10,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import {
-    TrendingUp, Users, Briefcase, Activity, Target, DollarSign,
-    Zap, ShoppingCart, ArrowRight, FileText, CreditCard, UserPlus,
-    Clock, CheckCircle2, AlertCircle, Plus, Receipt, ArrowUpRight,
-    Package, ChevronRight, BarChart3, Sparkles
+    TrendingUp, Users, Target, DollarSign,
+    ShoppingCart, FileText, UserPlus,
+    Clock, Plus, Receipt,
+    Activity, ArrowUpRight, BarChart3, Briefcase, ChevronRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Opportunity, Lead, Activity as ActivityType, Invoice } from '@/lib/db/types';
@@ -22,6 +22,18 @@ import { useTenant } from '@/lib/tenant-context';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { LeadForm } from '@/components/sales/lead-form';
 import { QuoteForm } from '@/components/sales/quote-form';
+
+export function isOverdue(dateStr: string) {
+    if (!dateStr) return false;
+    const d = new Date(dateStr);
+    const today = new Date();
+    return d < today && d.toDateString() !== today.toDateString();
+}
+
+export function isToday(dateStr: string) {
+    if (!dateStr) return false;
+    return new Date(dateStr).toDateString() === new Date().toDateString();
+}
 
 export default function SalesDashboardPage() {
     const router = useRouter();
@@ -34,10 +46,10 @@ export default function SalesDashboardPage() {
     const [salesOrders, setSalesOrders] = useState<any[]>([]);
     const [quotes, setQuotes] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [isLeadOpen, setIsLeadOpen] = useState(false);
-    const [isQuoteOpen, setIsQuoteOpen] = useState(false);
 
-    // Dynamic Currency Formatter
+    // Check if B2B/B2C based on company profile settings
+    const isRetail = companyProfile?.businessType === 'b2c_retail';
+
     const fmt = useCallback((n: number) => {
         return new Intl.NumberFormat('en-AE', {
             style: 'currency',
@@ -61,7 +73,7 @@ export default function SalesDashboardPage() {
                 getSalesOrders().catch(() => []),
                 getQuotes().catch(() => []),
             ]);
-            setOpportunities(oppsData || []);
+            setOpportunities((oppsData as any) || []);
             setLeads(leadsData || []);
             setActivities(activityData || []);
             setInvoices(invData || []);
@@ -72,22 +84,27 @@ export default function SalesDashboardPage() {
     };
 
     const stats = useMemo(() => {
-        const wonOpps = opportunities.filter(o => o.stage === 'closed_won');
-        const pipelineOpps = opportunities.filter(o => o.stage !== 'closed_won' && o.stage !== 'closed_lost');
+        const wonOpps = opportunities.filter(o => o.stage === 'won');
+        const pipelineOpps = opportunities.filter(o => o.stage !== 'won' && o.stage !== 'lost');
         const revenue = wonOpps.reduce((sum, o) => sum + Number(o.amount), 0);
         const pipelineValue = pipelineOpps.reduce((sum, o) => sum + Number(o.amount), 0);
         const winRate = opportunities.length > 0 ? (wonOpps.length / opportunities.length) * 100 : 0;
         const pendingInvoiceAmount = invoices.filter(i => i.status === 'pending').reduce((s, i) => s + Number(i.amount), 0);
         const activeQuotes = quotes.filter(q => q.status === 'draft' || q.status === 'sent').length;
-        
-        return { 
-            revenue, 
-            pipelineValue, 
-            winRate, 
-            activeLeads: leads.length, 
-            pendingInvoiceAmount, 
-            invoiceCount: invoices.length, 
-            activeQuotes 
+
+        const followUpsToday = opportunities.flatMap(o => o.followUps || []).filter(f => f.status === 'Pending' && isToday(f.scheduledAt)).length;
+        const overdueFollowUps = opportunities.flatMap(o => o.followUps || []).filter(f => f.status === 'Missed' || (f.status === 'Pending' && isOverdue(f.scheduledAt))).length;
+
+        return {
+            revenue,
+            pipelineValue,
+            winRate,
+            activeLeads: leads.length,
+            pendingInvoiceAmount,
+            invoiceCount: invoices.length,
+            activeQuotes,
+            followUpsToday,
+            overdueFollowUps
         };
     }, [opportunities, leads, invoices, quotes]);
 
@@ -96,232 +113,180 @@ export default function SalesDashboardPage() {
     return (
         <DashboardShell requireAdmin>
             <ModuleGuard module="sales">
-                <div className="space-y-6">
-                    {/* Header */}
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div className="flex items-center gap-4">
-                            <div className="h-10 w-10 rounded-lg bg-foreground text-card-foreground flex items-center justify-center shadow-sm">
-                                <ShoppingCart className="h-5 w-5" />
-                            </div>
-                            <div>
-                                <h1 className="text-2xl font-bold tracking-tight text-foreground">{getModuleLabel('sales')}</h1>
-                                <p className="text-sm text-muted-foreground">
-                                    Lead-to-Cash lifecycle management
-                                </p>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <Dialog open={isLeadOpen} onOpenChange={setIsLeadOpen}>
-                                <DialogTrigger asChild>
-                                    <Button variant="outline" size="sm" className="h-9 gap-2">
-                                        <UserPlus className="h-3.5 w-3.5" /> Lead
-                                    </Button>
-                                </DialogTrigger>
-                                <DialogContent className="max-w-xl p-0 overflow-hidden border-none shadow-2xl rounded-md">
-                                    <LeadForm onSuccess={() => { setIsLeadOpen(false); fetchData(); }} />
-                                </DialogContent>
-                            </Dialog>
-                            
-                            <Dialog open={isQuoteOpen} onOpenChange={setIsQuoteOpen}>
-                                <DialogTrigger asChild>
-                                    <Button variant="outline" size="sm" className="h-9 gap-2">
-                                        <FileText className="h-3.5 w-3.5" /> Quote
-                                    </Button>
-                                </DialogTrigger>
-                                <DialogContent className="max-w-xl p-0 overflow-hidden border-none shadow-2xl rounded-md">
-                                    <QuoteForm onSuccess={() => { setIsQuoteOpen(false); fetchData(); }} />
-                                </DialogContent>
-                            </Dialog>
+                <div className="space-y-8 max-w-6xl mx-auto pb-12">
 
-                            <Button size="sm" className="h-9 gap-2 bg-primary hover:bg-primary/90" onClick={() => router.push('/admin/invoices/new')}>
-                                <Plus className="h-3.5 w-3.5" /> Invoice
+                    {/* Header: Simple & Clear */}
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
+                        <div>
+                            <h1 className="text-3xl font-black tracking-tight text-foreground">{getModuleLabel('sales')}</h1>
+                            <p className="text-muted-foreground mt-1">Manage leads, opportunities, quotes, and sales transactions.</p>
+                        </div>
+
+                        {/* Quick Actions */}
+                        <div className="flex flex-wrap items-center gap-3">
+                            {!isRetail && (
+                                <Dialog>
+                                    <DialogTrigger asChild>
+                                        <Button size="sm" className="h-10 gap-2 font-bold shadow-sm">
+                                            <Plus className="h-4 w-4" /> New Lead
+                                        </Button>
+                                    </DialogTrigger>
+                                    <DialogContent className="max-w-xl p-0 overflow-hidden border-none shadow-2xl rounded-md">
+                                        <LeadForm onSuccess={() => fetchData()} />
+                                    </DialogContent>
+                                </Dialog>
+                            )}
+
+                            <Button onClick={() => router.push('/admin/quotations/new')} size="sm" variant="secondary" className="h-10 gap-2 font-bold shadow-sm">
+                                <Plus className="h-4 w-4" /> New Quotation
+                            </Button>
+
+                            <Button size="sm" variant="outline" className="h-10 gap-2 font-bold shadow-sm" onClick={() => router.push('/admin/invoices/new')}>
+                                <Receipt className="h-4 w-4" /> New Invoice
                             </Button>
                         </div>
                     </div>
 
-                    {/* KPI Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <MetricCard 
-                            title="Pipeline Value" 
-                            value={fmt(stats.pipelineValue)} 
-                            icon={TrendingUp} 
-                            trend={stats.pipelineValue > 0 ? "Active" : "Inactive"} 
-                            trendUp={stats.pipelineValue > 0} 
-                        />
-                        <MetricCard 
-                            title="Total Revenue" 
-                            value={fmt(stats.revenue)} 
-                            icon={DollarSign} 
-                            trend="YTD" 
-                            trendUp={stats.revenue > 0} 
-                        />
-                        <MetricCard 
-                            title="Win Rate" 
-                            value={`${stats.winRate.toFixed(0)}%`} 
-                            icon={Target} 
-                            trend="Stable" 
-                        />
-                        <MetricCard 
-                            title="Outstanding" 
-                            value={fmt(stats.pendingInvoiceAmount)} 
-                            icon={Clock} 
-                            trend="Receivables" 
-                            trendUp={false} 
-                        />
+                    {/* Quick Stats: Clear KPI Cards */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+                        <MetricCard title="Total Revenue (Won)" value={fmt(stats.revenue)} trend="Confirmed" />
+                        {!isRetail && (
+                            <MetricCard title="Pipeline Value" value={fmt(stats.pipelineValue)} trend="In Progress" />
+                        )}
+                        <MetricCard title="Active Leads" value={stats.activeLeads.toString()} trend="To Contact" />
+                        <MetricCard title="Pending Invoices" value={fmt(stats.pendingInvoiceAmount)} trend="Unpaid" />
+                        <Card className="border-border shadow-sm bg-orange-500/5">
+                            <CardHeader className="pb-2 pt-4 px-4"><CardTitle className="text-xs font-bold text-orange-600 dark:text-orange-400 uppercase tracking-widest">Follow-ups Today</CardTitle></CardHeader>
+                            <CardContent className="px-4 pb-4 pt-0"><div className="text-2xl font-black text-foreground">{stats.followUpsToday}</div></CardContent>
+                        </Card>
+                        <Card className="border-red-500/30 shadow-sm bg-red-500/5">
+                            <CardHeader className="pb-2 pt-4 px-4"><CardTitle className="text-xs font-bold text-red-600 dark:text-red-400 uppercase tracking-widest">Overdue Actions</CardTitle></CardHeader>
+                            <CardContent className="px-4 pb-4 pt-0"><div className="text-2xl font-black text-foreground">{stats.overdueFollowUps}</div></CardContent>
+                        </Card>
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        {/* Main Pipeline Area */}
-                        <div className="lg:col-span-2 space-y-6">
-                            <Card className="border shadow-sm rounded-md overflow-hidden">
-                                <CardHeader className="border-b bg-muted/50 py-4 flex flex-row items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <BarChart3 className="h-4 w-4 text-primary" />
-                                        <CardTitle className="text-sm font-bold">Pipeline Distribution</CardTitle>
-                                    </div>
-                                    <Button variant="ghost" size="sm" className="h-8 text-[10px] font-bold uppercase tracking-widest text-primary" asChild>
-                                        <Link href="/admin/sales/opportunities">Full Pipeline <ChevronRight className="h-3 w-3 ml-1" /></Link>
+                    {/* Main Content Area */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+                        {/* LEFT COLUMN */}
+                        <div className="space-y-8">
+
+                            {!isRetail && (
+                                <Card className="border-border shadow-sm">
+                                    <CardHeader className="flex flex-row items-center justify-between border-b border-border py-4">
+                                        <CardTitle className="text-base font-bold">Active Opportunities</CardTitle>
+                                        <Button variant="ghost" size="sm" className="h-8 text-xs font-medium" asChild>
+                                            <Link href="/admin/sales/opportunities">View All</Link>
+                                        </Button>
+                                    </CardHeader>
+                                    <CardContent className="p-0">
+                                        {opportunities.length === 0 ? (
+                                            <div className="p-8 text-center text-sm text-muted-foreground">No active opportunities.</div>
+                                        ) : (
+                                            <div className="divide-y divide-border">
+                                                {opportunities.slice(0, 5).map(opp => (
+                                                    <div key={opp.id} className="p-4 flex items-center justify-between hover:bg-muted/30 transition-colors">
+                                                        <div>
+                                                            <p className="font-bold text-sm">{opp.name}</p>
+                                                            <p className="text-xs text-muted-foreground mt-0.5">{opp.account?.name}</p>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <p className="font-bold text-sm">{fmt(Number(opp.amount))}</p>
+                                                            <Badge variant="secondary" className="mt-1 text-[10px]">{opp.stage.replace('_', ' ')}</Badge>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            )}
+
+                            {isRetail && (
+                                <Card className="border-border shadow-sm">
+                                    <CardHeader className="flex flex-row items-center justify-between border-b border-border py-4">
+                                        <CardTitle className="text-base font-bold">Recent Leads</CardTitle>
+                                        <Button variant="ghost" size="sm" className="h-8 text-xs font-medium" asChild>
+                                            <Link href="/admin/sales/leads">View All</Link>
+                                        </Button>
+                                    </CardHeader>
+                                    <CardContent className="p-0">
+                                        {leads.length === 0 ? (
+                                            <div className="p-8 text-center text-sm text-muted-foreground">No recent leads.</div>
+                                        ) : (
+                                            <div className="divide-y divide-border">
+                                                {leads.slice(0, 4).map(lead => (
+                                                    <div key={lead.id} className="p-4 flex items-center justify-between hover:bg-muted/30 transition-colors">
+                                                        <div>
+                                                            <p className="font-bold text-sm">{lead.first_name} {lead.last_name}</p>
+                                                            <p className="text-xs text-muted-foreground mt-0.5">{lead.company}</p>
+                                                        </div>
+                                                        <Badge className="bg-primary/10 text-primary border-none text-[10px]">{lead.status.replace('_', ' ')}</Badge>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            )}
+                        </div>
+
+                        {/* RIGHT COLUMN */}
+                        <div className="space-y-8">
+
+                            <Card className="border-border shadow-sm">
+                                <CardHeader className="flex flex-row items-center justify-between border-b border-border py-4">
+                                    <CardTitle className="text-base font-bold">Recent Quotes</CardTitle>
+                                    <Button variant="ghost" size="sm" className="h-8 text-xs font-medium" asChild>
+                                        <Link href="/admin/quotations">View All</Link>
                                     </Button>
                                 </CardHeader>
                                 <CardContent className="p-0">
-                                    <div className="grid grid-cols-2 md:grid-cols-5 divide-x divide-border border-b">
-                                        {[
-                                            { stage: 'Prospecting', key: 'prospecting', color: 'bg-zinc-400' },
-                                            { stage: 'Qualification', key: 'qualification', color: 'bg-zinc-600' },
-                                            { stage: 'Proposal', key: 'proposal', color: 'bg-foreground' },
-                                            { stage: 'Negotiation', key: 'negotiation', color: 'bg-primary' },
-                                            { stage: 'Closed Won', key: 'closed_won', color: 'bg-emerald-500' },
-                                        ].map(s => {
-                                            const stageOpps = opportunities.filter(o => o.stage === s.key);
-                                            const stageValue = stageOpps.reduce((sum, o) => sum + Number(o.amount), 0);
-                                            return (
-                                                <div key={s.key} className="p-4 text-center hover:bg-accent hover:text-accent-foreground transition-colors">
-                                                    <div className={cn("h-1 w-8 rounded-full mx-auto mb-3", s.color)} />
-                                                    <p className="text-lg font-bold text-foreground leading-none">{stageOpps.length}</p>
-                                                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight mt-2">{s.stage}</p>
-                                                    <p className="text-[10px] font-black text-foreground mt-1">{fmt(stageValue)}</p>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                    <div className="divide-y">
-                                        {opportunities.length > 0 ? (
-                                            opportunities.slice(0, 5).map(opp => (
-                                                <div key={opp.id} className="flex items-center justify-between p-4 hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer group">
-                                                    <div className="flex items-center gap-3 min-w-0">
-                                                        <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center text-muted-foreground font-bold text-xs uppercase">
-                                                            {opp.account?.name?.charAt(0) || 'O'}
-                                                        </div>
-                                                        <div className="min-w-0">
-                                                            <p className="text-xs font-bold text-foreground truncate">{opp.name}</p>
-                                                            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-tighter">{opp.account?.name}</p>
-                                                        </div>
+                                    {quotes.length === 0 ? (
+                                        <div className="p-8 text-center text-sm text-muted-foreground">No recent quotes.</div>
+                                    ) : (
+                                        <div className="divide-y divide-border">
+                                            {quotes.slice(0, 5).map(q => (
+                                                <div key={q.id} className="p-4 flex items-center justify-between hover:bg-muted/30 transition-colors">
+                                                    <div>
+                                                        <p className="font-bold text-sm">{q.quote_number}</p>
+                                                        <p className="text-xs text-muted-foreground mt-0.5">{q.account?.name}</p>
                                                     </div>
                                                     <div className="text-right">
-                                                        <p className="text-xs font-black text-foreground">{fmt(Number(opp.amount))}</p>
-                                                        <Badge variant="outline" className="text-[8px] font-black uppercase tracking-widest mt-1">{opp.stage.replace('_', ' ')}</Badge>
+                                                        <p className="font-bold text-sm">{fmt(Number(q.total_amount))}</p>
+                                                        <Badge variant="outline" className="mt-1 text-[10px]">{q.status}</Badge>
                                                     </div>
                                                 </div>
-                                            ))
-                                        ) : (
-                                            <div className="p-8 text-center">
-                                                <div className="h-12 w-12 bg-muted rounded-full flex items-center justify-center mx-auto mb-3">
-                                                    <Target className="h-6 w-6 text-muted-foreground/60" />
-                                                </div>
-                                                <p className="text-xs font-bold text-foreground">No active opportunities</p>
-                                                <p className="text-[10px] text-muted-foreground uppercase tracking-wide mt-1">Convert leads to build pipeline</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                </CardContent>
-                            </Card>
-
-                            <Card className="border shadow-sm rounded-md overflow-hidden">
-                                <CardHeader className="border-b bg-muted/50 py-4">
-                                    <CardTitle className="text-sm font-bold flex items-center gap-2">
-                                        <Activity className="h-4 w-4 text-primary" />
-                                        Activity Log
-                                    </CardTitle>
-                                </CardHeader>
-                                <div className="divide-y">
-                                    {activities.length > 0 ? (
-                                        activities.slice(0, 5).map(activity => (
-                                            <div key={activity.id} className="flex gap-4 items-start p-4 hover:bg-accent hover:text-accent-foreground transition-colors">
-                                                <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center text-muted-foreground shrink-0">
-                                                    <Activity className="h-4 w-4" />
-                                                </div>
-                                                <div className="min-w-0 flex-1">
-                                                    <p className="text-xs font-bold text-foreground truncate">{activity.subject}</p>
-                                                    <p className="text-[10px] text-muted-foreground line-clamp-1 mt-0.5">{activity.description}</p>
-                                                    <div className="flex items-center gap-2 mt-1.5">
-                                                        <Badge variant="secondary" className="text-[8px] font-black px-1.5 h-4 bg-muted text-muted-foreground border-none">{activity.type}</Badge>
-                                                        <p className="text-[10px] font-bold text-muted-foreground uppercase">{new Date(activity.created_at).toLocaleDateString('en-AE')}</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))
-                                    ) : (
-                                        <div className="p-8 text-center">
-                                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">No recent activities</p>
+                                            ))}
                                         </div>
                                     )}
-                                </div>
-                            </Card>
-                        </div>
-
-                        {/* Sidebar Area */}
-                        <div className="space-y-6">
-                            <Card className="border-border shadow-sm bg-foreground text-card-foreground overflow-hidden">
-                                <CardHeader className="pb-4">
-                                    <CardTitle className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
-                                        <Sparkles className="h-3.5 w-3.5 text-primary" />
-                                        Performance Note
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <div className="space-y-1">
-                                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Active Quotations</p>
-                                        <p className="text-2xl font-bold">{stats.activeQuotes}</p>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Conversion Rate</p>
-                                        <p className="text-2xl font-bold text-emerald-400">{(stats.winRate * 0.8).toFixed(1)}%</p>
-                                    </div>
                                 </CardContent>
                             </Card>
 
-                            <Card className="border shadow-sm rounded-md">
-                                <CardHeader className="border-b bg-muted/50 py-4">
-                                    <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Sales Terminal</CardTitle>
+                            <Card className="border-border shadow-sm">
+                                <CardHeader className="flex flex-row items-center justify-between border-b border-border py-4">
+                                    <CardTitle className="text-base font-bold">Navigation Defaults</CardTitle>
                                 </CardHeader>
-                                <div className="p-0 divide-y">
-                                    {[
-                                        { label: 'Leads Directory', href: '/admin/sales/leads', icon: UserPlus, count: leads.length },
-                                        { label: 'Pipeline View', href: '/admin/sales/opportunities', icon: Target, count: opportunities.length },
-                                        { label: 'Customer Base', href: '/admin/sales/customers', icon: Users },
-                                        { label: 'Quotations Hub', href: '/admin/quotations', icon: FileText, count: quotes.length },
-                                        { label: 'Revenue Invoices', href: '/admin/invoices', icon: Receipt, count: invoices.length },
-                                    ].map((link, i) => (
-                                        <Link 
-                                            key={i} 
-                                            href={link.href}
-                                            className="flex items-center justify-between px-4 py-3 hover:bg-accent hover:text-accent-foreground transition-colors group"
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <link.icon className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                                                <span className="text-xs font-bold text-foreground">{link.label}</span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                {link.count !== undefined && (
-                                                    <Badge variant="secondary" className="text-[8px] font-black h-4 px-1.5 min-w-4 flex items-center justify-center bg-muted text-muted-foreground border-none">{link.count}</Badge>
-                                                )}
-                                                <ChevronRight className="h-3 w-3 text-muted-foreground/60 group-hover:text-primary transition-all" />
-                                            </div>
-                                        </Link>
-                                    ))}
-                                </div>
+                                <CardContent className="p-0 divide-y divide-border">
+                                    <Link href="/admin/sales/customers" className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 border border-border rounded-md bg-background shadow-sm"><Users className="h-4 w-4" /></div>
+                                            <span className="font-bold text-sm">Customers Directory</span>
+                                        </div>
+                                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                    </Link>
+                                    <Link href="/admin/invoices" className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 border border-border rounded-md bg-background shadow-sm"><Receipt className="h-4 w-4" /></div>
+                                            <span className="font-bold text-sm">All Invoices</span>
+                                        </div>
+                                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                    </Link>
+                                </CardContent>
                             </Card>
+
                         </div>
+
                     </div>
                 </div>
             </ModuleGuard>
@@ -329,22 +294,16 @@ export default function SalesDashboardPage() {
     );
 }
 
-function MetricCard({ title, value, icon: Icon, trend, trendUp }: any) {
+function MetricCard({ title, value, trend }: { title: string, value: string, trend: string }) {
     return (
-        <Card className="border shadow-sm rounded-md bg-card hover:border-primary/50 transition-colors">
-            <CardHeader className="pb-1 flex flex-row items-center justify-between space-y-0">
-                <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{title}</CardTitle>
-                <div className={cn(
-                    "text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded",
-                    trendUp ? "bg-emerald-50 text-emerald-600" : trendUp === false ? "bg-rose-50 text-rose-600" : "bg-muted text-muted-foreground"
-                )}>
-                    {trend}
-                </div>
+        <Card className="border-border shadow-sm">
+            <CardHeader className="pb-2 pt-4 px-4">
+                <CardTitle className="text-xs font-medium text-muted-foreground">{title}</CardTitle>
             </CardHeader>
-            <CardContent>
-                <div className="flex items-center gap-2">
-                    <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-                    <div className="text-xl font-bold tracking-tight text-foreground">{value}</div>
+            <CardContent className="px-4 pb-4 pt-0">
+                <div className="text-2xl font-bold tracking-tight text-foreground">{value}</div>
+                <div className="mt-1 text-xs text-muted-foreground bg-muted inline-block px-2 py-0.5 rounded-md">
+                    {trend}
                 </div>
             </CardContent>
         </Card>

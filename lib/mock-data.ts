@@ -80,8 +80,14 @@ export const MOCK_CRM = {
         { id: 'l2', first_name: 'Sara', last_name: 'Ali', company: 'Dubai Marina Dev', email: 'sara@dmdev.com', status: 'qualified', potential_value: 450000 }
     ],
     opportunities: [
-        { id: 'o1', name: 'Zone 5 Steel Works', amount: 850000, stage: 'proposal', account: { name: 'Emaar Properties' } },
-        { id: 'o2', name: 'Refinery Maintenance', amount: 120000, stage: 'negotiation', account: { name: 'ADNOC' } }
+        {
+            id: 'o1', name: 'Zone 5 Steel Works', amount: 850000, stage: 'proposal_sent', account: { name: 'Emaar Properties' }, probability: 60, close_date: '2026-03-15',
+            followUps: [{ id: 'f1', type: 'Site Visit', scheduledAt: '2026-02-28T10:00:00Z', status: 'Pending', notes: 'Review phase 1 site', priority: 'High' }]
+        },
+        {
+            id: 'o2', name: 'Refinery Maintenance', amount: 120000, stage: 'negotiation', account: { name: 'ADNOC' }, probability: 80, close_date: '2026-02-25',
+            followUps: [{ id: 'f2', type: 'Call', scheduledAt: '2026-02-20T14:00:00Z', status: 'Pending', notes: 'Follow up on pricing', priority: 'Medium' }]
+        }
     ],
     customers: [
         { id: 'c1', name: 'Emaar Properties', industry: 'Real Estate', website: 'emaar.com' },

@@ -45,69 +45,65 @@ export function QuoteForm({ onSuccess }: QuoteFormProps) {
     };
 
     return (
-        <div className="bg-card">
-            <div className="p-6 bg-foreground text-card-foreground">
-                <div className="flex items-center gap-3 mb-6">
-                    <div className="h-10 w-10 rounded-lg bg-primary/20 flex items-center justify-center border border-primary/20">
+        <div className="bg-background">
+            <div className="p-6 border-b border-border">
+                <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
                         <FileText className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                        <h3 className="text-xl font-bold tracking-tight uppercase">New Quotation</h3>
-                        <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest">Draft Proposal</p>
+                        <h3 className="text-xl font-bold tracking-tight text-foreground">New Quotation</h3>
+                        <p className="text-muted-foreground text-xs mt-0.5">Create a new draft proposal</p>
                     </div>
                 </div>
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-6">
                 <div className="space-y-4">
-                    <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">1. Client & Validity</Label>
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1.5">
-                            <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Customer Account</Label>
+                            <Label className="text-xs font-bold text-foreground">Customer Account</Label>
                             <Select name="account_id" required>
-                                <SelectTrigger className="h-10 border-border text-xs font-bold uppercase">
+                                <SelectTrigger className="h-10 border-border text-sm font-medium bg-background">
                                     <SelectValue placeholder="Select Client..." />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {customers.map(c => (
-                                        <SelectItem key={c.id} value={c.id} className="text-xs font-bold uppercase">{c.name}</SelectItem>
+                                        <SelectItem key={c.id} value={c.id} className="text-sm">{c.name}</SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
                         </div>
                         <div className="space-y-1.5">
-                            <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Valid Until</Label>
+                            <Label className="text-xs font-bold text-foreground">Valid Until</Label>
                             <div className="relative">
                                 <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input name="valid_until" type="date" required className="h-10 pl-9 border-border" />
+                                <Input name="valid_until" type="date" required className="h-10 pl-9 border-border bg-background" />
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <div className="space-y-4">
-                    <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">2. Financials</Label>
                     <div className="space-y-1.5">
-                        <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Estimated Total (AED)</Label>
+                        <Label className="text-xs font-bold text-foreground">Estimated Total (AED)</Label>
                         <div className="relative">
                             <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input name="total_amount" type="number" required className="h-10 pl-9 border-border font-bold" placeholder="0.00" />
+                            <Input name="total_amount" type="number" required className="h-10 pl-9 border-border bg-background font-bold" placeholder="0.00" />
                         </div>
                     </div>
                 </div>
 
-                <div className="pt-4 sticky bottom-0 bg-card">
-                    <Button 
-                        type="submit" 
+                <div className="pt-4 flex justify-end gap-2">
+                    <Button
+                        type="submit"
                         disabled={loading}
-                        className="w-full h-12 bg-primary hover:bg-primary/90 font-black uppercase text-xs tracking-widest shadow-lg shadow-primary/20"
+                        className="h-10 px-8 bg-primary hover:bg-primary/90 text-sm font-bold"
                     >
                         {loading ? (
                             <RefreshCcw className="h-4 w-4 animate-spin" />
                         ) : (
-                            <div className="flex items-center gap-2">
-                                <Save size={14} /> Create Draft Quote
-                            </div>
+                            "Create Draft Quote"
                         )}
                     </Button>
                 </div>

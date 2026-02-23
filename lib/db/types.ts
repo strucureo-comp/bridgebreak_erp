@@ -773,7 +773,7 @@ export interface VendorPayment {
 
 // --- CRM Types (Dynamics 365 Parity) ---
 
-export type OpportunityStage = 'prospecting' | 'qualification' | 'proposal' | 'negotiation' | 'closed_won' | 'closed_lost';
+export type OpportunityStage = 'new_lead' | 'contacted' | 'qualified' | 'proposal_sent' | 'negotiation' | 'won' | 'lost';
 
 export type ActivityType = 'call' | 'email' | 'meeting' | 'task' | 'note';
 
@@ -805,6 +805,15 @@ export interface Contact {
   updated_at: string;
 }
 
+export interface FollowUp {
+  id: string;
+  type: 'Call' | 'Email' | 'Meeting' | 'Site Visit';
+  scheduledAt: string;
+  status: 'Pending' | 'Completed' | 'Missed';
+  notes: string;
+  priority: 'Low' | 'Medium' | 'High';
+}
+
 export interface Opportunity {
   id: string;
   account_id: string;
@@ -815,6 +824,7 @@ export interface Opportunity {
   close_date?: string;
   owner?: { full_name: string };
   account?: CustomerAccount;
+  followUps?: FollowUp[];
   created_at: string;
   updated_at: string;
 }

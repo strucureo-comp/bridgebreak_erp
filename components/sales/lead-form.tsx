@@ -4,9 +4,10 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { createLead } from '@/lib/api';
 import { toast } from 'sonner';
-import { User, Mail, Phone, Building2, Globe, RefreshCcw, Save } from 'lucide-react';
+import { DollarSign } from 'lucide-react';
 
 interface LeadFormProps {
     onSuccess: () => void;
@@ -15,20 +16,30 @@ interface LeadFormProps {
 export function LeadForm({ onSuccess }: LeadFormProps) {
     const [loading, setLoading] = useState(false);
 
-    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
+    // Using controlled state to match inside behaviors
+    const [formData, setFormData] = useState({
+        first_name: '',
+        last_name: '',
+        email: '',
+        company: '',
+        potential_value: 0,
+        notes: '',
+        status: 'new'
+    });
+
+    const handleSubmit = async (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
+
+        if (!formData.first_name || !formData.company) {
+            return toast.error("First Name and Company are required");
+        }
+
         setLoading(true);
-        const fd = new FormData(e.currentTarget);
 
         try {
             await createLead({
-                first_name: fd.get('first_name') as string,
-                last_name: fd.get('last_name') as string,
-                email: fd.get('email') as string,
-                phone: fd.get('phone') as string,
-                company: fd.get('company') as string,
+                ...formData,
                 source: 'Direct Entry',
-                status: 'new',
             });
             toast.success('Lead created successfully');
             onSuccess();
@@ -40,74 +51,53 @@ export function LeadForm({ onSuccess }: LeadFormProps) {
     };
 
     return (
-        <div className="bg-card">
-            <div className="p-6 bg-foreground text-card-foreground">
-                <div className="flex items-center gap-3 mb-6">
-                    <div className="h-10 w-10 rounded-lg bg-primary/20 flex items-center justify-center border border-primary/20">
-                        <User className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                        <h3 className="text-xl font-bold tracking-tight uppercase">New Lead Entry</h3>
-                        <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest">Prospect Registration</p>
-                    </div>
-                </div>
+        <div className="bg-background">
+            <div className="p-6 border-b border-border">
+                <h3 className="text-xl font-bold tracking-tight text-foreground">Register Lead</h3>
+                <p className="text-muted-foreground text-xs mt-0.5">Add a new potential client.</p>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-6">
-                <div className="space-y-4">
-                    <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">1. Prospect Identity</Label>
+            <form onSubmit={handleSubmit}>
+                <div className="p-6 space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1.5">
-                            <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">First Name</Label>
-                            <Input name="first_name" required className="h-10 border-border font-bold" placeholder="John" />
+                            <Label className="text-xs font-bold font-bold ml-1">First Name</Label>
+                            <Input placeholder="John" required className="h-10 bg-background" value={formData.first_name} onChange={e => setFormData({ ...formData, first_name: e.target.value })} />
                         </div>
                         <div className="space-y-1.5">
-                            <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Last Name</Label>
-                            <Input name="last_name" required className="h-10 border-border font-bold" placeholder="Doe" />
+                            <Label className="text-xs font-bold font-bold ml-1">Last Name</Label>
+                            <Input placeholder="Doe" className="h-10 bg-background" value={formData.last_name} onChange={e => setFormData({ ...formData, last_name: e.target.value })} />
                         </div>
                     </div>
-                </div>
 
-                <div className="space-y-4">
-                    <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">2. Contact & Organization</Label>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                            <Label className="text-xs font-bold ml-1">Email Address</Label>
+                            <Input type="email" placeholder="john@example.com" className="h-10 bg-background" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
+                        </div>
+                        <div className="space-y-1.5">
+                            <Label className="text-xs font-bold ml-1">Company</Label>
+                            <Input placeholder="Acme Corp" required className="h-10 bg-background" value={formData.company} onChange={e => setFormData({ ...formData, company: e.target.value })} />
+                        </div>
+                    </div>
+
                     <div className="space-y-1.5">
-                        <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Company Name</Label>
+                        <Label className="text-xs font-bold ml-1">Potential Value</Label>
                         <div className="relative">
-                            <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input name="company" className="h-10 pl-9 border-border" placeholder="Acme Corp" />
+                            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                            <Input type="number" className="h-10 pl-8 bg-background" value={formData.potential_value || ''} onChange={e => setFormData({ ...formData, potential_value: parseInt(e.target.value) || 0 })} />
                         </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                            <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Email Address</Label>
-                            <div className="relative">
-                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input name="email" type="email" required className="h-10 pl-9 border-border" placeholder="john@acme.com" />
-                            </div>
-                        </div>
-                        <div className="space-y-1.5">
-                            <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Phone Number</Label>
-                            <div className="relative">
-                                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input name="phone" className="h-10 pl-9 border-border" placeholder="+1 234 567 890" />
-                            </div>
-                        </div>
+
+                    <div className="space-y-1.5">
+                        <Label className="text-xs font-bold ml-1">Notes</Label>
+                        <Textarea placeholder="What are they looking for?" className="bg-background min-h-[100px]" value={formData.notes} onChange={e => setFormData({ ...formData, notes: e.target.value })} />
                     </div>
                 </div>
 
-                <div className="pt-4 sticky bottom-0 bg-card">
-                    <Button 
-                        type="submit" 
-                        disabled={loading}
-                        className="w-full h-12 bg-primary hover:bg-primary/90 font-black uppercase text-xs tracking-widest shadow-lg shadow-primary/20"
-                    >
-                        {loading ? (
-                            <RefreshCcw className="h-4 w-4 animate-spin" />
-                        ) : (
-                            <div className="flex items-center gap-2">
-                                <Save size={14} /> Commit Lead Record
-                            </div>
-                        )}
+                <div className="p-6 border-t border-border flex justify-end">
+                    <Button type="submit" disabled={loading} className="h-10 px-8 font-bold">
+                        {loading ? 'Saving...' : 'Add Lead'}
                     </Button>
                 </div>
             </form>
