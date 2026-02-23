@@ -2,11 +2,11 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/lib/auth/context';
-import { 
-  getBankAccounts, 
-  createBankAccount, 
-  getBankTransactions, 
-  createBankTransaction 
+import {
+  getBankAccounts,
+  createBankAccount,
+  getBankTransactions,
+  createBankTransaction
 } from '@/lib/api';
 import { DashboardShell } from '@/components/shared/layout/dashboard-shell';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -14,45 +14,31 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { 
-    Plus, 
-    Building2, 
-    Search,
-    ArrowUpRight,
-    ArrowDownRight,
-    Calendar,
-    ChevronRight,
-    RefreshCcw,
-    Wallet,
-    Landmark,
-    Info,
-    ArrowRightLeft,
-    CheckCircle2
+import {
+  Plus, Building2, Search, ArrowUpRight, ArrowDownRight,
+  Loader2, Wallet, Landmark, ArrowRightLeft, CheckCircle2, DollarSign
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { BankAccount, BankTransaction } from '@/lib/db/types';
 import { cn } from '@/lib/utils';
+import { useCurrency } from '@/lib/hooks/use-currency';
 
 export default function BankingPage() {
   const { user } = useAuth();
+  const { format: fmtCurrency } = useCurrency();
   const [accounts, setAccounts] = useState<BankAccount[]>([]);
   const [transactions, setTransactions] = useState<BankTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [isMounted, setIsMounted] = useState(false);
-
-  // Modal States
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const [isTxOpen, setIsTxOpen] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
-    if (user?.role === 'admin') {
-      fetchData();
-    }
+    if (user?.role === 'admin') fetchData();
   }, [user]);
 
   const fetchData = async () => {
@@ -71,14 +57,12 @@ export default function BankingPage() {
     }
   };
 
-  const totalLiquidity = useMemo(() => {
-    return accounts.reduce((sum, acc) => sum + Number(acc.current_balance), 0);
-  }, [accounts]);
+  const totalLiquidity = useMemo(() => accounts.reduce((sum, acc) => sum + Number(acc.current_balance), 0), [accounts]);
 
   const filteredTransactions = useMemo(() => {
-    return transactions.filter(t => 
-        (t.description?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
-        (t.bank_account?.name?.toLowerCase() || '').includes(searchQuery.toLowerCase())
+    return transactions.filter(t =>
+      (t.description?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+      (t.bank_account?.name?.toLowerCase() || '').includes(searchQuery.toLowerCase())
     );
   }, [transactions, searchQuery]);
 
@@ -88,8 +72,8 @@ export default function BankingPage() {
     return (
       <DashboardShell requireAdmin>
         <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
-          <RefreshCcw className="h-12 w-12 animate-spin text-primary" />
-          <p className="font-bold text-foreground">Syncing Bank Balances...</p>
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">Loading bank data...</p>
         </div>
       </DashboardShell>
     );
@@ -97,273 +81,300 @@ export default function BankingPage() {
 
   return (
     <DashboardShell requireAdmin>
-      <div className="space-y-8 pb-12">
-        {/* Visual Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="space-y-6 pb-8">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1">
-            <h1 className="text-4xl font-black tracking-tight text-foreground">Banks & Cash</h1>
-            <p className="text-muted-foreground font-medium flex items-center gap-2">
-              <Landmark className="h-4 w-4 text-primary" />
-              Manage your company bank accounts and physical cash.
+            <h1 className="text-xl font-bold tracking-tight text-foreground">Banking & Cash</h1>
+            <p className="text-sm text-muted-foreground flex items-center gap-2">
+              <Landmark className="h-3.5 w-3.5" />
+              Manage bank accounts and cash movements
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <Dialog open={isAccountOpen} onOpenChange={setIsAccountOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline" className="rounded-2xl border-border h-12 px-6 font-bold shadow-sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Link Account
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Plus className="h-3.5 w-3.5" /> Add Account
                 </Button>
               </DialogTrigger>
-              <DialogContent className="rounded-[2.5rem] p-8 max-w-lg">
+              <DialogContent className="max-w-md">
                 <AccountForm onSuccess={() => { setIsAccountOpen(false); fetchData(); }} />
               </DialogContent>
             </Dialog>
-            
             <Dialog open={isTxOpen} onOpenChange={setIsTxOpen}>
               <DialogTrigger asChild>
-                <Button className="rounded-2xl bg-slate-900 h-12 px-8 font-bold shadow-xl shadow-slate-200">
-                  <ArrowRightLeft className="h-4 w-4 mr-2" />
-                  Quick Entry
+                <Button size="sm" className="gap-2">
+                  <ArrowRightLeft className="h-3.5 w-3.5" /> New Entry
                 </Button>
               </DialogTrigger>
-              <DialogContent className="rounded-[2.5rem] p-8 max-w-lg">
+              <DialogContent className="max-w-md">
                 <TransactionForm accounts={accounts} onSuccess={() => { setIsTxOpen(false); fetchData(); }} />
               </DialogContent>
             </Dialog>
           </div>
         </div>
 
-        {/* Global KPI Card */}
-        <Card className="rounded-[3rem] border-none shadow-sm bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-card-foreground overflow-hidden p-12 relative group">
-            <Landmark className="absolute -right-4 -bottom-4 h-48 w-48 text-white/5 group-hover:scale-110 transition-transform duration-700" />
-            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-12">
-                <div className="space-y-3">
-                    <p className="text-xs font-black text-muted-foreground uppercase tracking-[0.3em]">Total Cash in Hand</p>
-                    <h2 className="text-6xl font-black tracking-tighter">${totalLiquidity.toLocaleString()}</h2>
-                    <div className="flex items-center gap-3 pt-4">
-                        <Badge className="bg-emerald-500 text-card-foreground border-none px-3 py-1 text-[10px] font-black tracking-widest uppercase">Verified</Badge>
-                        <span className="text-sm text-muted-foreground font-bold">Updated just now</span>
-                    </div>
+        {/* KPI Cards */}
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card className="border-border shadow-sm">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Total Balance</p>
+                  <p className="text-2xl font-bold">{fmtCurrency(totalLiquidity)}</p>
                 </div>
-                <div className="grid grid-cols-2 gap-12 md:border-l border-white/10 md:pl-12">
-                    <div className="space-y-1">
-                        <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Active Links</p>
-                        <p className="text-3xl font-black">{accounts.length}</p>
-                    </div>
-                    <div className="space-y-1">
-                        <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Movements</p>
-                        <p className="text-3xl font-black">{transactions.length}</p>
-                    </div>
+                <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                  <DollarSign className="h-5 w-5" />
                 </div>
-            </div>
-        </Card>
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-2">Cash in hand across all accounts</p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border shadow-sm">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Accounts</p>
+                  <p className="text-2xl font-bold">{accounts.length}</p>
+                </div>
+                <div className="h-10 w-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                  <Building2 className="h-5 w-5" />
+                </div>
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-2">Active bank & cash accounts</p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border shadow-sm">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Transactions</p>
+                  <p className="text-2xl font-bold">{transactions.length}</p>
+                </div>
+                <div className="h-10 w-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                  <ArrowRightLeft className="h-5 w-5" />
+                </div>
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-2">Total movements recorded</p>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Account Cards */}
-        <div className="grid gap-6 md:grid-cols-3">
-          {accounts.map(acc => (
-            <Card key={acc.id} className="rounded-[2.5rem] border-none shadow-sm bg-card overflow-hidden group hover:shadow-xl transition-all duration-500">
-                <CardHeader className="p-8 pb-4">
-                    <div className="flex items-center justify-between">
-                        <div className="h-14 w-14 rounded-3xl bg-muted flex items-center justify-center text-muted-foreground group-hover:bg-primary group-hover:text-white transition-all duration-500">
-                            {acc.type === 'cash' ? <Wallet className="h-7 w-7" /> : <Building2 className="h-7 w-7" />}
-                        </div>
-                        <Badge variant="secondary" className="bg-muted text-muted-foreground border-none font-black text-[10px] tracking-widest px-3 py-1 rounded-full uppercase">{acc.type}</Badge>
+        {accounts.length > 0 && (
+          <div className="grid gap-4 md:grid-cols-3">
+            {accounts.map(acc => (
+              <Card key={acc.id} className="border-border shadow-sm hover:shadow-md transition-shadow">
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center text-muted-foreground">
+                      {acc.type === 'cash' ? <Wallet className="h-4 w-4" /> : <Building2 className="h-4 w-4" />}
                     </div>
-                </CardHeader>
-                <CardContent className="p-8 pt-4">
-                    <div className="space-y-1 mb-8">
-                        <h3 className="text-2xl font-black text-foreground">{acc.name}</h3>
-                        <p className="text-sm text-muted-foreground font-bold uppercase tracking-tight">{acc.bank_name || 'Physical'}</p>
-                    </div>
-                    <div className="flex items-end justify-between p-6 bg-muted rounded-[2rem] group-hover:bg-slate-100 transition-colors">
-                        <div className="space-y-1">
-                            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Current Balance</p>
-                            <p className="text-3xl font-black text-foreground">${Number(acc.current_balance).toLocaleString()}</p>
-                        </div>
-                        <ChevronRight className="h-6 w-6 text-slate-300 group-hover:text-slate-900 transition-transform group-hover:translate-x-1" />
-                    </div>
+                    <Badge variant="secondary" className="text-[9px] uppercase">{acc.type}</Badge>
+                  </div>
+                  <h3 className="text-sm font-bold">{acc.name}</h3>
+                  <p className="text-[11px] text-muted-foreground mb-3">{acc.bank_name || 'Cash Account'}</p>
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                    <span className="text-[11px] text-muted-foreground">Balance</span>
+                    <span className="text-sm font-bold">{fmtCurrency(Number(acc.current_balance))}</span>
+                  </div>
                 </CardContent>
-            </Card>
-          ))}
-          {accounts.length === 0 && (
-            <Card className="rounded-[2.5rem] border-2 border-dashed border-border bg-slate-50/50 flex flex-col items-center justify-center p-12 text-center space-y-4 min-h-[300px]">
-                <div className="h-16 w-16 rounded-full bg-card flex items-center justify-center shadow-sm">
-                    <Plus className="h-8 w-8 text-slate-300" />
-                </div>
-                <p className="font-black text-muted-foreground uppercase tracking-widest text-xs">No accounts linked</p>
-                <Button variant="outline" className="rounded-xl font-bold" onClick={() => setIsAccountOpen(true)}>Add First Account</Button>
-            </Card>
-          )}
-        </div>
+              </Card>
+            ))}
+          </div>
+        )}
 
-        {/* Movement Table */}
-        <div className="space-y-6">
-            <h2 className="text-2xl font-black text-foreground ml-2">Record of Movements</h2>
-            <Card className="rounded-[3rem] border-none shadow-sm bg-card overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="bg-slate-50/50 border-b border-border">
-                                <th className="p-8 text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground">Activity</th>
-                                <th className="p-8 text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground">Account</th>
-                                <th className="p-8 text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground">Date</th>
-                                <th className="p-8 text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground text-right">Value</th>
-                                <th className="p-8 text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground text-center">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-50">
-                            {filteredTransactions.length === 0 ? (
-                                <tr><td colSpan={5} className="p-24 text-center text-slate-300 font-bold uppercase tracking-widest italic text-[10px]">No activity identified</td></tr>
-                            ) : filteredTransactions.map(tx => (
-                                <tr key={tx.id} className="hover:bg-slate-50/50 transition-colors group">
-                                    <td className="p-8">
-                                        <div className="flex items-center gap-5">
-                                            <div className={cn(
-                                                "h-12 w-12 rounded-2xl flex items-center justify-center shadow-sm",
-                                                tx.type === 'deposit' ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
-                                            )}>
-                                                {tx.type === 'deposit' ? <ArrowUpRight className="h-6 w-6" strokeWidth={3} /> : <ArrowDownRight className="h-6 w-6" strokeWidth={3} />}
-                                            </div>
-                                            <div className="min-w-0">
-                                                <p className="text-base font-bold text-foreground truncate max-w-[300px]">{tx.description}</p>
-                                                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{tx.reference || 'INTERNAL'}</p>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="p-8 text-sm font-bold text-muted-foreground">{tx.bank_account?.name}</td>
-                                    <td className="p-8 text-sm font-bold text-muted-foreground">{new Date(tx.date).toLocaleDateString()}</td>
-                                    <td className="p-8 text-right font-black text-lg">
-                                        {tx.type === 'deposit' ? '+' : '-'}${Number(tx.amount).toLocaleString()}
-                                    </td>
-                                    <td className="p-8 text-center">
-                                        <div className="flex items-center justify-center gap-2 text-emerald-600 font-black text-[10px] uppercase tracking-widest">
-                                            <CheckCircle2 className="h-4 w-4" />
-                                            {tx.status}
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+        {/* Transactions Table */}
+        <Card className="border-border shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between pb-3">
+            <div>
+              <CardTitle className="text-[15px] font-bold flex items-center gap-2">
+                <ArrowRightLeft className="h-4 w-4" /> Transactions
+              </CardTitle>
+              <CardDescription className="text-[12px]">{filteredTransactions.length} movement{filteredTransactions.length !== 1 ? 's' : ''}</CardDescription>
+            </div>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Search..."
+                className="pl-9 h-8 w-48 text-xs"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+              />
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="divide-y border-t">
+              {filteredTransactions.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-center space-y-3">
+                  <ArrowRightLeft className="h-10 w-10 text-muted-foreground/30" />
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">No transactions</p>
+                    <p className="text-[11px] text-muted-foreground">Record a new entry to get started.</p>
+                  </div>
                 </div>
-            </Card>
-        </div>
+              ) : filteredTransactions.map(tx => (
+                <div key={tx.id} className="flex items-center justify-between px-6 py-3.5 hover:bg-muted/30 transition-colors">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className={cn(
+                      "h-8 w-8 rounded-lg flex items-center justify-center shrink-0",
+                      tx.type === 'deposit' ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
+                    )}>
+                      {tx.type === 'deposit' ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{tx.description}</p>
+                      <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                        <span>{tx.bank_account?.name}</span>
+                        <span>·</span>
+                        <span>{new Date(tx.date).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0 ml-3">
+                    <span className={cn(
+                      "text-sm font-bold",
+                      tx.type === 'deposit' ? "text-emerald-600" : "text-rose-600"
+                    )}>
+                      {tx.type === 'deposit' ? '+' : '-'}{fmtCurrency(Number(tx.amount))}
+                    </span>
+                    <Badge variant="outline" className="text-[9px]">
+                      <CheckCircle2 className="h-3 w-3 mr-1 text-emerald-500" />
+                      {tx.status}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </DashboardShell>
   );
 }
 
 // --- Forms ---
-
 function AccountForm({ onSuccess }: { onSuccess: () => void }) {
   const [formData, setFormData] = useState({
-    name: '', account_number: '', bank_name: '', currency: 'USD', current_balance: '0', type: 'bank'
+    name: '', account_number: '', bank_name: '', currency: 'AED', current_balance: '0', type: 'bank'
   });
+  const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async () => {
+    if (!formData.name) { toast.error('Enter account name'); return; }
+    setSubmitting(true);
     try {
       await createBankAccount(formData);
-      toast.success('Account Link Established');
+      toast.success('Account added');
       onSuccess();
-    } catch { toast.error('Failed to link account'); }
+    } catch { toast.error('Failed'); } finally { setSubmitting(false); }
   };
 
   return (
-    <div className="space-y-8">
-      <div className="space-y-2">
-        <h3 className="text-3xl font-black tracking-tight">Link Account</h3>
-        <p className="text-muted-foreground font-medium">Add a new bank or cash vault.</p>
+    <div className="space-y-5">
+      <div>
+        <h3 className="text-lg font-bold">Add Account</h3>
+        <p className="text-sm text-muted-foreground">Link a bank or cash account.</p>
       </div>
-      <div className="grid gap-6">
+      <div className="space-y-4">
         <div className="space-y-2">
-          <Label className="font-bold ml-1">Account Label</Label>
-          <Input placeholder="e.g. Corporate Current" className="h-12 rounded-2xl font-bold" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+          <Label className="text-xs">Account Name *</Label>
+          <Input placeholder="e.g. Corporate Current" className="h-9" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
         </div>
         <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-                <Label className="font-bold ml-1">Institution</Label>
-                <Input placeholder="HSBC / Cash" className="h-12 rounded-2xl font-bold" value={formData.bank_name} onChange={e => setFormData({...formData, bank_name: e.target.value})} />
-            </div>
-            <div className="space-y-2">
-                <Label className="font-bold ml-1">Account No.</Label>
-                <Input placeholder="XXXX-XXXX" className="h-12 rounded-2xl font-bold font-mono" value={formData.account_number} onChange={e => setFormData({...formData, account_number: e.target.value})} />
-            </div>
+          <div className="space-y-2">
+            <Label className="text-xs">Bank Name</Label>
+            <Input placeholder="HSBC / Cash" className="h-9" value={formData.bank_name} onChange={e => setFormData({ ...formData, bank_name: e.target.value })} />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs">Account No.</Label>
+            <Input placeholder="XXXX-XXXX" className="h-9 font-mono" value={formData.account_number} onChange={e => setFormData({ ...formData, account_number: e.target.value })} />
+          </div>
         </div>
-        <div className="space-y-2">
-            <Label className="font-bold ml-1">Vault Type</Label>
-            <Select value={formData.type} onValueChange={v => setFormData({...formData, type: v})}>
-                <SelectTrigger className="h-12 rounded-2xl font-bold"><SelectValue /></SelectTrigger>
-                <SelectContent className="rounded-xl">
-                    <SelectItem value="bank">Commercial Bank</SelectItem>
-                    <SelectItem value="cash">Physical Cash Reserve</SelectItem>
-                    <SelectItem value="credit">Credit Line</SelectItem>
-                </SelectContent>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label className="text-xs">Type</Label>
+            <Select value={formData.type} onValueChange={v => setFormData({ ...formData, type: v })}>
+              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="bank">Bank</SelectItem>
+                <SelectItem value="cash">Cash</SelectItem>
+                <SelectItem value="credit">Credit Line</SelectItem>
+              </SelectContent>
             </Select>
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs">Opening Balance</Label>
+            <Input type="number" placeholder="0.00" className="h-9" value={formData.current_balance} onChange={e => setFormData({ ...formData, current_balance: e.target.value })} />
+          </div>
         </div>
       </div>
-      <Button onClick={handleSubmit} className="w-full h-14 rounded-2xl bg-slate-900 font-black text-lg uppercase tracking-widest shadow-xl shadow-slate-200 transition-transform active:scale-95">Link Vault</Button>
+      <Button onClick={handleSubmit} disabled={submitting} className="w-full gap-2">
+        {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+        {submitting ? 'Adding...' : 'Add Account'}
+      </Button>
     </div>
   );
 }
 
 function TransactionForm({ accounts, onSuccess }: { accounts: BankAccount[], onSuccess: () => void }) {
-    const [formData, setFormData] = useState({
-        bank_account_id: '',
-        date: new Date().toISOString().split('T')[0],
-        description: '',
-        amount: '',
-        type: 'deposit',
-        reference: ''
-    });
+  const [formData, setFormData] = useState({
+    bank_account_id: '', date: new Date().toISOString().split('T')[0],
+    description: '', amount: '', type: 'deposit', reference: ''
+  });
+  const [submitting, setSubmitting] = useState(false);
 
-    const handleSubmit = async () => {
-        if (!formData.bank_account_id || !formData.amount) {
-            toast.error('Complete all fields');
-            return;
-        }
-        try {
-            await createBankTransaction(formData);
-            toast.success('Entry Recorded');
-            onSuccess();
-        } catch { toast.error('Record failed'); }
-    };
+  const handleSubmit = async () => {
+    if (!formData.bank_account_id || !formData.amount) { toast.error('Fill required fields'); return; }
+    setSubmitting(true);
+    try {
+      await createBankTransaction(formData);
+      toast.success('Entry recorded');
+      onSuccess();
+    } catch { toast.error('Failed'); } finally { setSubmitting(false); }
+  };
 
-    return (
-        <div className="space-y-8">
-            <div className="space-y-2">
-                <h3 className="text-3xl font-black tracking-tight">New Entry</h3>
-                <p className="text-muted-foreground font-medium">Record a movement of money.</p>
-            </div>
-            <div className="grid gap-6">
-                <div className="space-y-2">
-                    <Label className="font-bold ml-1">Select Account</Label>
-                    <Select value={formData.bank_account_id} onValueChange={v => setFormData({...formData, bank_account_id: v})}>
-                        <SelectTrigger className="h-12 rounded-2xl font-bold"><SelectValue placeholder="Choose account" /></SelectTrigger>
-                        <SelectContent className="rounded-xl">
-                            {accounts.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <Label className="font-bold ml-1">Direction</Label>
-                        <div className="flex p-1 bg-muted rounded-2xl">
-                            <button className={cn("flex-1 py-2 text-[10px] font-black uppercase rounded-xl transition-all", formData.type === 'deposit' ? "bg-card shadow-sm text-emerald-600" : "text-muted-foreground")} onClick={() => setFormData({...formData, type: 'deposit'})}>IN</button>
-                            <button className={cn("flex-1 py-2 text-[10px] font-black uppercase rounded-xl transition-all", formData.type === 'withdrawal' ? "bg-card shadow-sm text-rose-600" : "text-muted-foreground")} onClick={() => setFormData({...formData, type: 'withdrawal'})}>OUT</button>
-                        </div>
-                    </div>
-                    <div className="space-y-2">
-                        <Label className="font-bold ml-1">Value</Label>
-                        <Input type="number" placeholder="0.00" className="h-12 rounded-2xl font-black text-lg" value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value})} />
-                    </div>
-                </div>
-                <div className="space-y-2">
-                    <Label className="font-bold ml-1">Short Description</Label>
-                    <Input placeholder="e.g. Petty cash refill" className="h-12 rounded-2xl font-bold" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} />
-                </div>
-            </div>
-            <Button onClick={handleSubmit} className="w-full h-14 rounded-2xl bg-slate-900 font-black text-lg uppercase tracking-widest shadow-xl shadow-slate-200 transition-transform active:scale-95">Process Entry</Button>
+  return (
+    <div className="space-y-5">
+      <div>
+        <h3 className="text-lg font-bold">New Transaction</h3>
+        <p className="text-sm text-muted-foreground">Record a money movement.</p>
+      </div>
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label className="text-xs">Account *</Label>
+          <Select value={formData.bank_account_id} onValueChange={v => setFormData({ ...formData, bank_account_id: v })}>
+            <SelectTrigger className="h-9"><SelectValue placeholder="Select account" /></SelectTrigger>
+            <SelectContent>
+              {accounts.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </div>
-    );
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label className="text-xs">Direction</Label>
+            <div className="flex p-0.5 bg-muted rounded-md">
+              <button className={cn("flex-1 py-1.5 text-xs font-medium rounded-sm transition-all", formData.type === 'deposit' ? "bg-background shadow-sm text-emerald-600" : "text-muted-foreground")} onClick={() => setFormData({ ...formData, type: 'deposit' })}>In</button>
+              <button className={cn("flex-1 py-1.5 text-xs font-medium rounded-sm transition-all", formData.type === 'withdrawal' ? "bg-background shadow-sm text-rose-600" : "text-muted-foreground")} onClick={() => setFormData({ ...formData, type: 'withdrawal' })}>Out</button>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs">Amount *</Label>
+            <Input type="number" placeholder="0.00" className="h-9" value={formData.amount} onChange={e => setFormData({ ...formData, amount: e.target.value })} />
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label className="text-xs">Description</Label>
+          <Input placeholder="e.g. Client payment" className="h-9" value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} />
+        </div>
+      </div>
+      <Button onClick={handleSubmit} disabled={submitting} className="w-full gap-2">
+        {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRightLeft className="h-4 w-4" />}
+        {submitting ? 'Recording...' : 'Record Entry'}
+      </Button>
+    </div>
+  );
 }

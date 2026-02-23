@@ -31,7 +31,7 @@ import { cn } from '@/lib/utils';
 
 export function Header() {
   const { user, signOut } = useAuth();
-  const { tenantStatus } = useTenant();
+  const { tenantStatus, brandingConfig, companyProfile } = useTenant();
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -59,8 +59,15 @@ export function Header() {
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="w-[280px] p-0 border-r border-border bg-background">
-            <div className="p-6 border-b border-border/50 bg-muted/50">
-              <SheetTitle className="text-[14px] font-bold text-foreground">Enterprise Workspace</SheetTitle>
+            <div className="p-6 border-b border-border/50 bg-muted/50 flex items-center gap-3">
+              {brandingConfig?.logo ? (
+                <div className="h-8 w-8 rounded-md overflow-hidden flex items-center justify-center bg-background shrink-0">
+                  <img src={brandingConfig.logo} alt="Logo" className="h-full w-full object-contain" />
+                </div>
+              ) : null}
+              <SheetTitle className="text-[14px] font-bold text-foreground">
+                {companyProfile?.tradingName || 'Enterprise Workspace'}
+              </SheetTitle>
             </div>
             <div className="overflow-y-auto h-full pb-20 no-scrollbar">
               <DashboardNav onNavClick={() => setIsOpen(false)} />

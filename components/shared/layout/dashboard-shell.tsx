@@ -56,7 +56,7 @@ export function DashboardShell({
       {/* Main Container */}
       <main className={cn(
         "flex-1 flex flex-col min-h-screen transition-all duration-300 ease-in-out",
-        "md:pl-[80px]" // Content stays at 80px offset while sidebar overlays
+        "md:pl-[72px]"
       )}>
         <Header />
         <div className="flex-1 p-4 md:p-8 overflow-y-auto pb-24 md:pb-8">

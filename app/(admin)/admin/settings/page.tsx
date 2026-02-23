@@ -27,6 +27,7 @@ import {
 
 import { ModuleGuard } from '@/components/shared/layout/module-guard';
 import { getSettings, saveSettings } from '@/lib/api';
+import { broadcastCurrencyChange } from '@/lib/hooks/use-currency';
 import { toast } from 'sonner';
 import { useTenant } from '@/lib/tenant-context';
 
@@ -74,7 +75,7 @@ const DEFAULT_COMPANY: CompanyProfile = {
     fiscalYearStart: '1',
     businessType: 'construction',
     companySize: 'startup',
-    activeModules: { finance: true, sales: true, operations: true, hr: true, inventory: true, projects: true, purchases: true }
+    activeModules: { finance: true, sales: true, operations: true, hr: true, inventory: true, projects: true, purchases: true, manufacturing: true, reports: true, compliance: true }
 };
 
 const DEFAULT_NOTIFICATIONS = {
@@ -198,6 +199,8 @@ export default function AdminSettingsPage() {
                 saveSettings('branding_config', brandingConfig),
             ]);
             await refreshTenantStatus();
+            // Broadcast currency change to all finance components
+            broadcastCurrencyChange(company.baseCurrency);
             toast.success('All settings saved successfully');
         } catch (error) {
             toast.error('Failed to save settings');
@@ -241,8 +244,8 @@ export default function AdminSettingsPage() {
                             <TabsTrigger value="fiscal">Tax & Fiscal</TabsTrigger>
                             <TabsTrigger value="identity">Roles & Access</TabsTrigger>
                             <TabsTrigger value="branding">Branding</TabsTrigger>
-                            <TabsTrigger value="alerts">Notifications</TabsTrigger>
-                            <TabsTrigger value="maintenance">System</TabsTrigger>
+                            <TabsTrigger value="alerts" disabled className="gap-1.5 opacity-50 cursor-not-allowed">Notifications <Badge variant="outline" className="text-[8px] h-3.5 px-1 py-0 font-black border-border">SOON</Badge></TabsTrigger>
+                            <TabsTrigger value="maintenance" disabled className="gap-1.5 opacity-50 cursor-not-allowed">System <Badge variant="outline" className="text-[8px] h-3.5 px-1 py-0 font-black border-border">SOON</Badge></TabsTrigger>
                         </TabsList>
 
                         {/* TAB 1: PROFILE / SECTOR */}

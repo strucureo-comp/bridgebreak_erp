@@ -52,14 +52,13 @@ export function ModuleSelector({ businessType, activeModules, onChange }: Module
                     <Switch
                         checked={activeModules ? !!activeModules[m.id] : m.core}
                         onCheckedChange={(checked) => {
-                            if (activeModules) {
-                                onChange({
-                                    ...activeModules,
-                                    [m.id]: checked
-                                });
-                            } else {
-                                onChange({ [m.id]: checked });
-                            }
+                            // Build a complete map with all modules
+                            const allModules: Record<string, boolean> = {};
+                            modules.forEach(mod => {
+                                allModules[mod.id] = activeModules ? !!activeModules[mod.id] : mod.core;
+                            });
+                            allModules[m.id] = checked;
+                            onChange(allModules);
                         }}
                     />
                 </div>

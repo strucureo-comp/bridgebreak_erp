@@ -42,6 +42,7 @@ interface CompanyProfile {
 interface TenantContextType {
   tenantStatus: TenantSetupStatus | null;
   companyProfile: CompanyProfile | null;
+  brandingConfig: { logo?: string | null; primaryColor?: string; accentColor?: string } | null;
   loading: boolean;
   getModuleLabel: (moduleId: string) => string;
   checkAccess: (module: ModuleKey) => ModuleAccess;
@@ -118,17 +119,20 @@ const DEFAULT_LABELS: Record<string, string> = {
 export function TenantProvider({ children }: { children: React.ReactNode }) {
   const [tenantStatus, setTenantStatus] = useState<TenantSetupStatus | null>(null);
   const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
+  const [brandingConfig, setBrandingConfig] = useState<{ logo?: string | null; primaryColor?: string; accentColor?: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
   const refreshTenantStatus = useCallback(async () => {
     try {
-      const [status, profile] = await Promise.all([
+      const [status, profile, branding] = await Promise.all([
         getTenantStatus(),
-        getSettings<CompanyProfile>('company_profile')
+        getSettings<CompanyProfile>('company_profile'),
+        getSettings<any>('branding_config')
       ]);
       setTenantStatus(status as any);
       setCompanyProfile(profile);
+      setBrandingConfig(branding);
     } catch (error) {
       console.error('Failed to load tenant context:', error);
     } finally {
@@ -189,6 +193,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     <TenantContext.Provider value={{
       tenantStatus,
       companyProfile,
+      brandingConfig,
       loading,
       getModuleLabel,
       checkAccess,

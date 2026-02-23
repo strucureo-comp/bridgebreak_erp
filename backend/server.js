@@ -6,6 +6,10 @@ const connectDB = require('./config/db');
 const authRoutes = require('./routes/auth');
 const settingsRoutes = require('./routes/settings');
 const workflowRoutes = require('./routes/workflows');
+const taxRoutes = require('./routes/tax');
+const financeRoutes = require('./routes/finance');
+const taxCenterRoutes = require('./routes/tax-center');
+const approvalEngineRoutes = require('./routes/approval-engine');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -18,6 +22,10 @@ app.use(express.json({ limit: '10mb' }));
 app.use('/api/auth', authRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/workflows', workflowRoutes);
+app.use('/api/tax', taxRoutes);
+app.use('/api/finance', financeRoutes);
+app.use('/api/tax-center', taxCenterRoutes);
+app.use('/api/approval-engine', approvalEngineRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

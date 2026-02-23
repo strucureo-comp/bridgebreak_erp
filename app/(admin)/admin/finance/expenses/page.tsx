@@ -1,91 +1,308 @@
 'use client';
 
+import { useEffect, useState, useMemo } from 'react';
+import { useAuth } from '@/lib/auth/context';
+import { getExpenses, createExpense, deleteExpense } from '@/lib/api';
 import { DashboardShell } from '@/components/shared/layout/dashboard-shell';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { 
-    Receipt, 
-    TrendingDown, 
-    ArrowDownRight, 
-    RefreshCcw, 
-    ChevronRight, 
-    Box,
-    DollarSign,
-    Clock,
-    Activity,
-    AlertCircle
-} from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import {
+    Plus, Receipt, Search, Loader2, Trash2, DollarSign, Clock,
+    TrendingDown, CheckCircle2, XCircle, MoreHorizontal
+} from 'lucide-react';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useCurrency } from '@/lib/hooks/use-currency';
+
+const EXPENSE_CATEGORIES = [
+    'Office Supplies', 'Travel', 'Software & Subscriptions', 'Marketing',
+    'Utilities', 'Rent', 'Professional Fees', 'Insurance',
+    'Equipment', 'Meals & Entertainment', 'Miscellaneous'
+];
 
 export default function ExpensesPage() {
-  return (
-    <DashboardShell requireAdmin>
-      <div className="space-y-10 pb-12">
-        {/* Visual Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-1">
-            <h1 className="text-4xl font-black tracking-tight text-foreground">Money Spent</h1>
-            <p className="text-muted-foreground font-medium flex items-center gap-2">
-              <TrendingDown className="h-4 w-4 text-rose-500" />
-              Track project costs and operational spending.
-            </p>
-          </div>
-        </div>
+    const { user } = useAuth();
+    const { format: fmtCurrency, symbol } = useCurrency();
+    const [expenses, setExpenses] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [isMounted, setIsMounted] = useState(false);
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-        {/* High-Impact Stat Strip */}
-        <div className="grid gap-6 md:grid-cols-3">
-            <ExpenseKPI title="Quarterly Spend" value="$0.00" icon={Receipt} color="rose" />
-            <ExpenseKPI title="Unbilled Costs" value="0" icon={Clock} color="amber" />
-            <ExpenseKPI title="Budget Health" value="Stable" icon={Activity} color="emerald" />
-        </div>
+    useEffect(() => {
+        setIsMounted(true);
+        if (user?.role === 'admin') fetchData();
+    }, [user]);
 
-        {/* Informational Section */}
-        <div className="flex flex-col items-center justify-center py-32 bg-card rounded-[3rem] border-4 border-slate-50 shadow-sm space-y-8 text-center px-6">
-            <div className="relative">
-                <div className="h-32 w-32 rounded-[2.5rem] bg-muted flex items-center justify-center text-slate-200 shadow-inner">
-                    <Receipt size={64} strokeWidth={1.5} />
+    const fetchData = async () => {
+        try {
+            setLoading(true);
+            const data = await getExpenses();
+            setExpenses(data || []);
+        } catch (error) {
+            console.error('Expenses Fetch Error:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDelete = async (id: string) => {
+        if (!confirm('Delete this expense?')) return;
+        const ok = await deleteExpense(id);
+        if (ok) {
+            toast.success('Expense deleted');
+            fetchData();
+        } else {
+            toast.error('Failed to delete');
+        }
+    };
+
+    const filteredExpenses = useMemo(() => {
+        return expenses.filter(e =>
+            (e.description?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+            (e.category?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+            (e.vendor?.toLowerCase() || '').includes(searchQuery.toLowerCase())
+        );
+    }, [expenses, searchQuery]);
+
+    const totalSpend = expenses.filter(e => ['approved', 'paid'].includes(e.status)).reduce((s, e) => s + Number(e.total || 0), 0);
+    const pendingCount = expenses.filter(e => e.status === 'pending').length;
+
+    if (!isMounted) return null;
+
+    if (loading) {
+        return (
+            <DashboardShell requireAdmin>
+                <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <p className="text-sm text-muted-foreground">Loading expenses...</p>
                 </div>
-                <div className="absolute -top-4 -right-4 h-12 w-12 rounded-full bg-rose-500 flex items-center justify-center text-card-foreground shadow-lg">
-                    <AlertCircle size={24} />
+            </DashboardShell>
+        );
+    }
+
+    return (
+        <DashboardShell requireAdmin>
+            <div className="space-y-6 pb-8">
+                {/* Header */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                        <h1 className="text-xl font-bold tracking-tight text-foreground">Expenses</h1>
+                        <p className="text-sm text-muted-foreground flex items-center gap-2">
+                            <TrendingDown className="h-3.5 w-3.5" />
+                            Track and manage company spending
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                            <Input
+                                placeholder="Search expenses..."
+                                className="pl-9 h-9 w-64 text-sm"
+                                value={searchQuery}
+                                onChange={e => setSearchQuery(e.target.value)}
+                            />
+                        </div>
+                        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                            <DialogTrigger asChild>
+                                <Button size="sm" className="gap-2">
+                                    <Plus className="h-3.5 w-3.5" /> New Expense
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-md">
+                                <ExpenseForm onSuccess={() => { setIsDialogOpen(false); fetchData(); }} />
+                            </DialogContent>
+                        </Dialog>
+                    </div>
                 </div>
+
+                {/* KPI Cards */}
+                <div className="grid gap-4 md:grid-cols-3">
+                    <Card className="border-border shadow-sm">
+                        <CardContent className="p-5">
+                            <div className="flex items-center justify-between">
+                                <div className="space-y-1">
+                                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Total Spend</p>
+                                    <p className="text-2xl font-bold">{fmtCurrency(totalSpend)}</p>
+                                </div>
+                                <div className="h-10 w-10 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
+                                    <DollarSign className="h-5 w-5" />
+                                </div>
+                            </div>
+                            <p className="text-[11px] text-muted-foreground mt-2">Approved & paid expenses</p>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="border-border shadow-sm">
+                        <CardContent className="p-5">
+                            <div className="flex items-center justify-between">
+                                <div className="space-y-1">
+                                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Pending Approval</p>
+                                    <p className="text-2xl font-bold">{pendingCount}</p>
+                                </div>
+                                <div className="h-10 w-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+                                    <Clock className="h-5 w-5" />
+                                </div>
+                            </div>
+                            <p className="text-[11px] text-muted-foreground mt-2">Awaiting review</p>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="border-border shadow-sm">
+                        <CardContent className="p-5">
+                            <div className="flex items-center justify-between">
+                                <div className="space-y-1">
+                                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Total Records</p>
+                                    <p className="text-2xl font-bold">{expenses.length}</p>
+                                </div>
+                                <div className="h-10 w-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                                    <Receipt className="h-5 w-5" />
+                                </div>
+                            </div>
+                            <p className="text-[11px] text-muted-foreground mt-2">All expense entries</p>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Expenses Table */}
+                <Card className="border-border shadow-sm">
+                    <CardHeader className="pb-3">
+                        <CardTitle className="text-[15px] font-bold flex items-center gap-2">
+                            <Receipt className="h-4 w-4" /> Expense Records
+                        </CardTitle>
+                        <CardDescription className="text-[12px]">{filteredExpenses.length} expense{filteredExpenses.length !== 1 ? 's' : ''} found</CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                        <div className="divide-y border-t">
+                            {filteredExpenses.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center py-16 text-center space-y-3">
+                                    <Receipt className="h-10 w-10 text-muted-foreground/30" />
+                                    <div>
+                                        <p className="text-sm font-medium text-muted-foreground">No expenses recorded</p>
+                                        <p className="text-[11px] text-muted-foreground">Click &quot;New Expense&quot; to add your first entry.</p>
+                                    </div>
+                                </div>
+                            ) : filteredExpenses.map(exp => (
+                                <div key={exp._id} className="flex items-center justify-between px-6 py-3.5 hover:bg-muted/30 transition-colors group">
+                                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                                        <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center text-muted-foreground shrink-0">
+                                            <Receipt className="h-4 w-4" />
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-sm font-medium truncate">{exp.description}</p>
+                                            <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                                                <span>{exp.category}</span>
+                                                {exp.vendor && <><span>·</span><span>{exp.vendor}</span></>}
+                                                <span>·</span>
+                                                <span>{new Date(exp.date).toLocaleDateString()}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3 shrink-0 ml-3">
+                                        <span className="text-sm font-bold">{fmtCurrency(Number(exp.total))}</span>
+                                        <Badge variant={exp.status === 'paid' ? 'default' : exp.status === 'approved' ? 'secondary' : exp.status === 'rejected' ? 'destructive' : 'outline'} className="text-[9px]">
+                                            {exp.status}
+                                        </Badge>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 text-destructive"
+                                            onClick={() => handleDelete(exp._id)}
+                                        >
+                                            <Trash2 className="h-3.5 w-3.5" />
+                                        </Button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
             </div>
-            <div className="max-w-md space-y-3">
-                <h3 className="text-3xl font-black text-foreground">Cost Engine</h3>
-                <p className="text-muted-foreground font-medium leading-relaxed text-lg">
-                    The automated expense tracking module is being synchronized with your bank accounts and procurement logs. 
-                </p>
-                <div className="pt-4 flex items-center justify-center gap-2 text-rose-500 font-black text-xs uppercase tracking-widest">
-                    <span>Audit Ready</span>
-                    <div className="h-1 w-1 rounded-full bg-rose-500" />
-                    <span>Real-time Log</span>
-                </div>
-            </div>
-            <Button className="rounded-2xl px-12 h-14 font-black bg-slate-900 text-card-foreground shadow-2xl shadow-slate-200 uppercase tracking-widest text-sm hover:scale-[1.02] transition-transform">
-                Log New Expense
-            </Button>
-        </div>
-      </div>
-    </DashboardShell>
-  );
+        </DashboardShell>
+    );
 }
 
-function ExpenseKPI({ title, value, icon: Icon, color }: { title: string; value: any; icon: any; color: string }) {
-    const variants: Record<string, string> = {
-        rose: "bg-rose-50 text-rose-600 shadow-rose-100/50",
-        amber: "bg-amber-50 text-amber-600 shadow-amber-100/50",
-        emerald: "bg-emerald-50 text-emerald-600 shadow-emerald-100/50",
+// --- Expense Form ---
+function ExpenseForm({ onSuccess }: { onSuccess: () => void }) {
+    const [formData, setFormData] = useState({
+        category: '', vendor: '', description: '', amount: '', tax_amount: '0', payment_method: 'bank_transfer'
+    });
+    const [submitting, setSubmitting] = useState(false);
+
+    const handleSubmit = async () => {
+        if (!formData.description || !formData.amount || !formData.category) {
+            toast.error('Fill in required fields');
+            return;
+        }
+        setSubmitting(true);
+        try {
+            const total = Number(formData.amount) + Number(formData.tax_amount || 0);
+            await createExpense({ ...formData, amount: Number(formData.amount), tax_amount: Number(formData.tax_amount), total });
+            toast.success('Expense recorded');
+            onSuccess();
+        } catch {
+            toast.error('Failed to record expense');
+        } finally {
+            setSubmitting(false);
+        }
     };
+
     return (
-        <Card className="rounded-[2.5rem] border-none shadow-sm bg-card p-8 group hover:shadow-xl transition-all duration-500">
-            <div className="flex items-center justify-between mb-4">
-                <div className={cn("h-12 w-12 rounded-2xl flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform", variants[color])}>
-                    <Icon size={24} strokeWidth={2.5} />
-                </div>
-                <ChevronRight className="h-5 w-5 text-slate-200 group-hover:text-slate-900 transition-colors" />
+        <div className="space-y-5">
+            <div>
+                <h3 className="text-lg font-bold">New Expense</h3>
+                <p className="text-sm text-muted-foreground">Record a company expense.</p>
             </div>
-            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{title}</p>
-            <h3 className="text-3xl font-black text-foreground tracking-tighter">{value}</h3>
-        </Card>
+            <div className="space-y-4">
+                <div className="space-y-2">
+                    <Label className="text-xs">Category *</Label>
+                    <Select value={formData.category} onValueChange={v => setFormData({ ...formData, category: v })}>
+                        <SelectTrigger className="h-9"><SelectValue placeholder="Select category" /></SelectTrigger>
+                        <SelectContent>
+                            {EXPENSE_CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="space-y-2">
+                    <Label className="text-xs">Description *</Label>
+                    <Input placeholder="What was this expense for?" className="h-9" value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                    <Label className="text-xs">Vendor</Label>
+                    <Input placeholder="e.g. Amazon, FedEx" className="h-9" value={formData.vendor} onChange={e => setFormData({ ...formData, vendor: e.target.value })} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label className="text-xs">Amount *</Label>
+                        <Input type="number" placeholder="0.00" className="h-9" value={formData.amount} onChange={e => setFormData({ ...formData, amount: e.target.value })} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label className="text-xs">Tax Amount</Label>
+                        <Input type="number" placeholder="0.00" className="h-9" value={formData.tax_amount} onChange={e => setFormData({ ...formData, tax_amount: e.target.value })} />
+                    </div>
+                </div>
+                <div className="space-y-2">
+                    <Label className="text-xs">Payment Method</Label>
+                    <Select value={formData.payment_method} onValueChange={v => setFormData({ ...formData, payment_method: v })}>
+                        <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                            <SelectItem value="cash">Cash</SelectItem>
+                            <SelectItem value="credit_card">Credit Card</SelectItem>
+                            <SelectItem value="cheque">Cheque</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+            </div>
+            <Button onClick={handleSubmit} disabled={submitting} className="w-full gap-2">
+                {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                {submitting ? 'Saving...' : 'Record Expense'}
+            </Button>
+        </div>
     );
 }
