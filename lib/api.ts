@@ -158,9 +158,31 @@ export async function createResourceBooking(data: any) { return mockDelay(true);
 export async function getPriceLists() { return mockDelay([]); }
 export async function createPriceList(data: any) { return mockDelay(true); }
 
-// --- TENANT & SETTINGS ---
+// --- TENANT & SETTINGS (REAL BACKEND) ---
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4000/api';
+
+function getToken(): string | null {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem('bb_token');
+}
+
+function authHeaders(): HeadersInit {
+    const token = getToken();
+    const headers: HeadersInit = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return headers;
+}
+
 export async function getTenantStatus() {
-    return mockDelay({
+    try {
+        const res = await fetch(`${API_BASE}/settings/tenant_status`, { headers: authHeaders() });
+        if (res.ok) {
+            const json = await res.json();
+            if (json.data) return json.data;
+        }
+    } catch (e) { console.error('[API] getTenantStatus error:', e); }
+    // Fallback defaults
+    return {
         setup_stage: 'completed',
         business_type: 'construction',
         company_setup_complete: true,
@@ -170,35 +192,44 @@ export async function getTenantStatus() {
         module_sales: true,
         module_operations: true,
         module_hr: true
-    });
+    };
 }
 
 export async function getSettings<T>(key: string): Promise<T | null> {
-    if (key === 'company_profile') {
-        return mockDelay({
-            legalName: 'SYSTEM STEEL ENGINEERING LLC',
-            tradingName: 'System Steel',
-            baseCurrency: 'AED',
-            taxId: '100123456789003',
-            address: 'Warehouse 4, Al Quoz, Dubai',
-            branding: {
-                color: '#ef4444',
-                template: 'modern',
-                headerAlign: 'left',
-                showWatermark: true
-            }
-        } as any);
-    }
-    return mockDelay(null);
+    try {
+        const res = await fetch(`${API_BASE}/settings/${key}`, { headers: authHeaders() });
+        if (res.ok) {
+            const json = await res.json();
+            return json.data as T;
+        }
+    } catch (e) { console.error(`[API] getSettings(${key}) error:`, e); }
+    return null;
 }
 
 export async function saveSettings(key: string, data: any) {
-    console.log(`[Mock API] Save Settings [${key}]:`, data);
-    return mockDelay(true);
+    try {
+        const res = await fetch(`${API_BASE}/settings/${key}`, {
+            method: 'PUT',
+            headers: authHeaders(),
+            body: JSON.stringify({ value: data }),
+        });
+        if (res.ok) {
+            const json = await res.json();
+            return json.data;
+        }
+        throw new Error('Save failed');
+    } catch (e) {
+        console.error(`[API] saveSettings(${key}) error:`, e);
+        throw e;
+    }
 }
 
-export async function getSystemSetting(key: string) { return mockDelay(null); }
-export async function setSystemSetting(key: string, val: any) { return mockDelay(true); }
+export async function getSystemSetting(key: string) {
+    return getSettings(key);
+}
+export async function setSystemSetting(key: string, val: any) {
+    return saveSettings(key, val);
+}
 
 // --- USERS ---
 export async function getUsers(): Promise<any[]> { return mockDelay([]); }
@@ -260,7 +291,49 @@ export async function createEnquiry(data: any) { return mockDelay('id'); }
 export async function updateEnquiry(id: string, data: any) { return mockDelay(true); }
 export async function getPerformanceData(t: string) { return mockDelay([]); }
 export async function createPerformanceItem(data: any) { return mockDelay(true); }
-export async function getApprovalWorkflows() { return mockDelay([]); }
-export async function createApprovalWorkflow(data: any) { return mockDelay(true); }
+
+// --- APPROVAL WORKFLOWS (REAL BACKEND) ---
+export async function getApprovalWorkflows() {
+    try {
+        const res = await fetch(`${API_BASE}/workflows`, { headers: authHeaders() });
+        if (res.ok) {
+            const json = await res.json();
+            return json.data || [];
+        }
+    } catch (e) { console.error('[API] getApprovalWorkflows error:', e); }
+    return [];
+}
+
+export async function createApprovalWorkflow(data: any) {
+    const res = await fetch(`${API_BASE}/workflows`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Failed to create workflow');
+    const json = await res.json();
+    return json.data;
+}
+
+export async function updateApprovalWorkflow(id: string, data: any) {
+    const res = await fetch(`${API_BASE}/workflows/${id}`, {
+        method: 'PUT',
+        headers: authHeaders(),
+        body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Failed to update workflow');
+    const json = await res.json();
+    return json.data;
+}
+
+export async function deleteApprovalWorkflow(id: string) {
+    const res = await fetch(`${API_BASE}/workflows/${id}`, {
+        method: 'DELETE',
+        headers: authHeaders(),
+    });
+    if (!res.ok) throw new Error('Failed to delete workflow');
+    return true;
+}
+
 export async function getBudgetControls() { return mockDelay([]); }
 export async function setBudgetControl(data: any) { return mockDelay(true); }
