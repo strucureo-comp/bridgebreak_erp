@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/lib/auth/context';
 import { getCustomers, createCustomer, deleteCustomer, updateCustomer } from '@/lib/api';
-import { DashboardShell } from '@/components/layout/dashboard-shell';
+import { DashboardShell } from '@/components/shared/layout/dashboard-shell';
 import { Card, CardContent } from '@/components/ui/card';
 import {
     Users, Search, Plus, Building2, Briefcase, Globe, Phone, Target, ChevronRight, Trash2, Edit2
@@ -18,7 +18,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import type { CustomerAccount } from '@/lib/db/types';
 import { useTenant } from '@/lib/tenant-context';
-import { ModuleGuard } from '@/components/layout/module-guard';
+import { ModuleGuard } from '@/components/shared/layout/module-guard';
 
 export default function SalesCustomersPage() {
     const { user } = useAuth();

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { DashboardShell } from '@/components/layout/dashboard-shell';
+import { DashboardShell } from '@/components/shared/layout/dashboard-shell';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { getProjects } from '@/lib/api';
 import type { Project } from '@/lib/db/types';
-import { ModuleGuard } from '@/components/layout/module-guard';
+import { ModuleGuard } from '@/components/shared/layout/module-guard';
 import { useTenant } from '@/lib/tenant-context';
 
 function fmt(n: number): string {

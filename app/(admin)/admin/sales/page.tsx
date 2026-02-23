@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/context';
 import { getOpportunities, getLeads, getActivities, getInvoices, getSalesOrders, getQuotes } from '@/lib/api';
-import { DashboardShell } from '@/components/layout/dashboard-shell';
+import { DashboardShell } from '@/components/shared/layout/dashboard-shell';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -17,11 +17,11 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Opportunity, Lead, Activity as ActivityType, Invoice } from '@/lib/db/types';
-import { ModuleGuard } from '@/components/layout/module-guard';
+import { ModuleGuard } from '@/components/shared/layout/module-guard';
 import { useTenant } from '@/lib/tenant-context';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
-import { LeadForm } from '@/components/sales/lead-form';
-import { QuoteForm } from '@/components/sales/quote-form';
+import { LeadForm } from './_components/lead-form';
+import { QuoteForm } from './_components/quote-form';
 
 export function isOverdue(dateStr: string) {
     if (!dateStr) return false;
@@ -137,11 +137,11 @@ export default function SalesDashboardPage() {
                                 </Dialog>
                             )}
 
-                            <Button onClick={() => router.push('/admin/quotations/new')} size="sm" variant="secondary" className="h-10 gap-2 font-bold shadow-sm">
+                            <Button onClick={() => router.push('/admin/finance/quotations/new')} size="sm" variant="secondary" className="h-10 gap-2 font-bold shadow-sm">
                                 <Plus className="h-4 w-4" /> New Quotation
                             </Button>
 
-                            <Button size="sm" variant="outline" className="h-10 gap-2 font-bold shadow-sm" onClick={() => router.push('/admin/invoices/new')}>
+                            <Button size="sm" variant="outline" className="h-10 gap-2 font-bold shadow-sm" onClick={() => router.push('/admin/finance/invoices/new')}>
                                 <Receipt className="h-4 w-4" /> New Invoice
                             </Button>
                         </div>
@@ -238,7 +238,7 @@ export default function SalesDashboardPage() {
                                 <CardHeader className="flex flex-row items-center justify-between border-b border-border py-4">
                                     <CardTitle className="text-base font-bold">Recent Quotes</CardTitle>
                                     <Button variant="ghost" size="sm" className="h-8 text-xs font-medium" asChild>
-                                        <Link href="/admin/quotations">View All</Link>
+                                        <Link href="/admin/finance/quotations">View All</Link>
                                     </Button>
                                 </CardHeader>
                                 <CardContent className="p-0">
@@ -275,7 +275,7 @@ export default function SalesDashboardPage() {
                                         </div>
                                         <ChevronRight className="h-4 w-4 text-muted-foreground" />
                                     </Link>
-                                    <Link href="/admin/invoices" className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
+                                    <Link href="/admin/finance/invoices" className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
                                         <div className="flex items-center gap-3">
                                             <div className="p-2 border border-border rounded-md bg-background shadow-sm"><Receipt className="h-4 w-4" /></div>
                                             <span className="font-bold text-sm">All Invoices</span>

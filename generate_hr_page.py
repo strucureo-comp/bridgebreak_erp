@@ -4,7 +4,7 @@ CODE = """
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { DashboardShell } from "@/components/shared/layout/dashboard-shell";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

@@ -7,7 +7,7 @@ import { useTenant } from '@/lib/tenant-context';
 import {
     getPurchaseOrders, getVendors, getPurchaseRequests, getGRNs, getVendorBills, getVendorPayments, getProjects
 } from '@/lib/api';
-import { DashboardShell } from '@/components/layout/dashboard-shell';
+import { DashboardShell } from '@/components/shared/layout/dashboard-shell';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -46,9 +46,9 @@ import {
 } from 'recharts';
 import type { PurchaseOrder, Vendor, PurchaseRequest, GRN, VendorBill, VendorPayment, Project } from '@/lib/db/types';
 import { cn } from '@/lib/utils';
-import { MaterialRequestForm } from '@/components/purchases/material-request-form';
-import { VendorForm } from '@/components/purchases/vendor-form';
-import { ModuleGuard } from '@/components/layout/module-guard';
+import { MaterialRequestForm } from './_components/material-request-form';
+import { VendorForm } from './_components/vendor-form';
+import { ModuleGuard } from '@/components/shared/layout/module-guard';
 
 function fmt(n: number): string {
     return new Intl.NumberFormat('en-AE', {

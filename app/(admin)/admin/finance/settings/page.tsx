@@ -3,10 +3,10 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/context';
-import { DashboardShell } from '@/components/layout/dashboard-shell';
-import { FinanceConfigurator } from '@/components/admin/finance-configurator';
+import { DashboardShell } from '@/components/shared/layout/dashboard-shell';
+import { FinanceConfigurator } from '../_components/finance-configurator';
 import { getSystemSetting, setSystemSetting } from '@/lib/api';
-import type { FinanceConfiguration } from '@/lib/finance-config';
+import type { FinanceConfiguration } from '@/app/(admin)/admin/finance/_lib/finance-config';
 import { toast } from 'sonner';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';

@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/lib/auth/context';
 import { getOpportunities, createOpportunity, updateOpportunity, deleteOpportunity, getCustomers } from '@/lib/api';
-import { DashboardShell } from '@/components/layout/dashboard-shell';
+import { DashboardShell } from '@/components/shared/layout/dashboard-shell';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     Briefcase, Search, Plus, DollarSign, Calendar, Target, ChevronRight, Edit2, Trash2, AlertCircle, Clock
@@ -20,7 +20,7 @@ import { toast } from 'sonner';
 import type { Opportunity, CustomerAccount, FollowUp, OpportunityStage } from '@/lib/db/types';
 import { cn } from '@/lib/utils';
 import { useTenant } from '@/lib/tenant-context';
-import { ModuleGuard } from '@/components/layout/module-guard';
+import { ModuleGuard } from '@/components/shared/layout/module-guard';
 
 function isOverdue(dateStr: string) {
     const d = new Date(dateStr);

@@ -6,7 +6,7 @@ import { useAuth } from '@/lib/auth/context';
 import { useTenant } from '@/lib/tenant-context';
 import { getProjects, updateProject, getUsers, createProject } from '@/lib/api';
 import { ProjectsContent } from '@/components/projects/projects-content';
-import { DashboardShell } from '@/components/layout/dashboard-shell';
+import { DashboardShell } from '@/components/shared/layout/dashboard-shell';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -36,7 +36,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { ModuleGuard } from '@/components/layout/module-guard';
+import { ModuleGuard } from '@/components/shared/layout/module-guard';
 
 type ProjectMode = 'registry' | 'operations' | 'live' | 'archived';
 

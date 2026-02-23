@@ -1,8 +1,8 @@
 'use client';
 
-import { DashboardShell } from '@/components/layout/dashboard-shell';
+import { DashboardShell } from '@/components/shared/layout/dashboard-shell';
 import { useTenant } from '@/lib/tenant-context';
-import { ManufacturingContent } from '@/components/manufacturing/manufacturing-content';
+import { ManufacturingContent } from './_components/manufacturing-content';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Factory, Activity, Box, AlertTriangle } from 'lucide-react';
 
