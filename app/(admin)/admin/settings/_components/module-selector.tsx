@@ -17,15 +17,15 @@ interface ModuleSelectorProps {
 
 export function ModuleSelector({ businessType, onChange }: ModuleSelectorProps) {
     const modules = [
-        { id: 'finance', label: 'Finance & Accounts', icon: DollarSign, core: true },
-        { id: 'sales', label: 'Sales & CRM', icon: ShoppingCart, core: true },
-        { id: 'operations', label: 'Operations Hub', icon: Cog, core: true },
-        { id: 'hr', label: 'Workforce OS', icon: Users, core: false },
-        { id: 'inventory', label: 'Inventory Control', icon: Package, core: businessType === 'manufacturing' || businessType === 'retail' },
-        { id: 'projects', label: 'Project Portfolio', icon: Briefcase, core: businessType === 'construction' || businessType === 'services' },
-        { id: 'manufacturing', label: 'MRP Engine', icon: Factory, core: businessType === 'manufacturing' },
-        { id: 'reports', label: 'Strategic BI', icon: BarChart3, core: false },
-        { id: 'compliance', label: 'Legal Vault', icon: Shield, core: false },
+        { id: 'finance', label: 'Finance', icon: DollarSign, core: true },
+        { id: 'sales', label: 'Sales', icon: ShoppingCart, core: true },
+        { id: 'operations', label: 'Operations', icon: Cog, core: true },
+        { id: 'hr', label: 'Human Resources', icon: Users, core: false },
+        { id: 'inventory', label: 'Inventory', icon: Package, core: businessType === 'manufacturing' || businessType === 'retail' },
+        { id: 'projects', label: 'Projects', icon: Briefcase, core: businessType === 'construction' || businessType === 'services' },
+        { id: 'manufacturing', label: 'Manufacturing', icon: Factory, core: businessType === 'manufacturing' },
+        { id: 'reports', label: 'Reports', icon: BarChart3, core: false },
+        { id: 'compliance', label: 'Legal & Compliance', icon: Shield, core: false },
     ];
 
     return (
