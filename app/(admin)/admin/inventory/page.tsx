@@ -1,647 +1,1004 @@
-'use client';
+"use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo } from "react";
+import { format } from "date-fns";
 import {
-  Package, Search, Plus, FileText, Settings as SettingsIcon, AlertTriangle, Activity,
-  RefreshCw, DollarSign, Clock, ShieldAlert,
-  ArrowRightLeft, CheckCircle2, Filter, MapPin, Trash2, Check, X, Shield, Users
-} from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Progress } from '@/components/ui/progress';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { DashboardShell } from '@/components/layout/dashboard-shell';
-import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+  AlertCircle, AlertTriangle, ArrowRightLeft, Building,
+  Check, CheckCircle2, ChevronDown, PackagePlus, PackageSearch,
+  Search, Settings, Trash2, X, Factory, DollarSign, Activity
+} from "lucide-react";
 
-// --- INITIAL MOCK DATA --- //
-const INITIAL_SETTINGS = {
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
+import { toast } from "sonner";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { DashboardShell } from "@/components/layout/dashboard-shell";
+
+// --- Mock Data Initialization ---
+
+const initialSettings = {
   wasteTolerancePercent: 5,
   writeOffApprovalThreshold: 5000,
-  lowStockThreshold: 20, // Global baseline
+  lowStockThreshold: 20,
 };
 
-const INITIAL_SKUS = [
-  { id: 'STL-001', name: 'Structural Steel H-Beam', category: 'Raw Materials', unit: 'Tons', stock: 250, minThreshold: 50, costPerUnit: 1200, wastePercent: 2.0, siteAllocated: 100 },
-  { id: 'CEM-002', name: 'Portland Cement Grade 43', category: 'Raw Materials', unit: 'Bags', stock: 15, minThreshold: 100, costPerUnit: 8, wastePercent: 6.5, siteAllocated: 500 },
-  { id: 'CBL-003', name: 'Electrical Copper Cable', category: 'Electrical', unit: 'Meters', stock: 0, minThreshold: 500, costPerUnit: 15, wastePercent: 0.5, siteAllocated: 200 },
-  { id: 'GLS-004', name: 'Tempered Glass Panels', category: 'Finishing', unit: 'Sq Meters', stock: 80, minThreshold: 30, costPerUnit: 150, wastePercent: 1.2, siteAllocated: 40 },
+const initialSkus = [
+  {
+    id: "STL-001",
+    name: "Structural Steel H-Beam",
+    category: "Raw Materials",
+    unit: "Tons",
+    stock: 250,
+    minThreshold: 50,
+    costPerUnit: 1200,
+    wastePercent: 2.0,
+    siteAllocated: 100
+  },
+  {
+    id: "CMT-102",
+    name: "Portland Cement",
+    category: "Raw Materials",
+    unit: "Bags",
+    stock: 15,
+    minThreshold: 100,
+    costPerUnit: 8,
+    wastePercent: 6.5,
+    siteAllocated: 400
+  },
+  {
+    id: "BRK-050",
+    name: "Red Clay Bricks",
+    category: "Materials",
+    unit: "Pallets",
+    stock: 0,
+    minThreshold: 20,
+    costPerUnit: 150,
+    wastePercent: 1.2,
+    siteAllocated: 50
+  }
 ];
 
-type WasteStatus = 'Pending' | 'Approved' | 'Rejected';
-
-const INITIAL_WASTE_LOGS = [
-  { id: 'W-001', skuId: 'CEM-002', quantity: 20, reason: 'Water Damage', reportedBy: 'Site Engineer', status: 'Pending' as WasteStatus, value: 160 },
-  { id: 'W-002', skuId: 'STL-001', quantity: 5, reason: 'Cutting Error', reportedBy: 'Warehouse Manager', status: 'Approved' as WasteStatus, value: 6000 },
+const initialWasteLogs = [
+  {
+    id: "W-1001",
+    skuId: "STL-001",
+    quantity: 2,
+    reason: "Damaged during transport",
+    reportedBy: "siteEngineer",
+    status: "Pending", // "Pending", "Pending Finance", "Approved", "Rejected"
+    date: new Date().toISOString()
+  },
+  {
+    id: "W-1002",
+    skuId: "CMT-102",
+    quantity: 700,
+    reason: "Water damage at warehouse",
+    reportedBy: "warehouseManager",
+    status: "Pending Finance",
+    date: new Date().toISOString()
+  }
 ];
 
-const INITIAL_MOVEMENTS = [
-  { id: 'M-001', date: '2026-02-23 09:00', skuId: 'STL-001', type: 'Increase', quantity: 100, value: 120000, user: 'Warehouse Manager' },
-  { id: 'M-002', date: '2026-02-22 14:30', skuId: 'CEM-002', type: 'Allocation', quantity: -50, value: -400, user: 'Warehouse Manager' },
+const initialMovements = [
+  {
+    id: "M-2001",
+    timestamp: new Date().toISOString(),
+    type: "Increase",
+    skuId: "STL-001",
+    quantity: 100,
+    user: "warehouseManager",
+    notes: "Restock"
+  }
 ];
 
-const INITIAL_ALLOCATIONS = [
-  { id: 'A-001', site: 'Site A - Downtown Tower', skuId: 'STL-001', allocated: 100, consumed: 80 },
-  { id: 'A-002', site: 'Site B - Riverside Complex', skuId: 'CEM-002', allocated: 500, consumed: 450 },
+const SITES = ["Site A", "Site B", "Site C", "HQ Warehouse"];
+
+// --- Roles & Permissions ---
+
+const ROLES = [
+  { id: "superAdmin", name: "Super Admin" },
+  { id: "warehouseManager", name: "Warehouse Manager" },
+  { id: "siteEngineer", name: "Site Engineer" },
+  { id: "financeController", name: "Finance Controller" },
 ];
 
-const formatCurrency = (val: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val);
+const PERMISSIONS = {
+  superAdmin: {
+    canEditSku: true, canOverride: true, canChangeSettings: true,
+    canAdjustStock: true, canRegisterSku: true, canAllocate: true,
+    canReportWaste: true, canApproveWaste: true, canApproveFinance: true
+  },
+  warehouseManager: {
+    canEditSku: false, canOverride: false, canChangeSettings: false,
+    canAdjustStock: true, canRegisterSku: true, canAllocate: true,
+    canReportWaste: true, canApproveWaste: true, canApproveFinance: false
+  },
+  siteEngineer: {
+    canEditSku: false, canOverride: false, canChangeSettings: false,
+    canAdjustStock: false, canRegisterSku: false, canAllocate: true, // Instructions: "can request materials" / we use allocate modal for this
+    canReportWaste: true, canApproveWaste: false, canApproveFinance: false
+  },
+  financeController: {
+    canEditSku: false, canOverride: false, canChangeSettings: false,
+    canAdjustStock: false, canRegisterSku: false, canAllocate: false,
+    canReportWaste: false, canApproveWaste: false, canApproveFinance: true
+  }
+};
 
-export default function InventoryDashboard() {
-  // STATE MANAGERS
-  const [currentRole, setCurrentRole] = useState<'Super Admin' | 'Warehouse Manager' | 'Site Engineer' | 'Finance Controller'>('Super Admin');
-  const [settings, setSettings] = useState(INITIAL_SETTINGS);
-  const [skus, setSkus] = useState(INITIAL_SKUS);
-  const [wasteLogs, setWasteLogs] = useState(INITIAL_WASTE_LOGS);
-  const [movements, setMovements] = useState(INITIAL_MOVEMENTS);
-  const [allocations, setAllocations] = useState(INITIAL_ALLOCATIONS);
+export default function InventoryControlPage() {
+  const [currentRole, setCurrentRole] = useState("warehouseManager");
+  const role = PERMISSIONS[currentRole as keyof typeof PERMISSIONS];
 
-  // MODAL STATES
+  // State
+  const [settings, setSettings] = useState(initialSettings);
+  const [skus, setSkus] = useState(initialSkus);
+  const [wasteLogs, setWasteLogs] = useState(initialWasteLogs);
+  const [movements, setMovements] = useState(initialMovements);
+  const [allocations, setAllocations] = useState<{ id: string, site: string, skuId: string, quantity: number, date: string }[]>([]);
+
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Modals Default State
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   const [isAdjustOpen, setIsAdjustOpen] = useState(false);
   const [isWasteOpen, setIsWasteOpen] = useState(false);
   const [isAllocateOpen, setIsAllocateOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  // FORM STATES (Temporaries)
-  const [formRegister, setFormRegister] = useState({ id: '', name: '', category: 'Raw Materials', unit: '', stock: 0, minThreshold: 10, costPerUnit: 0 });
-  const [formAdjust, setFormAdjust] = useState({ skuId: '', type: 'Increase', quantity: 0 });
-  const [formWaste, setFormWaste] = useState({ skuId: '', quantity: 0, reason: '' });
-  const [formAllocate, setFormAllocate] = useState({ site: '', skuId: '', quantity: 0 });
-  const [formSettings, setFormSettings] = useState({ ...INITIAL_SETTINGS });
+  // Form States
+  const [skuForm, setSkuForm] = useState({ id: "", name: "", category: "Raw Materials", unit: "Units", minThreshold: 10, costPerUnit: 0 });
+  const [adjustForm, setAdjustForm] = useState({ skuId: "", type: "Increase", quantity: 0, reason: "" });
+  const [wasteForm, setWasteForm] = useState({ skuId: "", quantity: 0, reason: "" });
+  const [allocateForm, setAllocateForm] = useState({ skuId: "", site: SITES[0], quantity: 0 });
+  const [settingsForm, setSettingsForm] = useState(initialSettings);
 
-  // ROLE PERMISSIONS
-  const canEditSku = currentRole === 'Super Admin';
-  const canChangeSettings = currentRole === 'Super Admin';
-  const canOverrideApprovals = currentRole === 'Super Admin';
+  // --- Computed Metrics ---
+  const totalSkus = skus.length;
+  const lowStockCount = skus.filter(s => s.stock > 0 && s.stock < s.minThreshold).length;
+  const criticalStockouts = skus.filter(s => s.stock === 0).length;
+  const totalHoldingValue = skus.reduce((acc, s) => acc + (s.stock * s.costPerUnit), 0);
+  const allocatedToSites = skus.reduce((acc, s) => acc + s.siteAllocated, 0);
 
-  const canAdjustStock = currentRole === 'Super Admin' || currentRole === 'Warehouse Manager';
-  const canRegisterSku = currentRole === 'Super Admin' || currentRole === 'Warehouse Manager';
-  const canAllocateToSite = currentRole === 'Super Admin' || currentRole === 'Warehouse Manager';
+  const currentMonthWasteValue = wasteLogs
+    .filter(w => w.status === "Approved")
+    .reduce((acc, w) => {
+      const sku = skus.find(s => s.id === w.skuId);
+      return acc + (w.quantity * (sku?.costPerUnit || 0));
+    }, 0);
 
-  const canReportWaste = currentRole === 'Super Admin' || currentRole === 'Site Engineer' || currentRole === 'Warehouse Manager';
-  const canApproveWriteOffs = currentRole === 'Super Admin' || currentRole === 'Finance Controller';
+  const avgWastePercent = skus.length ? skus.reduce((acc, s) => acc + s.wastePercent, 0) / skus.length : 0;
+  const isWasteOverTolerance = avgWastePercent > settings.wasteTolerancePercent;
 
-  // COMPUTED METRICS
-  const metrics = useMemo(() => {
-    let lowStock = 0;
-    let criticalStock = 0;
-    let holdingValue = 0;
-    let siteAllocatedValue = 0;
-    let totalWasteUnits = 0;
-
-    skus.forEach(s => {
-      if (s.stock === 0) criticalStock++;
-      else if (s.stock < s.minThreshold) lowStock++;
-      holdingValue += s.stock * s.costPerUnit;
-      siteAllocatedValue += s.siteAllocated * s.costPerUnit;
-    });
-
-    // Total waste this month
-    const thisMonthWaste = wasteLogs.reduce((sum, log) => sum + log.quantity, 0);
-    const thisMonthWasteValue = wasteLogs.reduce((sum, log) => sum + log.value, 0);
-
-    // Overall waste percentage logic (for system alert)
-    const overallWastePct = siteAllocatedValue > 0 ? (thisMonthWasteValue / siteAllocatedValue) * 100 : 0;
-    const isWasteCritical = overallWastePct > settings.wasteTolerancePercent;
-
-    return {
-      totalSkus: skus.length,
-      lowStock,
-      criticalStock,
-      holdingValue,
-      siteAllocatedValue,
-      thisMonthWaste,
-      thisMonthWasteValue,
-      overallWastePct,
-      isWasteCritical
-    };
-  }, [skus, wasteLogs, settings]);
-
-  // ACTION LOGIC
-  const logMovement = (skuId: string, type: string, qty: number, val: number) => {
-    setMovements(prev => [
-      { id: `M-${Date.now()}`, date: new Date().toISOString().slice(0, 16).replace('T', ' '), skuId, type: type as any, quantity: qty, value: val, user: currentRole },
-      ...prev
-    ]);
-  };
-
+  // --- Actions ---
   const handleRegisterSku = () => {
-    if (!canRegisterSku) return;
-    setSkus([...skus, { ...formRegister, wastePercent: 0, siteAllocated: 0 }]);
-    toast.success(`Registered SKU: ${formRegister.id}`);
+    if (!skuForm.id || !skuForm.name) {
+      toast.error("Please fill in SKU ID and Name.");
+      return;
+    }
+    if (skus.find(s => s.id === skuForm.id)) {
+      toast.error("SKU ID already exists.");
+      return;
+    }
+
+    setSkus([...skus, {
+      ...skuForm,
+      stock: 0,
+      wastePercent: 0,
+      siteAllocated: 0,
+    }]);
+
+    toast.success(`SKU ${skuForm.id} registered successfully.`);
     setIsRegisterOpen(false);
+    setSkuForm({ id: "", name: "", category: "Raw Materials", unit: "Units", minThreshold: 10, costPerUnit: 0 });
   };
 
   const handleAdjustStock = () => {
-    if (!canAdjustStock) return;
-    const sku = skus.find(s => s.id === formAdjust.skuId);
-    if (!sku) return toast.error("Select a SKU");
-
-    const qty = Number(formAdjust.quantity);
-    if (qty <= 0) return toast.error("Quantity must be positive");
-
-    let newStock = sku.stock;
-    if (formAdjust.type === 'Increase') newStock += qty;
-    else {
-      if (sku.stock < qty) return toast.error("Insufficient stock");
-      newStock -= qty;
+    if (!adjustForm.skuId || !adjustForm.quantity || adjustForm.quantity <= 0) {
+      toast.error("Invalid adjustment data.");
+      return;
     }
 
-    setSkus(skus.map(s => s.id === sku.id ? { ...s, stock: newStock } : s));
-    const valueImpact = qty * sku.costPerUnit * (formAdjust.type === 'Increase' ? 1 : -1);
-    logMovement(sku.id, formAdjust.type, formAdjust.type === 'Increase' ? qty : -qty, valueImpact);
+    const skuIndex = skus.findIndex(s => s.id === adjustForm.skuId);
+    if (skuIndex === -1) return;
 
-    toast.success(`Stock adjusted for ${sku.id}`);
+    const sku = skus[skuIndex];
+    if (adjustForm.type === "Deduct" && sku.stock < adjustForm.quantity) {
+      toast.error(`Cannot deduct ${adjustForm.quantity}. Only ${sku.stock} in stock.`);
+      return;
+    }
+
+    const newStock = adjustForm.type === "Increase"
+      ? sku.stock + adjustForm.quantity
+      : sku.stock - adjustForm.quantity;
+
+    const updatedSkus = [...skus];
+    updatedSkus[skuIndex] = { ...sku, stock: newStock };
+    setSkus(updatedSkus);
+
+    setMovements([{
+      id: `M-${Math.floor(Math.random() * 10000)}`,
+      timestamp: new Date().toISOString(),
+      type: adjustForm.type,
+      skuId: sku.id,
+      quantity: adjustForm.quantity,
+      user: currentRole,
+      notes: adjustForm.reason
+    }, ...movements]);
+
+    toast.success(`Stock adjusted for ${sku.id}.`);
     setIsAdjustOpen(false);
+    setAdjustForm({ skuId: "", type: "Increase", quantity: 0, reason: "" });
   };
 
   const handleReportWaste = () => {
-    if (!canReportWaste) return;
-    const sku = skus.find(s => s.id === formWaste.skuId);
-    if (!sku) return toast.error("Select a SKU");
-
-    const qty = Number(formWaste.quantity);
-    if (qty <= 0) return toast.error("Quantity must be positive");
-
-    if (sku.stock < qty) return toast.error("Waste cannot exceed current stock");
-
-    const value = qty * sku.costPerUnit;
-    let status: WasteStatus = 'Approved';
-
-    // Auto deduct stock
-    setSkus(skus.map(s => s.id === sku.id ? { ...s, stock: s.stock - qty } : s));
-    logMovement(sku.id, 'Waste', -qty, -value);
-
-    // Write-off approval logic
-    if (value > settings.writeOffApprovalThreshold) {
-      status = 'Pending';
-      toast.info(`Waste value ${formatCurrency(value)} exceeds threshold. Sent to Finance for approval.`);
-    } else {
-      toast.success("Waste reported and auto-approved.");
+    if (!wasteForm.skuId || !wasteForm.quantity || wasteForm.quantity <= 0) {
+      toast.error("Invalid waste report.");
+      return;
     }
 
-    setWasteLogs([{
-      id: `W-${Date.now()}`, skuId: sku.id, quantity: qty, reason: formWaste.reason, reportedBy: currentRole, status, value
-    }, ...wasteLogs]);
+    const sku = skus.find(s => s.id === wasteForm.skuId);
+    if (!sku) return;
 
+    if (sku.stock < wasteForm.quantity) {
+      toast.error("Waste quantity cannot exceed current stock.");
+      return;
+    }
+
+    const costImpact = wasteForm.quantity * sku.costPerUnit;
+    const isApprovalNeeded = costImpact > settings.writeOffApprovalThreshold;
+    const initialStatus = isApprovalNeeded ? "Pending Finance" : "Pending";
+
+    const newWaste = {
+      id: `W-${Math.floor(Math.random() * 10000)}`,
+      skuId: sku.id,
+      quantity: wasteForm.quantity,
+      reason: wasteForm.reason,
+      reportedBy: currentRole,
+      status: initialStatus,
+      date: new Date().toISOString()
+    };
+
+    setWasteLogs([newWaste, ...wasteLogs]);
+    toast.success(`Waste reported. Status: ${initialStatus}.`);
     setIsWasteOpen(false);
+    setWasteForm({ skuId: "", quantity: 0, reason: "" });
   };
 
   const handleAllocate = () => {
-    if (!canAllocateToSite) return;
-    const sku = skus.find(s => s.id === formAllocate.skuId);
-    if (!sku) return toast.error("Select a SKU");
-    if (!formAllocate.site) return toast.error("Enter a site");
-
-    const qty = Number(formAllocate.quantity);
-    if (qty <= 0) return toast.error("Quantity must be positive");
-    if (sku.stock < qty) return toast.error("Insufficient central stock");
-
-    setSkus(skus.map(s => s.id === sku.id ? { ...s, stock: s.stock - qty, siteAllocated: s.siteAllocated + qty } : s));
-    logMovement(sku.id, 'Allocation', -qty, -qty * sku.costPerUnit);
-
-    const existing = allocations.find(a => a.skuId === sku.id && a.site === formAllocate.site);
-    if (existing) {
-      setAllocations(allocations.map(a => a.id === existing.id ? { ...a, allocated: a.allocated + qty } : a));
-    } else {
-      setAllocations([...allocations, { id: `A-${Date.now()}`, site: formAllocate.site, skuId: sku.id, allocated: qty, consumed: 0 }]);
+    if (!allocateForm.skuId || !allocateForm.quantity || allocateForm.quantity <= 0) {
+      toast.error("Invalid allocation data.");
+      return;
     }
 
-    toast.success(`Allocated ${qty} units of ${sku.id} to ${formAllocate.site}`);
+    const skuIndex = skus.findIndex(s => s.id === allocateForm.skuId);
+    if (skuIndex === -1) return;
+
+    const sku = skus[skuIndex];
+    if (sku.stock < allocateForm.quantity) {
+      toast.error(`Insufficient central stock for allocation. Required: ${allocateForm.quantity}, Available: ${sku.stock}`);
+      return;
+    }
+
+    // Deduct stock and add to siteAllocated
+    const updatedSkus = [...skus];
+    updatedSkus[skuIndex] = {
+      ...sku,
+      stock: sku.stock - allocateForm.quantity,
+      siteAllocated: sku.siteAllocated + allocateForm.quantity
+    };
+    setSkus(updatedSkus);
+
+    // Add Allocation Record
+    setAllocations([{
+      id: `A-${Math.floor(Math.random() * 10000)}`,
+      site: allocateForm.site,
+      skuId: sku.id,
+      quantity: allocateForm.quantity,
+      date: new Date().toISOString()
+    }, ...allocations]);
+
+    // Add Movement Log
+    setMovements([{
+      id: `M-${Math.floor(Math.random() * 10000)}`,
+      timestamp: new Date().toISOString(),
+      type: "Allocation",
+      skuId: sku.id,
+      quantity: allocateForm.quantity,
+      user: currentRole,
+      notes: `Allocated to ${allocateForm.site}`
+    }, ...movements]);
+
+    toast.success(`Successfully allocated ${allocateForm.quantity} to ${allocateForm.site}.`);
     setIsAllocateOpen(false);
-  };
-
-  const handleApproveWaste = (logId: string, approve: boolean) => {
-    if (!canApproveWriteOffs) return;
-    setWasteLogs(logs => logs.map(l => l.id === logId ? { ...l, status: approve ? 'Approved' : 'Rejected' } : l));
-    // Provide stock back if rejected
-    const log = wasteLogs.find(l => l.id === logId);
-    if (!approve && log) {
-      setSkus(skus.map(s => s.id === log.skuId ? { ...s, stock: s.stock + log.quantity } : s));
-      logMovement(log.skuId, 'Increase (Rejection Reversal)', log.quantity, log.value);
-      toast.success("Waste record rejected. Stock reverted.");
-    } else {
-      toast.success("Waste record approved. Write-off logged.");
-    }
+    setAllocateForm({ skuId: "", site: SITES[0], quantity: 0 });
   };
 
   const handleSaveSettings = () => {
-    if (!canChangeSettings) return;
-    setSettings(formSettings);
-    toast.success("Global inventory settings updated.");
+    setSettings(settingsForm);
+    toast.success("Settings updated successfully.");
     setIsSettingsOpen(false);
   };
 
-  // HELPER: Permission Wrapper
-  const renderAction = (condition: boolean, button: React.ReactNode, tooltip: string) => {
-    if (condition) return button;
-    return (
-      <TooltipProvider delayDuration={100}>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="cursor-not-allowed opacity-50 pointer-events-none">
-              {button}
-            </div>
-          </TooltipTrigger>
-          <TooltipContent className="text-xs bg-destructive text-destructive-foreground">{tooltip}</TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    );
+  const handleApproveWaste = (logId: string, approve: boolean) => {
+    const logIndex = wasteLogs.findIndex(w => w.id === logId);
+    if (logIndex === -1) return;
+
+    const log = wasteLogs[logIndex];
+    if (log.status === "Approved" || log.status === "Rejected") {
+      toast.error("Already processed.");
+      return;
+    }
+
+    // Role check logic
+    if (log.status === "Pending Finance" && !role.canApproveFinance && !role.canOverride) {
+      toast.error("You lack permission to approve finance write-offs.");
+      return;
+    }
+    if (log.status === "Pending" && !role.canApproveWaste && !role.canOverride) {
+      toast.error("You lack permission to approve general waste logs.");
+      return;
+    }
+
+    const updatedLogs = [...wasteLogs];
+    updatedLogs[logIndex] = { ...log, status: approve ? "Approved" : "Rejected" };
+    setWasteLogs(updatedLogs);
+
+    if (approve) {
+      // Deduct stock
+      const skuIndex = skus.findIndex(s => s.id === log.skuId);
+      if (skuIndex !== -1) {
+        const updatedSkus = [...skus];
+        const newStock = Math.max(0, updatedSkus[skuIndex].stock - log.quantity);
+        updatedSkus[skuIndex] = { ...updatedSkus[skuIndex], stock: newStock };
+
+        // Let's recalculate waste percentage dynamically for mock demo (simple approach)
+        updatedSkus[skuIndex].wastePercent = Number(((updatedSkus[skuIndex].wastePercent + 0.5)).toFixed(2));
+        setSkus(updatedSkus);
+      }
+
+      setMovements([{
+        id: `M-${Math.floor(Math.random() * 10000)}`,
+        timestamp: new Date().toISOString(),
+        type: "Waste",
+        skuId: log.skuId,
+        quantity: log.quantity,
+        user: currentRole,
+        notes: "Approved Waste Write-off"
+      }, ...movements]);
+
+      toast.success("Waste log approved and stock deducted.");
+    } else {
+      toast.info("Waste log rejected.");
+    }
   };
 
 
+  const filteredSkus = skus.filter(s =>
+    s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    s.id.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <DashboardShell requireAdmin>
-      <div className="space-y-6 pb-12 font-sans -mx-4 md:-mx-8 -mt-4 md:-mt-8 text-foreground min-h-screen relative">
-
-        {/* HEADER AREA */}
-        <div className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b border-border shadow-sm px-4 md:px-8 py-4">
-          <div className="max-w-[1600px] mx-auto flex flex-col lg:flex-row items-center justify-between gap-4">
-
-            <div className="flex flex-col md:flex-row md:items-center gap-3 w-full lg:w-auto overflow-hidden">
-              <div className="h-10 w-10 flex-shrink-0 bg-primary/10 rounded-md hidden md:flex items-center justify-center">
-                <Package className="text-primary h-5 w-5" />
-              </div>
-              <div className="flex flex-col truncate">
-                <div className="flex items-center gap-2">
-                  <h1 className="text-lg font-bold tracking-tight text-foreground truncate">Inventory Control</h1>
-                  <Badge className="text-[10px] bg-emerald-100 text-emerald-800 border-emerald-200">LIVE MOCK</Badge>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                  <Users className="h-3.5 w-3.5" />
-                  Role Logic Simulator:
-                  <Select value={currentRole} onValueChange={(val: any) => setCurrentRole(val)}>
-                    <SelectTrigger className="h-6 px-2 border-primary/20 bg-primary/5 text-primary text-xs w-40 font-bold ml-1">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Super Admin">Super Admin</SelectItem>
-                      <SelectItem value="Warehouse Manager">Warehouse Manager</SelectItem>
-                      <SelectItem value="Site Engineer">Site Engineer</SelectItem>
-                      <SelectItem value="Finance Controller">Finance Controller</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+      <div className="space-y-8 max-w-7xl mx-auto pb-12 w-full">
+        {/* Header Area */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
+          <div className="flex items-center gap-4">
+            <Factory className="h-8 w-8 text-primary" />
+            <div>
+              <h1 className="text-3xl font-black tracking-tight text-foreground">Inventory Control</h1>
+              <div className="flex items-center gap-2 mt-1">
+                <p className="text-muted-foreground">Manage centralized and site-allocated stock levels.</p>
+                <Badge variant="secondary" className="hidden sm:inline-flex bg-muted text-foreground/80 font-medium">
+                  Local Simulation
+                </Badge>
               </div>
             </div>
+          </div>
 
-            <div className="w-full max-w-sm relative hidden lg:block">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input type="search" placeholder="Search SKU, mock data..." className="w-full pl-9 h-9 bg-muted/50 rounded-md text-xs font-medium border-border" />
+          <div className="flex items-center gap-4">
+            {/* Role Switcher */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground font-medium select-none">Acting As:</span>
+              <Select value={currentRole} onValueChange={setCurrentRole}>
+                <SelectTrigger className="h-10 w-[180px] bg-primary/5 border-border text-primary font-bold shadow-sm">
+                  <SelectValue placeholder="Select Role" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ROLES.map(r => (
+                    <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
-            <div className="flex items-center gap-2 w-full lg:w-auto shrink-0 overflow-x-auto pb-2 lg:pb-0">
-              {renderAction(canRegisterSku,
-                <Dialog open={isRegisterOpen} onOpenChange={setIsRegisterOpen}>
-                  <DialogTrigger asChild><Button size="sm" className="h-8 text-[11px] font-bold"><Plus className="h-3.5 w-3.5 mr-1" /> Register Material</Button></DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader><DialogTitle>Register New SKU</DialogTitle></DialogHeader>
-                    <div className="grid grid-cols-2 gap-4 py-4">
-                      <div className="space-y-1"><Label className="text-xs">SKU ID</Label><Input value={formRegister.id} onChange={e => setFormRegister({ ...formRegister, id: e.target.value })} className="text-xs" /></div>
-                      <div className="space-y-1"><Label className="text-xs">Name</Label><Input value={formRegister.name} onChange={e => setFormRegister({ ...formRegister, name: e.target.value })} className="text-xs" /></div>
-                      <div className="space-y-1"><Label className="text-xs">Category</Label><Input value={formRegister.category} onChange={e => setFormRegister({ ...formRegister, category: e.target.value })} className="text-xs" /></div>
-                      <div className="space-y-1"><Label className="text-xs">Unit</Label><Input value={formRegister.unit} onChange={e => setFormRegister({ ...formRegister, unit: e.target.value })} className="text-xs" /></div>
-                      <div className="space-y-1"><Label className="text-xs">Initial Stock</Label><Input type="number" value={formRegister.stock} onChange={e => setFormRegister({ ...formRegister, stock: Number(e.target.value) })} className="text-xs" /></div>
-                      <div className="space-y-1"><Label className="text-xs">Cost per Unit ($)</Label><Input type="number" value={formRegister.costPerUnit} onChange={e => setFormRegister({ ...formRegister, costPerUnit: Number(e.target.value) })} className="text-xs" /></div>
-                    </div>
-                    <DialogFooter><Button onClick={handleRegisterSku} className="w-full text-xs" disabled={!formRegister.id}>Save SKU</Button></DialogFooter>
-                  </DialogContent>
-                </Dialog>,
-                "Restricted to Warehouse Manager / Admin"
-              )}
-
-              {renderAction(canAdjustStock,
-                <Dialog open={isAdjustOpen} onOpenChange={setIsAdjustOpen}>
-                  <DialogTrigger asChild><Button variant="outline" size="sm" className="h-8 text-[11px] font-bold"><ArrowRightLeft className="h-3.5 w-3.5 mr-1" /> Adjust Stock</Button></DialogTrigger>
-                  <DialogContent className="max-w-sm">
-                    <DialogHeader><DialogTitle>Adjust Central Stock</DialogTitle></DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div className="space-y-1">
-                        <Label className="text-xs">Select SKU</Label>
-                        <Select onValueChange={v => setFormAdjust({ ...formAdjust, skuId: v })}>
-                          <SelectTrigger className="text-xs"><SelectValue placeholder="SKU" /></SelectTrigger>
-                          <SelectContent>{skus.map(s => <SelectItem key={s.id} value={s.id} className="text-xs">{s.id}</SelectItem>)}</SelectContent>
-                        </Select>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                          <Label className="text-xs">Type</Label>
-                          <Select value={formAdjust.type} onValueChange={v => setFormAdjust({ ...formAdjust, type: v })}>
-                            <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
-                            <SelectContent><SelectItem value="Increase">Increase</SelectItem><SelectItem value="Deduct">Deduct</SelectItem></SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-1"><Label className="text-xs">Qty</Label><Input type="number" onChange={e => setFormAdjust({ ...formAdjust, quantity: Number(e.target.value) })} className="text-xs" /></div>
-                      </div>
-                    </div>
-                    <DialogFooter><Button onClick={handleAdjustStock} className="w-full text-xs">Execute Adjustment</Button></DialogFooter>
-                  </DialogContent>
-                </Dialog>,
-                "Restricted to Warehouse Manager / Admin"
-              )}
-
-              {renderAction(canChangeSettings,
-                <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
-                  <DialogTrigger asChild><Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground"><SettingsIcon className="h-4 w-4" /></Button></DialogTrigger>
-                  <DialogContent className="max-w-sm">
-                    <DialogHeader><DialogTitle>Inventory System Settings</DialogTitle></DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div className="space-y-1"><Label className="text-xs">System Waste Tolerance (%)</Label><Input type="number" value={formSettings.wasteTolerancePercent} onChange={e => setFormSettings({ ...formSettings, wasteTolerancePercent: Number(e.target.value) })} className="text-xs" /></div>
-                      <div className="space-y-1"><Label className="text-xs">Write-Off Approval Threshold ($)</Label><Input type="number" value={formSettings.writeOffApprovalThreshold} onChange={e => setFormSettings({ ...formSettings, writeOffApprovalThreshold: Number(e.target.value) })} className="text-xs" /></div>
-                      <div className="space-y-1"><Label className="text-xs">Global Low Stock Baseline</Label><Input type="number" value={formSettings.lowStockThreshold} onChange={e => setFormSettings({ ...formSettings, lowStockThreshold: Number(e.target.value) })} className="text-xs" /></div>
-                    </div>
-                    <DialogFooter><Button onClick={handleSaveSettings} className="w-full text-xs">Save Settings</Button></DialogFooter>
-                  </DialogContent>
-                </Dialog>,
-                "Restricted to Super Admin"
-              )}
-            </div>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-10 w-10 shadow-sm"
+              onClick={() => {
+                setSettingsForm(settings);
+                setIsSettingsOpen(true);
+              }}
+              disabled={!role.canChangeSettings}
+            >
+              <Settings className="h-4 w-4 text-foreground" />
+            </Button>
           </div>
         </div>
 
-        <div className="max-w-[1600px] mx-auto px-4 md:px-8 space-y-6 pt-6">
+        <div className="flex flex-col gap-6">
 
-          {/* CRITICAL ALERTS */}
-          {metrics.isWasteCritical && (
-            <Alert variant="destructive" className="bg-rose-50 border-rose-200 text-rose-800">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertTitle className="font-bold">Critical Waste Velocity Detected</AlertTitle>
-              <AlertDescription className="text-xs font-medium mt-1">
-                Current systemic waste level ({metrics.overallWastePct.toFixed(1)}%) exceeds the global tolerance threshold of {settings.wasteTolerancePercent}%. Finance & Admin interventions recommended.
+          {/* Global Alerts */}
+          {isWasteOverTolerance && (
+            <Alert variant="destructive" className="animate-in fade-in slide-in-from-top-2 border-red-200 bg-red-50 text-red-900">
+              <AlertTriangle className="h-4 w-4" color="#b91c1c" />
+              <AlertTitle className="font-semibold text-red-800">Critical Waste Exceeded</AlertTitle>
+              <AlertDescription className="text-red-700">
+                Company-wide waste threshold ({settings.wasteTolerancePercent}%) has been exceeded. Current average: {avgWastePercent.toFixed(1)}%. Immediate review advised.
               </AlertDescription>
             </Alert>
           )}
 
-          {/* METRICS CARDS */}
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-            <Card className="shadow-xs"><CardContent className="p-4 flex flex-col justify-center h-full"><p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Total SKUs</p><span className="text-2xl font-black">{metrics.totalSkus}</span></CardContent></Card>
-            <Card className="shadow-xs"><CardContent className="p-4 flex flex-col justify-center h-full"><p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Holding Value</p><span className="text-xl font-black">{formatCurrency(metrics.holdingValue)}</span></CardContent></Card>
-            <Card className="shadow-xs"><CardContent className="p-4 flex flex-col justify-center h-full"><p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Allocated Value</p><span className="text-xl font-black text-blue-600">{formatCurrency(metrics.siteAllocatedValue)}</span></CardContent></Card>
-            <Card className={cn("shadow-xs", metrics.lowStock > 0 && "border-amber-200 bg-amber-50/10")}><CardContent className="p-4 flex flex-col justify-center h-full"><p className={cn("text-[10px] font-bold uppercase mb-1", metrics.lowStock > 0 ? "text-amber-600" : "text-muted-foreground")}>Low Stock Items</p><span className={cn("text-2xl font-black", metrics.lowStock > 0 && "text-amber-600")}>{metrics.lowStock}</span></CardContent></Card>
-            <Card className={cn("shadow-xs", metrics.criticalStock > 0 && "border-rose-200 bg-rose-50/10")}><CardContent className="p-4 flex flex-col justify-center h-full"><p className={cn("text-[10px] font-bold uppercase mb-1", metrics.criticalStock > 0 ? "text-rose-600" : "text-muted-foreground")}>Critical Stockouts</p><span className={cn("text-2xl font-black", metrics.criticalStock > 0 && "text-rose-600")}>{metrics.criticalStock}</span></CardContent></Card>
-            <Card className={cn("shadow-xs", metrics.isWasteCritical && "border-rose-200 bg-rose-50/10")}><CardContent className="p-4 flex flex-col justify-center h-full"><p className={cn("text-[10px] font-bold uppercase mb-1", metrics.isWasteCritical ? "text-rose-600" : "text-muted-foreground")}>Waste Tolerance</p><span className={cn("text-xl font-black", metrics.isWasteCritical && "text-rose-600")}>{metrics.overallWastePct.toFixed(1)}% <span className="text-xs text-muted-foreground font-normal">/ {settings.wasteTolerancePercent}%</span></span></CardContent></Card>
+          {/* Action Bar */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="relative w-full sm:w-[320px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
+              <Input
+                placeholder="Search by SKU or Name..."
+                className="pl-9 bg-white"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button disabled={!role.canRegisterSku} onClick={() => setIsRegisterOpen(true)} className="bg-primary hover:bg-primary/90 text-white">
+                <PackagePlus className="h-4 w-4 mr-2" /> Register Material
+              </Button>
+              <Button disabled={!role.canAdjustStock} onClick={() => setIsAdjustOpen(true)} variant="outline" className="bg-white">
+                <ArrowRightLeft className="h-4 w-4 mr-2" /> Stock Adjustment
+              </Button>
+              <Button disabled={!role.canAllocate} onClick={() => setIsAllocateOpen(true)} variant="outline" className="bg-white">
+                <Building className="h-4 w-4 mr-2" /> Allocate to Site
+              </Button>
+              <Button disabled={!role.canReportWaste} onClick={() => setIsWasteOpen(true)} variant="outline" className="text-red-600 border-red-200 hover:bg-red-50 bg-white">
+                <Trash2 className="h-4 w-4 mr-2" /> Report Waste
+              </Button>
+            </div>
           </div>
 
-          <Tabs defaultValue="catalog" className="w-full space-y-6">
-            <TabsList className="bg-background border-border/50 border overflow-x-auto justify-start h-10 w-full rounded-md px-1 flex-nowrap shadow-sm">
-              <TabsTrigger value="catalog" className="text-xs font-bold"><Package className="h-3.5 w-3.5 mr-1.5" />Master Catalog</TabsTrigger>
-              <TabsTrigger value="movement" className="text-xs font-bold"><ArrowRightLeft className="h-3.5 w-3.5 mr-1.5" />Stock Movement</TabsTrigger>
-              <TabsTrigger value="wastage" className="text-xs font-bold"><Trash2 className="h-3.5 w-3.5 mr-1.5" />Waste Management</TabsTrigger>
-              <TabsTrigger value="allocation" className="text-xs font-bold"><MapPin className="h-3.5 w-3.5 mr-1.5" />Site Allocation</TabsTrigger>
+          {/* Metrics Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+            <Card className="bg-white">
+              <CardHeader className="p-4 pb-2">
+                <CardDescription className="font-medium text-muted-foreground text-xs uppercase tracking-wider">Total SKUs</CardDescription>
+                <CardTitle className="text-2xl font-bold text-foreground font-semibold">{totalSkus}</CardTitle>
+              </CardHeader>
+            </Card>
+
+            <Card className="bg-white">
+              <CardHeader className="p-4 pb-2 flex-row justify-between items-start space-y-0">
+                <div>
+                  <CardDescription className="font-medium text-muted-foreground text-xs uppercase tracking-wider">Low Stock</CardDescription>
+                  <CardTitle className="text-2xl font-bold text-orange-600">{lowStockCount}</CardTitle>
+                </div>
+                <div className="p-2 bg-orange-100/50 rounded-full">
+                  <AlertCircle className="h-4 w-4 text-orange-600" />
+                </div>
+              </CardHeader>
+            </Card>
+
+            <Card className="bg-white border-red-200">
+              <CardHeader className="p-4 pb-2 flex-row justify-between items-start space-y-0">
+                <div>
+                  <CardDescription className="font-medium text-muted-foreground text-xs uppercase tracking-wider">Critical (Zero)</CardDescription>
+                  <CardTitle className="text-2xl font-bold text-red-600">{criticalStockouts}</CardTitle>
+                </div>
+                <div className="p-2 bg-red-100/50 rounded-full">
+                  <AlertTriangle className="h-4 w-4 text-red-600" />
+                </div>
+              </CardHeader>
+            </Card>
+
+            <Card className="bg-white col-span-1 md:col-span-2 lg:col-span-1 border-border">
+              <CardHeader className="p-4 pb-2 flex-row justify-between items-start space-y-0">
+                <div>
+                  <CardDescription className="font-medium text-muted-foreground text-xs uppercase tracking-wider">Holding Value</CardDescription>
+                  <CardTitle className="text-2xl font-bold text-primary">${totalHoldingValue.toLocaleString()}</CardTitle>
+                </div>
+                <div className="p-2 bg-primary/15 rounded-full">
+                  <DollarSign className="h-4 w-4 text-primary" />
+                </div>
+              </CardHeader>
+            </Card>
+
+            <Card className="bg-white">
+              <CardHeader className="p-4 pb-2">
+                <CardDescription className="font-medium text-muted-foreground text-xs uppercase tracking-wider">Allocated</CardDescription>
+                <CardTitle className="text-2xl font-bold text-foreground font-semibold">{allocatedToSites}</CardTitle>
+              </CardHeader>
+            </Card>
+
+            <Card className="bg-white">
+              <CardHeader className="p-4 pb-2">
+                <CardDescription className="font-medium text-muted-foreground text-xs uppercase tracking-wider">Waste Value (MTD)</CardDescription>
+                <CardTitle className="text-2xl font-bold text-foreground font-semibold">${currentMonthWasteValue.toLocaleString()}</CardTitle>
+              </CardHeader>
+            </Card>
+          </div>
+
+          {/* Dynamic Tabs */}
+          <Tabs defaultValue="master-catalog" className="w-full flex-grow flex flex-col">
+            <TabsList className="bg-muted p-1 w-full flex justify-start pl-2 rounded-lg gap-1 border-b mb-6 overflow-x-auto">
+              <TabsTrigger value="master-catalog" className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-4 py-2">Master Catalog</TabsTrigger>
+              <TabsTrigger value="stock-movement" className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-4 py-2">Stock Movement Log</TabsTrigger>
+              <TabsTrigger value="waste-management" className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-4 py-2">
+                Waste Approvals
+                {wasteLogs.filter(w => w.status.includes('Pending')).length > 0 && (
+                  <Badge variant="destructive" className="ml-2 h-5 w-5 p-0 flex items-center justify-center rounded-full text-[10px]">
+                    {wasteLogs.filter(w => w.status.includes('Pending')).length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="site-allocation" className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-4 py-2">Site Allocations</TabsTrigger>
             </TabsList>
 
-            {/* TAB 1: MASTER CATALOG */}
-            <TabsContent value="catalog" className="m-0 border-none p-0">
-              <Card className="shadow-xs border-border/60">
-                <div className="p-4 border-b border-border flex items-center justify-between">
-                  <h3 className="text-sm font-bold">Catalog Dashboard</h3>
-                  {/* Additional buttons could go here */}
-                </div>
-                <Table>
-                  <TableHeader className="bg-muted/30">
-                    <TableRow>
-                      <TableHead className="text-[11px] font-bold uppercase">SKU</TableHead>
-                      <TableHead className="text-[11px] font-bold uppercase">Asset Name</TableHead>
-                      <TableHead className="text-[11px] font-bold uppercase text-center">Live Stock</TableHead>
-                      <TableHead className="text-[11px] font-bold uppercase text-center">Min Threshold</TableHead>
-                      <TableHead className="text-[11px] font-bold uppercase text-center">Waste %</TableHead>
-                      <TableHead className="text-[11px] font-bold uppercase text-right">Holding Val</TableHead>
-                      <TableHead className="text-[11px] font-bold uppercase text-center">Status</TableHead>
-                      <TableHead className="text-[11px] font-bold uppercase text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {skus.map(s => {
-                      const isZero = s.stock === 0;
-                      const isLow = s.stock > 0 && s.stock < s.minThreshold;
-                      const overWaste = s.wastePercent > settings.wasteTolerancePercent;
-
-                      return (
-                        <TableRow key={s.id}>
-                          <TableCell className="py-3 font-mono text-xs font-bold text-primary">{s.id}</TableCell>
-                          <TableCell className="py-3">
-                            <p className="text-sm font-bold">{s.name}</p>
-                            <p className="text-[10px] text-muted-foreground uppercase">{s.category} • {s.unit}</p>
-                          </TableCell>
-                          <TableCell className="py-3 text-center">
-                            <span className={cn("text-lg font-black", isZero ? "text-rose-600" : isLow ? "text-amber-600" : "")}>{s.stock}</span>
-                          </TableCell>
-                          <TableCell className="py-3 text-center text-xs text-muted-foreground">{s.minThreshold}</TableCell>
-                          <TableCell className="py-3 text-center text-xs">
-                            <Badge variant="outline" className={cn("bg-transparent border", overWaste && "border-rose-500 text-rose-600 bg-rose-50")}>{s.wastePercent.toFixed(1)}%</Badge>
-                          </TableCell>
-                          <TableCell className="py-3 text-right font-mono text-sm">{formatCurrency(s.stock * s.costPerUnit)}</TableCell>
-                          <TableCell className="py-3 text-center">
-                            {isZero ? <Badge variant="destructive" className="bg-rose-500 text-[10px]">CRITICAL</Badge> :
-                              isLow ? <Badge className="bg-amber-500 text-[10px] hover:bg-amber-600">LOW</Badge> :
-                                <Badge className="bg-emerald-500 text-[10px] hover:bg-emerald-600">HEALTHY</Badge>}
-                          </TableCell>
-                          <TableCell className="py-3 text-right">
-                            {canEditSku ? <Button variant="ghost" size="sm" className="h-6 text-[10px] font-bold" onClick={() => toast.info('Edit SKU functionality available to Admin.')}>Edit</Button> : <span className="text-[10px] text-muted-foreground">Read Only</span>}
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })}
-                  </TableBody>
-                </Table>
-              </Card>
-            </TabsContent>
-
-            {/* TAB 2: STOCK MOVEMENT */}
-            <TabsContent value="movement" className="m-0 border-none p-0">
-              <Card className="shadow-xs border-border/60">
-                <div className="p-4 border-b border-border">
-                  <h3 className="text-sm font-bold">Immutable Ledger Log</h3>
-                </div>
-                <Table>
-                  <TableHeader className="bg-muted/30">
-                    <TableRow>
-                      <TableHead className="text-[11px] font-bold uppercase">Date & Time</TableHead>
-                      <TableHead className="text-[11px] font-bold uppercase">SKU</TableHead>
-                      <TableHead className="text-[11px] font-bold uppercase">Operation Type</TableHead>
-                      <TableHead className="text-[11px] font-bold uppercase text-right">Quantity</TableHead>
-                      <TableHead className="text-[11px] font-bold uppercase text-right">Value Impact</TableHead>
-                      <TableHead className="text-[11px] font-bold uppercase text-right">Executed By</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {movements.map(m => (
-                      <TableRow key={m.id}>
-                        <TableCell className="py-3 text-[11px] text-muted-foreground">{m.date}</TableCell>
-                        <TableCell className="py-3 font-mono font-bold text-xs">{m.skuId}</TableCell>
-                        <TableCell className="py-3 text-xs">
-                          <Badge variant="outline" className="uppercase text-[9px] font-black">{m.type}</Badge>
-                        </TableCell>
-                        <TableCell className="py-3 text-right text-sm">
-                          <span className={cn("font-bold", m.quantity > 0 ? "text-emerald-600" : "text-rose-600")}>
-                            {m.quantity > 0 ? '+' : ''}{m.quantity}
-                          </span>
-                        </TableCell>
-                        <TableCell className="py-3 text-right text-xs font-mono font-bold">{m.value > 0 ? '+' : ''}{formatCurrency(m.value)}</TableCell>
-                        <TableCell className="py-3 text-right text-[10px] text-muted-foreground">{m.user}</TableCell>
+            <TabsContent value="master-catalog" className="flex-grow focus-visible:outline-none data-[state=inactive]:hidden">
+              <Card className="rounded-xl border-border overflow-hidden bg-white shadow-sm">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader className="bg-muted/40">
+                      <TableRow>
+                        <TableHead className="w-[100px] font-semibold text-muted-foreground">SKU</TableHead>
+                        <TableHead className="font-semibold text-muted-foreground">Name</TableHead>
+                        <TableHead className="text-right font-semibold text-muted-foreground">Stock</TableHead>
+                        <TableHead className="font-semibold text-muted-foreground">Status</TableHead>
+                        <TableHead className="text-right font-semibold text-muted-foreground hidden md:table-cell">Cost</TableHead>
+                        <TableHead className="text-right font-semibold text-muted-foreground hidden lg:table-cell">Value</TableHead>
+                        <TableHead className="text-right font-semibold text-muted-foreground">Waste %</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </Card>
-            </TabsContent>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredSkus.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">No SKUs found.</TableCell>
+                        </TableRow>
+                      )}
+                      {filteredSkus.map((sku) => {
+                        const isZero = sku.stock === 0;
+                        const isLow = sku.stock > 0 && sku.stock < sku.minThreshold;
+                        const value = sku.stock * sku.costPerUnit;
 
-            {/* TAB 3: WASTE MANAGEMENT */}
-            <TabsContent value="wastage" className="m-0 border-none p-0 border">
-              <Card className="shadow-xs border-border/60">
-                <div className="p-4 border-b border-border flex justify-between items-center">
-                  <div>
-                    <h3 className="text-sm font-bold text-rose-600 flex items-center gap-2"><Trash2 className="h-4 w-4" /> Loss & Write-Off Ledger</h3>
-                    <p className="text-xs text-muted-foreground mt-1">Total Waste Value (This Month): <span className="font-bold text-foreground">{formatCurrency(metrics.thisMonthWasteValue)}</span></p>
-                  </div>
-                  {renderAction(canReportWaste,
-                    <Dialog open={isWasteOpen} onOpenChange={setIsWasteOpen}>
-                      <DialogTrigger asChild><Button size="sm" variant="destructive" className="h-8 text-[11px] font-bold"><Plus className="h-3.5 w-3.5 mr-1" /> Report Waste</Button></DialogTrigger>
-                      <DialogContent className="max-w-sm">
-                        <DialogHeader><DialogTitle>Report Material Loss / Waste</DialogTitle></DialogHeader>
-                        <div className="space-y-4 py-4">
-                          <div className="space-y-1">
-                            <Label className="text-xs">SKU</Label>
-                            <Select onValueChange={v => setFormWaste({ ...formWaste, skuId: v })}>
-                              <SelectTrigger className="text-xs"><SelectValue placeholder="Select SKU" /></SelectTrigger>
-                              <SelectContent>{skus.map(s => <SelectItem key={s.id} value={s.id} className="text-xs">{s.id}</SelectItem>)}</SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-1"><Label className="text-xs">Quantity Lost</Label><Input type="number" onChange={e => setFormWaste({ ...formWaste, quantity: Number(e.target.value) })} className="text-xs" /></div>
-                          <div className="space-y-1"><Label className="text-xs">Reason/Root Cause</Label><Input onChange={e => setFormWaste({ ...formWaste, reason: e.target.value })} className="text-xs" /></div>
-                          <p className="text-[10px] text-muted-foreground">Losses over ${settings.writeOffApprovalThreshold} will pend Finance Approval automatically.</p>
-                        </div>
-                        <DialogFooter><Button onClick={handleReportWaste} variant="destructive" className="w-full text-xs" disabled={!formWaste.skuId || !formWaste.quantity}>Log Waste Record</Button></DialogFooter>
-                      </DialogContent>
-                    </Dialog>,
-                    "Role lacks waste reporting permissions."
-                  )}
-                </div>
-                <Table>
-                  <TableHeader className="bg-muted/30">
-                    <TableRow>
-                      <TableHead className="text-[11px] font-bold uppercase">Log ID</TableHead>
-                      <TableHead className="text-[11px] font-bold uppercase">SKU</TableHead>
-                      <TableHead className="text-[11px] font-bold uppercase">Reason</TableHead>
-                      <TableHead className="text-[11px] font-bold uppercase">Reporter</TableHead>
-                      <TableHead className="text-[11px] font-bold uppercase text-right">Lost Qty</TableHead>
-                      <TableHead className="text-[11px] font-bold uppercase text-right">Financial Impact</TableHead>
-                      <TableHead className="text-[11px] font-bold uppercase text-center">Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {wasteLogs.map(w => (
-                      <TableRow key={w.id}>
-                        <TableCell className="py-3 font-mono text-xs text-muted-foreground">{w.id}</TableCell>
-                        <TableCell className="py-3 font-mono font-bold text-xs">{w.skuId}</TableCell>
-                        <TableCell className="py-3 text-xs">{w.reason}</TableCell>
-                        <TableCell className="py-3 text-[10px] text-muted-foreground">{w.reportedBy}</TableCell>
-                        <TableCell className="py-3 text-right text-sm font-black text-rose-600">-{w.quantity}</TableCell>
-                        <TableCell className="py-3 text-right text-sm font-mono font-bold">{formatCurrency(w.value)}</TableCell>
-                        <TableCell className="py-3 text-center">
-                          {w.status === 'Pending' ? (
-                            <div className="flex flex-col items-center gap-1">
-                              <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-200 text-[9px] uppercase">PENDING FINANCE</Badge>
-                              {canApproveWriteOffs && (
-                                <div className="flex gap-1 mt-1">
-                                  <Button size="icon" variant="outline" className="h-5 w-5 rounded-full border-emerald-200 bg-emerald-50 text-emerald-600 hover:bg-emerald-100" onClick={() => handleApproveWaste(w.id, true)}><Check className="h-3 w-3" /></Button>
-                                  <Button size="icon" variant="outline" className="h-5 w-5 rounded-full border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100" onClick={() => handleApproveWaste(w.id, false)}><X className="h-3 w-3" /></Button>
-                                </div>
+                        return (
+                          <TableRow key={sku.id} className="hover:bg-background transition-colors">
+                            <TableCell className="font-medium text-foreground">{sku.id}</TableCell>
+                            <TableCell>
+                              <div>{sku.name}</div>
+                              <div className="text-xs text-muted-foreground">{sku.category}</div>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="font-medium">{sku.stock} <span className="text-xs text-muted-foreground font-normal">{sku.unit}</span></div>
+                              <Progress
+                                value={Math.min(100, (sku.stock / (sku.minThreshold * 3)) * 100)}
+                                className={`h-1.5 mt-2 ${isZero ? '[&>div]:bg-red-500 bg-red-100' : isLow ? '[&>div]:bg-orange-500 bg-orange-100' : '[&>div]:bg-emerald-500 bg-emerald-100'}`}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              {isZero ? (
+                                <Badge variant="destructive" className="bg-red-50 text-red-700 border-red-200 hover:bg-red-100">Critical</Badge>
+                              ) : isLow ? (
+                                <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">Low Stock</Badge>
+                              ) : (
+                                <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">Healthy</Badge>
                               )}
-                            </div>
-                          ) : w.status === 'Approved' ? (
-                            <Badge className="bg-emerald-50 text-emerald-600 border-none shadow-none text-[9px] uppercase"><CheckCircle2 className="h-3 w-3 mr-1" /> APPROVED</Badge>
-                          ) : (
-                            <Badge className="bg-muted text-muted-foreground border-none text-[9px] uppercase">REJECTED</Badge>
-                          )}
+                            </TableCell>
+                            <TableCell className="text-right text-muted-foreground hidden md:table-cell">${sku.costPerUnit.toLocaleString()}</TableCell>
+                            <TableCell className="text-right font-medium hidden lg:table-cell">${value.toLocaleString()}</TableCell>
+                            <TableCell className="text-right">
+                              <span className={sku.wastePercent > settings.wasteTolerancePercent ? "text-red-600 font-medium" : "text-muted-foreground"}>
+                                {sku.wastePercent.toFixed(1)}%
+                              </span>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="stock-movement" className="flex-grow focus-visible:outline-none data-[state=inactive]:hidden">
+              <Card className="rounded-xl border-border overflow-hidden bg-white shadow-sm">
+                <Table>
+                  <TableHeader className="bg-muted/40">
+                    <TableRow>
+                      <TableHead>Date & Time</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>SKU</TableHead>
+                      <TableHead className="text-right">Quantity</TableHead>
+                      <TableHead>User Role</TableHead>
+                      <TableHead>Notes</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {movements.map((mov) => (
+                      <TableRow key={mov.id}>
+                        <TableCell className="text-muted-foreground">{format(new Date(mov.timestamp), "MMM dd, yyyy HH:mm")}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={
+                            mov.type === "Increase" ? "border-emerald-200 text-emerald-700 bg-emerald-50" :
+                              mov.type === "Deduct" ? "border-orange-200 text-orange-700 bg-orange-50" :
+                                mov.type === "Waste" ? "border-red-200 text-red-700 bg-red-50" :
+                                  "border-border text-primary bg-primary/10"
+                          }>
+                            {mov.type}
+                          </Badge>
                         </TableCell>
+                        <TableCell className="font-medium text-foreground font-semibold">{mov.skuId}</TableCell>
+                        <TableCell className="text-right">{mov.type === "Increase" ? "+" : "-"}{mov.quantity}</TableCell>
+                        <TableCell className="text-muted-foreground">{ROLES.find(r => r.id === mov.user)?.name || mov.user}</TableCell>
+                        <TableCell className="text-muted-foreground truncate max-w-[200px]">{mov.notes}</TableCell>
                       </TableRow>
                     ))}
+                    {movements.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">No stock movements recorded.</TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
               </Card>
             </TabsContent>
 
-            {/* TAB 4: SITE ALLOCATION */}
-            <TabsContent value="allocation" className="m-0 border-none p-0">
-              <Card className="shadow-xs border-border/60">
-                <div className="p-4 border-b border-border flex justify-between items-center">
-                  <div>
-                    <h3 className="text-sm font-bold flex items-center gap-2">Site Project Bindings</h3>
-                    <p className="text-xs text-muted-foreground mt-1">Deduct central stock by assigning directly to live construction sites.</p>
-                  </div>
-                  {renderAction(canAllocateToSite,
-                    <Dialog open={isAllocateOpen} onOpenChange={setIsAllocateOpen}>
-                      <DialogTrigger asChild><Button size="sm" className="h-8 text-[11px] font-bold"><MapPin className="h-3.5 w-3.5 mr-1" /> Allocate Stock</Button></DialogTrigger>
-                      <DialogContent className="max-w-sm">
-                        <DialogHeader><DialogTitle>New Site Allocation</DialogTitle></DialogHeader>
-                        <div className="space-y-4 py-4">
-                          <div className="space-y-1">
-                            <Label className="text-xs">Select Target Site</Label>
-                            <Select onValueChange={v => setFormAllocate({ ...formAllocate, site: v })}>
-                              <SelectTrigger className="text-xs"><SelectValue placeholder="Project Site" /></SelectTrigger>
-                              <SelectContent><SelectItem value="Site A - Downtown Tower">Site A - Downtown Tower</SelectItem><SelectItem value="Site B - Riverside Complex">Site B - Riverside Complex</SelectItem></SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-xs">SKU to Allocate</Label>
-                            <Select onValueChange={v => setFormAllocate({ ...formAllocate, skuId: v })}>
-                              <SelectTrigger className="text-xs"><SelectValue placeholder="SKU" /></SelectTrigger>
-                              <SelectContent>{skus.map(s => <SelectItem key={s.id} value={s.id} className="text-xs">{s.id}</SelectItem>)}</SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-1"><Label className="text-xs">Quantity</Label><Input type="number" onChange={e => setFormAllocate({ ...formAllocate, quantity: Number(e.target.value) })} className="text-xs" /></div>
+            <TabsContent value="waste-management" className="flex-grow focus-visible:outline-none data-[state=inactive]:hidden flex flex-col gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {wasteLogs.map(log => {
+                  const sku = skus.find(s => s.id === log.skuId);
+                  const value = sku ? sku.costPerUnit * log.quantity : 0;
+                  const isOverThreshold = value > settings.writeOffApprovalThreshold;
+
+                  return (
+                    <Card key={log.id} className="bg-white shadow-sm hover:shadow-md transition-shadow">
+                      <CardHeader className="p-4 pb-2">
+                        <div className="flex justify-between items-start mb-2">
+                          <Badge variant="outline" className="font-mono bg-muted/40 text-muted-foreground">{log.id}</Badge>
+                          <Badge variant={
+                            log.status === "Approved" ? "default" :
+                              log.status === "Rejected" ? "destructive" :
+                                "secondary"
+                          } className={
+                            log.status === "Approved" ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200" :
+                              log.status === "Pending Finance" ? "bg-amber-100 text-amber-800 hover:bg-amber-200" : ""
+                          }>
+                            {log.status}
+                          </Badge>
                         </div>
-                        <DialogFooter><Button onClick={handleAllocate} className="w-full text-xs">Push Allocation to Site</Button></DialogFooter>
-                      </DialogContent>
-                    </Dialog>,
-                    "Role lacks allocation permissions."
-                  )}
-                </div>
+                        <CardTitle className="text-lg font-bold text-foreground font-semibold flex justify-between">
+                          <span>{log.skuId}</span>
+                          <span className="text-red-600">- {log.quantity} unit(s)</span>
+                        </CardTitle>
+                        <CardDescription className="text-muted-foreground">
+                          {sku?.name}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="p-4 pt-2 text-sm text-muted-foreground space-y-2 border-b border-border">
+                        <div>
+                          <span className="font-medium text-muted-foreground">Reason:</span>
+                          <p className="mt-1 line-clamp-2">{log.reason}</p>
+                        </div>
+                        <div className="flex justify-between items-center bg-muted/40 p-2 rounded-md">
+                          <span className="font-medium text-muted-foreground">Loss Value:</span>
+                          <span className="font-bold text-foreground font-semibold">${value.toLocaleString()}</span>
+                        </div>
+                        <div className="text-xs text-muted-foreground/60">
+                          Reported by: {ROLES.find(r => r.id === log.reportedBy)?.name || log.reportedBy} on {format(new Date(log.date), "MMM dd")}
+                        </div>
+                      </CardContent>
+
+                      {log.status.includes("Pending") && (
+                        <CardFooter className="p-3 bg-muted/40 flex gap-2 justify-end rounded-b-xl">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 border-red-200 text-red-600 hover:bg-red-50"
+                            onClick={() => handleApproveWaste(log.id, false)}
+                          >
+                            <X className="h-4 w-4 mr-1" /> Reject
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white"
+                            disabled={
+                              (log.status === "Pending Finance" && !role.canApproveFinance && !role.canOverride) ||
+                              (log.status === "Pending" && !role.canApproveWaste && !role.canOverride)
+                            }
+                            onClick={() => handleApproveWaste(log.id, true)}
+                          >
+                            <Check className="h-4 w-4 mr-1" /> Approve Write-off
+                          </Button>
+                        </CardFooter>
+                      )}
+                    </Card>
+                  );
+                })}
+                {wasteLogs.length === 0 && (
+                  <div className="col-span-full py-12 text-center flex flex-col items-center border-2 border-dashed border-border rounded-xl">
+                    <CheckCircle2 className="h-10 w-10 text-emerald-400 mb-3" />
+                    <p className="text-muted-foreground font-medium">No waste logs recorded.</p>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="site-allocation" className="flex-grow focus-visible:outline-none data-[state=inactive]:hidden">
+              <Card className="rounded-xl border-border bg-white shadow-sm p-0 overflow-hidden">
                 <Table>
-                  <TableHeader className="bg-muted/30">
+                  <TableHeader className="bg-muted/40">
                     <TableRow>
-                      <TableHead className="text-[11px] font-bold uppercase">Destination Site</TableHead>
-                      <TableHead className="text-[11px] font-bold uppercase">Linked SKU</TableHead>
-                      <TableHead className="text-[11px] font-bold uppercase text-center">Total Allocated</TableHead>
-                      <TableHead className="text-[11px] font-bold uppercase text-center">Reported Consumption</TableHead>
-                      <TableHead className="text-[11px] font-bold uppercase text-center">Burn %</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Destination Site</TableHead>
+                      <TableHead>SKU</TableHead>
+                      <TableHead className="text-right">Quantity</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {allocations.map(a => {
-                      const pct = a.allocated > 0 ? (a.consumed / a.allocated) * 100 : 0;
-                      return (
-                        <TableRow key={a.id}>
-                          <TableCell className="py-4 text-sm font-bold">{a.site}</TableCell>
-                          <TableCell className="py-4 text-xs font-mono font-bold text-primary">{a.skuId}</TableCell>
-                          <TableCell className="py-4 text-center text-sm font-bold">{a.allocated}</TableCell>
-                          <TableCell className="py-4 text-center text-sm">{a.consumed}</TableCell>
-                          <TableCell className="py-4 text-center">
-                            <div className="flex flex-col items-center gap-1">
-                              <Progress value={pct} className="w-16 h-1.5" />
-                              <span className="text-[9px] text-muted-foreground font-medium">{pct.toFixed(0)}%</span>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })}
+                    {allocations.map((alloc) => (
+                      <TableRow key={alloc.id}>
+                        <TableCell className="text-muted-foreground">{format(new Date(alloc.date), "MMM dd, yyyy")}</TableCell>
+                        <TableCell className="font-medium text-foreground font-semibold">
+                          <div className="flex items-center gap-2">
+                            <Building className="h-4 w-4 text-primary/70" />
+                            {alloc.site}
+                          </div>
+                        </TableCell>
+                        <TableCell>{alloc.skuId} - <span className="text-muted-foreground text-sm hidden sm:inline">{skus.find(s => s.id === alloc.skuId)?.name}</span></TableCell>
+                        <TableCell className="text-right font-medium">{alloc.quantity}</TableCell>
+                      </TableRow>
+                    ))}
+                    {allocations.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">No site allocations recorded yet.</TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
               </Card>
             </TabsContent>
           </Tabs>
-
         </div>
+
+        {/* MODALS */}
+
+        {/* Register SKU Dialog */}
+        <Dialog open={isRegisterOpen} onOpenChange={setIsRegisterOpen}>
+          <DialogContent className="sm:max-w-md bg-white">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2"><PackagePlus className="h-5 w-5 text-primary" /> Register Material</DialogTitle>
+              <DialogDescription>
+                Add a new SKU to the central inventory catalog.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="skuId">SKU ID</Label>
+                <Input id="skuId" placeholder="e.g. WOOD-001" value={skuForm.id} onChange={e => setSkuForm({ ...skuForm, id: e.target.value.toUpperCase() })} />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="skuName">Material Name</Label>
+                <Input id="skuName" placeholder="e.g. Treated Plywood" value={skuForm.name} onChange={e => setSkuForm({ ...skuForm, name: e.target.value })} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label>Category</Label>
+                  <Select value={skuForm.category} onValueChange={v => setSkuForm({ ...skuForm, category: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Raw Materials">Raw Materials</SelectItem>
+                      <SelectItem value="Equipment">Equipment</SelectItem>
+                      <SelectItem value="Consumables">Consumables</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="skuUnit">Unit</Label>
+                  <Input id="skuUnit" placeholder="e.g. Sheets" value={skuForm.unit} onChange={e => setSkuForm({ ...skuForm, unit: e.target.value })} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="minThresh">Min Threshold</Label>
+                  <Input type="number" id="minThresh" min="0" value={skuForm.minThreshold} onChange={e => setSkuForm({ ...skuForm, minThreshold: Number(e.target.value) })} />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="cost">Cost Per Unit ($)</Label>
+                  <Input type="number" id="cost" min="0" value={skuForm.costPerUnit} onChange={e => setSkuForm({ ...skuForm, costPerUnit: Number(e.target.value) })} />
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsRegisterOpen(false)}>Cancel</Button>
+              <Button onClick={handleRegisterSku} className="bg-primary hover:bg-primary/90 text-white">Save SKU</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Adjust Stock Dialog */}
+        <Dialog open={isAdjustOpen} onOpenChange={setIsAdjustOpen}>
+          <DialogContent className="sm:max-w-md bg-white">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2"><ArrowRightLeft className="h-5 w-5 text-primary" /> Stock Adjustment</DialogTitle>
+              <DialogDescription>
+                Record a manual increase or deduction for a specific SKU.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label>Target SKU</Label>
+                <Select value={adjustForm.skuId} onValueChange={v => setAdjustForm({ ...adjustForm, skuId: v })}>
+                  <SelectTrigger><SelectValue placeholder="Select Material" /></SelectTrigger>
+                  <SelectContent>
+                    {skus.map(s => <SelectItem key={s.id} value={s.id}>{s.id} · {s.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label>Action Type</Label>
+                  <Select value={adjustForm.type} onValueChange={v => setAdjustForm({ ...adjustForm, type: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Increase">Increase (+)</SelectItem>
+                      <SelectItem value="Deduct">Deduct (-)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label>Quantity</Label>
+                  <Input type="number" min="1" value={adjustForm.quantity || ''} onChange={e => setAdjustForm({ ...adjustForm, quantity: Number(e.target.value) })} />
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <Label>Reason / Notes</Label>
+                <Input placeholder="e.g. Audit correction, Supplier delivery..." value={adjustForm.reason} onChange={e => setAdjustForm({ ...adjustForm, reason: e.target.value })} />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsAdjustOpen(false)}>Cancel</Button>
+              <Button onClick={handleAdjustStock} className="bg-primary hover:bg-primary/90 text-white">Confirm Adjustment</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Report Waste Dialog */}
+        <Dialog open={isWasteOpen} onOpenChange={setIsWasteOpen}>
+          <DialogContent className="sm:max-w-md bg-white">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-red-600"><Trash2 className="h-5 w-5" /> Report Waste</DialogTitle>
+              <DialogDescription>
+                Log damaged or lost material. Write-offs over ${settings.writeOffApprovalThreshold} require Finance approval.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label>Target SKU</Label>
+                <Select value={wasteForm.skuId} onValueChange={v => setWasteForm({ ...wasteForm, skuId: v })}>
+                  <SelectTrigger><SelectValue placeholder="Select Material" /></SelectTrigger>
+                  <SelectContent>
+                    {skus.filter(s => s.stock > 0).map(s => <SelectItem key={s.id} value={s.id}>{s.id} (Avail: {s.stock})</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label>Quantity to write-off</Label>
+                <Input type="number" min="1" value={wasteForm.quantity || ''} onChange={e => setWasteForm({ ...wasteForm, quantity: Number(e.target.value) })} />
+              </div>
+              <div className="grid gap-2">
+                <Label>Reason</Label>
+                <Input placeholder="e.g. Water damage, broken during shift" value={wasteForm.reason} onChange={e => setWasteForm({ ...wasteForm, reason: e.target.value })} />
+              </div>
+
+              {/* Show cost impact preview dynamically */}
+              {wasteForm.skuId && wasteForm.quantity > 0 && (
+                <div className="rounded-lg bg-red-50 p-3 mt-2 border border-red-100 flex justify-between items-center text-sm">
+                  <span className="text-red-800 font-medium">Estimated Write-off Value:</span>
+                  <span className="text-red-900 font-bold">
+                    ${(wasteForm.quantity * (skus.find(s => s.id === wasteForm.skuId)?.costPerUnit || 0)).toLocaleString()}
+                  </span>
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsWasteOpen(false)}>Cancel</Button>
+              <Button onClick={handleReportWaste} className="bg-red-600 hover:bg-red-700 text-white">Submit Report</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+
+        {/* Allocate to Site Dialog */}
+        <Dialog open={isAllocateOpen} onOpenChange={setIsAllocateOpen}>
+          <DialogContent className="sm:max-w-md bg-white">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2"><Building className="h-5 w-5 text-primary" /> Allocate Inventory</DialogTitle>
+              <DialogDescription>
+                Move stock from central inventory to a specific project site.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label>Material</Label>
+                <Select value={allocateForm.skuId} onValueChange={v => setAllocateForm({ ...allocateForm, skuId: v })}>
+                  <SelectTrigger><SelectValue placeholder="Select SKU" /></SelectTrigger>
+                  <SelectContent>
+                    {skus.filter(s => s.stock > 0).map(s => <SelectItem key={s.id} value={s.id}>{s.name} (Avail: {s.stock})</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label>Destination Site</Label>
+                <Select value={allocateForm.site} onValueChange={v => setAllocateForm({ ...allocateForm, site: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {SITES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label>Quantity requested</Label>
+                <Input type="number" min="1" value={allocateForm.quantity || ''} onChange={e => setAllocateForm({ ...allocateForm, quantity: Number(e.target.value) })} />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsAllocateOpen(false)}>Cancel</Button>
+              <Button onClick={handleAllocate} className="bg-primary hover:bg-primary/90 text-white">Allocate Stock</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+
+        {/* Settings Dialog (Super Admin) */}
+        <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+          <DialogContent className="sm:max-w-md bg-white">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2"><Settings className="h-5 w-5 text-foreground font-semibold" /> System Settings</DialogTitle>
+              <DialogDescription>
+                Configure global inventory rules and thresholds.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label>Waste Tolerance Percentage (%)</Label>
+                <Input type="number" step="0.1" value={settingsForm.wasteTolerancePercent} onChange={e => setSettingsForm({ ...settingsForm, wasteTolerancePercent: Number(e.target.value) })} />
+                <p className="text-xs text-muted-foreground">Triggers global alert if average waste exceeds this.</p>
+              </div>
+              <div className="grid gap-2">
+                <Label>Write-off Finance Approval Threshold ($)</Label>
+                <Input type="number" value={settingsForm.writeOffApprovalThreshold} onChange={e => setSettingsForm({ ...settingsForm, writeOffApprovalThreshold: Number(e.target.value) })} />
+                <p className="text-xs text-muted-foreground">Waste reports exceeding this value route to Finance.</p>
+              </div>
+              <div className="grid gap-2">
+                <Label>Global Low Stock Alert Level</Label>
+                <Input type="number" value={settingsForm.lowStockThreshold} onChange={e => setSettingsForm({ ...settingsForm, lowStockThreshold: Number(e.target.value) })} />
+                <p className="text-xs text-muted-foreground">Default fallback count for low stock warnings.</p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsSettingsOpen(false)}>Cancel</Button>
+              <Button onClick={handleSaveSettings}>Save Changes</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
       </div>
     </DashboardShell>
   );
