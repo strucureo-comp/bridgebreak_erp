@@ -36,6 +36,8 @@ import { cn } from '@/lib/utils';
 
 // --- INITIAL STATE ---
 const INITIAL_DATA = {
+    slug: 'bridge-a10',
+    name: 'Structure Bridge A-10',
     code: 'PROJ-2026-A10',
     client: 'Emaar Properties',
     location: 'Dubai Marina, UAE',
