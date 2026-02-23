@@ -111,7 +111,8 @@ const DEFAULT_LABELS: Record<string, string> = {
   reports: 'Analytics',
   settings: 'System Hub',
   masters: 'Master Data',
-  purchases: 'Procurement'
+  purchases: 'Procurement',
+  compliance: 'Legal & Compliance'
 };
 
 export function TenantProvider({ children }: { children: React.ReactNode }) {
@@ -157,11 +158,28 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
 
   const checkAccess = (module: ModuleKey): ModuleAccess => {
     if (module === 'dashboard' || module === 'settings') return { accessible: true };
+
+    const sector = companyProfile?.businessType || tenantStatus?.business_type || 'service';
+
+    // Core logic defining defaults
+    const isCore = (m: string) => {
+      if (['finance', 'sales', 'operations', 'purchases'].includes(m)) return true;
+      if (m === 'inventory' && ['manufacturing', 'retail', 'trading'].includes(sector)) return true;
+      if (m === 'projects' && ['construction', 'service'].includes(sector)) return true;
+      if (m === 'manufacturing' && sector === 'manufacturing') return true;
+      return false;
+    };
+
     if (companyProfile?.activeModules && module in companyProfile.activeModules) {
       if (!companyProfile.activeModules[module]) {
         return { accessible: false, reason: 'Module suspended by System Admin' };
       }
+      return { accessible: true };
     }
+
+    // Default by core
+    if (!isCore(module)) return { accessible: false, reason: 'Module not enabled' };
+
     return checkModuleAccess(module, tenantStatus, user?.role);
   };
 

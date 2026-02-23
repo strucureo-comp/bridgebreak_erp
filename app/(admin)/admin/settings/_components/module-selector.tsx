@@ -7,15 +7,16 @@ import { cn } from '@/lib/utils';
 import {
     DollarSign, ShoppingCart, Cog,
     Users, Package, Briefcase,
-    Shield, BarChart3, Factory
+    Shield, BarChart3, Factory, Building2
 } from 'lucide-react';
 
 interface ModuleSelectorProps {
     businessType: string;
+    activeModules?: Record<string, boolean>;
     onChange: (modules: Record<string, boolean>) => void;
 }
 
-export function ModuleSelector({ businessType, onChange }: ModuleSelectorProps) {
+export function ModuleSelector({ businessType, activeModules, onChange }: ModuleSelectorProps) {
     const modules = [
         { id: 'finance', label: 'Finance', icon: DollarSign, core: true },
         { id: 'sales', label: 'Sales', icon: ShoppingCart, core: true },
@@ -23,6 +24,7 @@ export function ModuleSelector({ businessType, onChange }: ModuleSelectorProps) 
         { id: 'hr', label: 'Human Resources', icon: Users, core: false },
         { id: 'inventory', label: 'Inventory', icon: Package, core: businessType === 'manufacturing' || businessType === 'retail' },
         { id: 'projects', label: 'Projects', icon: Briefcase, core: businessType === 'construction' || businessType === 'services' },
+        { id: 'purchases', label: 'Procurement', icon: Building2, core: true },
         { id: 'manufacturing', label: 'Manufacturing', icon: Factory, core: businessType === 'manufacturing' },
         { id: 'reports', label: 'Reports', icon: BarChart3, core: false },
         { id: 'compliance', label: 'Legal & Compliance', icon: Shield, core: false },
@@ -48,9 +50,16 @@ export function ModuleSelector({ businessType, onChange }: ModuleSelectorProps) 
                         </div>
                     </div>
                     <Switch
-                        checked={m.core}
+                        checked={activeModules ? !!activeModules[m.id] : m.core}
                         onCheckedChange={(checked) => {
-                            // In a real app we'd manage state here
+                            if (activeModules) {
+                                onChange({
+                                    ...activeModules,
+                                    [m.id]: checked
+                                });
+                            } else {
+                                onChange({ [m.id]: checked });
+                            }
                         }}
                     />
                 </div>

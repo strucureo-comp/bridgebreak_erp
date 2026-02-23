@@ -2,7 +2,6 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const connectDB = require('./config/db');
-const seedSuperAdmin = require('./seed');
 
 const authRoutes = require('./routes/auth');
 const settingsRoutes = require('./routes/settings');
@@ -28,7 +27,6 @@ app.get('/api/health', (req, res) => {
 // Start server
 async function start() {
     await connectDB();
-    await seedSuperAdmin();
 
     app.listen(PORT, () => {
         console.log(`\n[Server] BridgeBreak API running on http://localhost:${PORT}`);

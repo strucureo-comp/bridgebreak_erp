@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -9,103 +10,147 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
+    Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog';
+import {
     Landmark, Shield, Calculator, Globe,
     Plus, FileText, BarChart3, Clock,
-    AlertCircle, Download, Settings
+    AlertCircle, Download, Settings, Trash2, Edit2
 } from 'lucide-react';
+import { toast } from 'sonner';
+
 const COUNTRIES = [
-    { code: 'AF', name: 'Afghanistan' }, { code: 'AX', name: 'Aland Islands' }, { code: 'AL', name: 'Albania' },
-    { code: 'DZ', name: 'Algeria' }, { code: 'AS', name: 'American Samoa' }, { code: 'AD', name: 'Andorra' },
-    { code: 'AO', name: 'Angola' }, { code: 'AI', name: 'Anguilla' }, { code: 'AQ', name: 'Antarctica' },
-    { code: 'AG', name: 'Antigua and Barbuda' }, { code: 'AR', name: 'Argentina' }, { code: 'AM', name: 'Armenia' },
-    { code: 'AW', name: 'Aruba' }, { code: 'AU', name: 'Australia' }, { code: 'AT', name: 'Austria' },
-    { code: 'AZ', name: 'Azerbaijan' }, { code: 'BS', name: 'Bahamas' }, { code: 'BH', name: 'Bahrain' },
-    { code: 'BD', name: 'Bangladesh' }, { code: 'BB', name: 'Barbados' }, { code: 'BY', name: 'Belarus' },
-    { code: 'BE', name: 'Belgium' }, { code: 'BZ', name: 'Belize' }, { code: 'BJ', name: 'Benin' },
-    { code: 'BM', name: 'Bermuda' }, { code: 'BT', name: 'Bhutan' }, { code: 'BO', name: 'Bolivia' },
-    { code: 'BQ', name: 'Bonaire, Sint Eustatius and Saba' }, { code: 'BA', name: 'Bosnia and Herzegovina' },
-    { code: 'BW', name: 'Botswana' }, { code: 'BV', name: 'Bouvet Island' }, { code: 'BR', name: 'Brazil' },
-    { code: 'IO', name: 'British Indian Ocean Territory' }, { code: 'BN', name: 'Brunei Darussalam' },
-    { code: 'BG', name: 'Bulgaria' }, { code: 'BF', name: 'Burkina Faso' }, { code: 'BI', name: 'Burundi' },
-    { code: 'KH', name: 'Cambodia' }, { code: 'CM', name: 'Cameroon' }, { code: 'CA', name: 'Canada' },
-    { code: 'CV', name: 'Cape Verde' }, { code: 'KY', name: 'Cayman Islands' }, { code: 'CF', name: 'Central African Republic' },
-    { code: 'TD', name: 'Chad' }, { code: 'CL', name: 'Chile' }, { code: 'CN', name: 'China' },
-    { code: 'CX', name: 'Christmas Island' }, { code: 'CC', name: 'Cocos (Keeling) Islands' }, { code: 'CO', name: 'Colombia' },
-    { code: 'KM', name: 'Comoros' }, { code: 'CG', name: 'Congo' }, { code: 'CD', name: 'Congo, Democratic Republic of the Congo' },
-    { code: 'CK', name: 'Cook Islands' }, { code: 'CR', name: 'Costa Rica' }, { code: 'CI', name: "Cote d'Ivoire" },
-    { code: 'HR', name: 'Croatia' }, { code: 'CU', name: 'Cuba' }, { code: 'CW', name: 'Curacao' },
-    { code: 'CY', name: 'Cyprus' }, { code: 'CZ', name: 'Czech Republic' }, { code: 'DK', name: 'Denmark' },
-    { code: 'DJ', name: 'Djibouti' }, { code: 'DM', name: 'Dominica' }, { code: 'DO', name: 'Dominican Republic' },
-    { code: 'EC', name: 'Ecuador' }, { code: 'EG', name: 'Egypt' }, { code: 'SV', name: 'El Salvador' },
-    { code: 'GQ', name: 'Equatorial Guinea' }, { code: 'ER', name: 'Eritrea' }, { code: 'EE', name: 'Estonia' },
-    { code: 'ET', name: 'Ethiopia' }, { code: 'FK', name: 'Falkland Islands (Malvinas)' }, { code: 'FO', name: 'Faroe Islands' },
-    { code: 'FJ', name: 'Fiji' }, { code: 'FI', name: 'Finland' }, { code: 'FR', name: 'France' },
-    { code: 'GF', name: 'French Guiana' }, { code: 'PF', name: 'French Polynesia' }, { code: 'TF', name: 'French Southern Territories' },
-    { code: 'GA', name: 'Gabon' }, { code: 'GM', name: 'Gambia' }, { code: 'GE', name: 'Georgia' },
-    { code: 'DE', name: 'Germany' }, { code: 'GH', name: 'Ghana' }, { code: 'GI', name: 'Gibraltar' },
-    { code: 'GR', name: 'Greece' }, { code: 'GL', name: 'Greenland' }, { code: 'GD', name: 'Grenada' },
-    { code: 'GP', name: 'Guadeloupe' }, { code: 'GU', name: 'Guam' }, { code: 'GT', name: 'Guatemala' },
-    { code: 'GG', name: 'Guernsey' }, { code: 'GN', name: 'Guinea' }, { code: 'GW', name: 'Guinea-Bissau' },
-    { code: 'GY', name: 'Guyana' }, { code: 'HT', name: 'Haiti' }, { code: 'HM', name: 'Heard Island and McDonald Islands' },
-    { code: 'VA', name: 'Holy See (Vatican City State)' }, { code: 'HN', name: 'Honduras' }, { code: 'HK', name: 'Hong Kong' },
-    { code: 'HU', name: 'Hungary' }, { code: 'IS', name: 'Iceland' }, { code: 'IN', name: 'India' },
-    { code: 'ID', name: 'Indonesia' }, { code: 'IR', name: 'Iran, Islamic Republic of' }, { code: 'IQ', name: 'Iraq' },
-    { code: 'IE', name: 'Ireland' }, { code: 'IM', name: 'Isle of Man' }, { code: 'IL', name: 'Israel' },
-    { code: 'IT', name: 'Italy' }, { code: 'JM', name: 'Jamaica' }, { code: 'JP', name: 'Japan' },
-    { code: 'JE', name: 'Jersey' }, { code: 'JO', name: 'Jordan' }, { code: 'KZ', name: 'Kazakhstan' },
-    { code: 'KE', name: 'Kenya' }, { code: 'KI', name: 'Kiribati' }, { code: 'KP', name: "Korea, Democratic People's Republic of" },
-    { code: 'KR', name: 'Korea, Republic of' }, { code: 'XK', name: 'Kosovo' }, { code: 'KW', name: 'Kuwait' },
-    { code: 'KG', name: 'Kyrgyzstan' }, { code: 'LA', name: "Lao People's Democratic Republic" }, { code: 'LV', name: 'Latvia' },
-    { code: 'LB', name: 'Lebanon' }, { code: 'LS', name: 'Lesotho' }, { code: 'LR', name: 'Liberia' },
-    { code: 'LY', name: 'Libyan Arab Jamahiriya' }, { code: 'LI', name: 'Liechtenstein' }, { code: 'LT', name: 'Lithuania' },
-    { code: 'LU', name: 'Luxembourg' }, { code: 'MO', name: 'Macao' }, { code: 'MK', name: 'Macedonia, the Former Yugoslav Republic of' },
-    { code: 'MG', name: 'Madagascar' }, { code: 'MW', name: 'Malawi' }, { code: 'MY', name: 'Malaysia' },
-    { code: 'MV', name: 'Maldives' }, { code: 'ML', name: 'Mali' }, { code: 'MT', name: 'Malta' },
-    { code: 'MH', name: 'Marshall Islands' }, { code: 'MQ', name: 'Martinique' }, { code: 'MR', name: 'Mauritania' },
-    { code: 'MU', name: 'Mauritius' }, { code: 'YT', name: 'Mayotte' }, { code: 'MX', name: 'Mexico' },
-    { code: 'FM', name: 'Micronesia, Federated States of' }, { code: 'MD', name: 'Moldova, Republic of' }, { code: 'MC', name: 'Monaco' },
-    { code: 'MN', name: 'Mongolia' }, { code: 'ME', name: 'Montenegro' }, { code: 'MS', name: 'Montserrat' },
-    { code: 'MA', name: 'Morocco' }, { code: 'MZ', name: 'Mozambique' }, { code: 'MM', name: 'Myanmar' },
-    { code: 'NA', name: 'Namibia' }, { code: 'NR', name: 'Nauru' }, { code: 'NP', name: 'Nepal' },
-    { code: 'NL', name: 'Netherlands' }, { code: 'AN', name: 'Netherlands Antilles' }, { code: 'NC', name: 'New Caledonia' },
-    { code: 'NZ', name: 'New Zealand' }, { code: 'NI', name: 'Nicaragua' }, { code: 'NE', name: 'Niger' },
-    { code: 'NG', name: 'Nigeria' }, { code: 'NU', name: 'Niue' }, { code: 'NF', name: 'Norfolk Island' },
-    { code: 'MP', name: 'Northern Mariana Islands' }, { code: 'NO', name: 'Norway' }, { code: 'OM', name: 'Oman' },
-    { code: 'PK', name: 'Pakistan' }, { code: 'PW', name: 'Palau' }, { code: 'PS', name: 'Palestinian Territory, Occupied' },
-    { code: 'PA', name: 'Panama' }, { code: 'PG', name: 'Papua New Guinea' }, { code: 'PY', name: 'Paraguay' },
-    { code: 'PE', name: 'Peru' }, { code: 'PH', name: 'Philippines' }, { code: 'PN', name: 'Pitcairn' },
-    { code: 'PL', name: 'Poland' }, { code: 'PT', name: 'Portugal' }, { code: 'PR', name: 'Puerto Rico' },
-    { code: 'QA', name: 'Qatar' }, { code: 'RE', name: 'Reunion' }, { code: 'RO', name: 'Romania' },
-    { code: 'RU', name: 'Russian Federation' }, { code: 'RW', name: 'Rwanda' }, { code: 'BL', name: 'Saint Barthelemy' },
-    { code: 'SH', name: 'Saint Helena' }, { code: 'KN', name: 'Saint Kitts and Nevis' }, { code: 'LC', name: 'Saint Lucia' },
-    { code: 'MF', name: 'Saint Martin' }, { code: 'PM', name: 'Saint Pierre and Miquelon' }, { code: 'VC', name: 'Saint Vincent and the Grenadines' },
-    { code: 'WS', name: 'Samoa' }, { code: 'SM', name: 'San Marino' }, { code: 'ST', name: 'Sao Tome and Principe' },
-    { code: 'SA', name: 'Saudi Arabia' }, { code: 'SN', name: 'Senegal' }, { code: 'RS', name: 'Serbia' },
-    { code: 'CS', name: 'Serbia and Montenegro' }, { code: 'SC', name: 'Seychelles' }, { code: 'SL', name: 'Sierra Leone' },
-    { code: 'SG', name: 'Singapore' }, { code: 'SX', name: 'Sint Maarten' }, { code: 'SK', name: 'Slovakia' },
-    { code: 'SI', name: 'Slovenia' }, { code: 'SB', name: 'Solomon Islands' }, { code: 'SO', name: 'Somalia' },
-    { code: 'ZA', name: 'South Africa' }, { code: 'GS', name: 'South Georgia and the South Sandwich Islands' }, { code: 'SS', name: 'South Sudan' },
-    { code: 'ES', name: 'Spain' }, { code: 'LK', name: 'Sri Lanka' }, { code: 'SD', name: 'Sudan' },
-    { code: 'SR', name: 'Suriname' }, { code: 'SJ', name: 'Svalbard and Jan Mayen' }, { code: 'SZ', name: 'Swaziland' },
-    { code: 'SE', name: 'Sweden' }, { code: 'CH', name: 'Switzerland' }, { code: 'SY', name: 'Syrian Arab Republic' },
-    { code: 'TW', name: 'Taiwan, Province of China' }, { code: 'TJ', name: 'Tajikistan' }, { code: 'TZ', name: 'Tanzania, United Republic of' },
-    { code: 'TH', name: 'Thailand' }, { code: 'TL', name: 'Timor-Leste' }, { code: 'TG', name: 'Togo' },
-    { code: 'TK', name: 'Tokelau' }, { code: 'TO', name: 'Tonga' }, { code: 'TT', name: 'Trinidad and Tobago' },
-    { code: 'TN', name: 'Tunisia' }, { code: 'TR', name: 'Turkey' }, { code: 'TM', name: 'Turkmenistan' },
-    { code: 'TC', name: 'Turks and Caicos Islands' }, { code: 'TV', name: 'Tuvalu' }, { code: 'UG', name: 'Uganda' },
-    { code: 'UA', name: 'Ukraine' }, { code: 'AE', name: 'United Arab Emirates' }, { code: 'GB', name: 'United Kingdom' },
-    { code: 'US', name: 'United States' }, { code: 'UM', name: 'United States Minor Outlying Islands' }, { code: 'UY', name: 'Uruguay' },
-    { code: 'UZ', name: 'Uzbekistan' }, { code: 'VU', name: 'Vanuatu' }, { code: 'VE', name: 'Venezuela' },
-    { code: 'VN', name: 'Viet Nam' }, { code: 'VG', name: 'Virgin Islands, British' }, { code: 'VI', name: 'Virgin Islands, U.s.' },
-    { code: 'WF', name: 'Wallis and Futuna' }, { code: 'EH', name: 'Western Sahara' }, { code: 'YE', name: 'Yemen' },
-    { code: 'ZM', name: 'Zambia' }, { code: 'ZW', name: 'Zimbabwe' }
+    { code: 'AE', name: 'United Arab Emirates' }, { code: 'SA', name: 'Saudi Arabia' },
+    { code: 'US', name: 'United States' }, { code: 'GB', name: 'United Kingdom' },
+    { code: 'IN', name: 'India' }, { code: 'DE', name: 'Germany' }, { code: 'FR', name: 'France' },
+    { code: 'CN', name: 'China' }, { code: 'JP', name: 'Japan' }, { code: 'AU', name: 'Australia' },
+    { code: 'CA', name: 'Canada' }, { code: 'BR', name: 'Brazil' }, { code: 'SG', name: 'Singapore' },
+    { code: 'KW', name: 'Kuwait' }, { code: 'QA', name: 'Qatar' }, { code: 'BH', name: 'Bahrain' },
+    { code: 'OM', name: 'Oman' }, { code: 'EG', name: 'Egypt' }, { code: 'PK', name: 'Pakistan' },
+    { code: 'MY', name: 'Malaysia' }, { code: 'ZA', name: 'South Africa' }, { code: 'NG', name: 'Nigeria' },
+    { code: 'KE', name: 'Kenya' }, { code: 'TR', name: 'Turkey' }, { code: 'IT', name: 'Italy' },
+    { code: 'ES', name: 'Spain' }, { code: 'NL', name: 'Netherlands' }, { code: 'CH', name: 'Switzerland' },
+    { code: 'SE', name: 'Sweden' }, { code: 'NO', name: 'Norway' }, { code: 'RU', name: 'Russian Federation' },
+    { code: 'MX', name: 'Mexico' }, { code: 'KR', name: 'Korea, Republic of' }, { code: 'ID', name: 'Indonesia' },
+    { code: 'TH', name: 'Thailand' }, { code: 'PH', name: 'Philippines' }, { code: 'VN', name: 'Viet Nam' },
+    { code: 'BD', name: 'Bangladesh' }, { code: 'LK', name: 'Sri Lanka' }, { code: 'NZ', name: 'New Zealand' },
 ];
 
-interface TaxSystemConfigProps {
-    onChange: (value: any) => void;
+interface TaxRate {
+    id: number;
+    name: string;
+    rate: string;
+    type: string;
+    status: 'Core' | 'Custom';
 }
 
-export function TaxSystemConfig({ onChange }: TaxSystemConfigProps) {
+interface TaxConfigData {
+    region: string;
+    taxSystem: string;
+    defaultRate: string;
+    reverseCharge: boolean;
+    zeroRated: boolean;
+    taxRates: TaxRate[];
+    filingFreq: string;
+    methodology: string;
+    autoVatReturn: boolean;
+    filingReminders: boolean;
+}
+
+interface TaxSystemConfigProps {
+    value?: TaxConfigData;
+    onChange: (value: TaxConfigData) => void;
+}
+
+export function TaxSystemConfig({ value, onChange }: TaxSystemConfigProps) {
+    const [region, setRegion] = useState(value?.region || 'AE');
+    const [taxSystem, setTaxSystem] = useState(value?.taxSystem || 'vat');
+    const [defaultRate, setDefaultRate] = useState(value?.defaultRate || '5');
+    const [reverseCharge, setReverseCharge] = useState(value?.reverseCharge ?? true);
+    const [zeroRated, setZeroRated] = useState(value?.zeroRated ?? true);
+    const [taxRates, setTaxRates] = useState<TaxRate[]>(value?.taxRates || []);
+    const [filingFreq, setFilingFreq] = useState(value?.filingFreq || 'quarterly');
+    const [methodology, setMethodology] = useState(value?.methodology || 'accrual');
+    const [autoVatReturn, setAutoVatReturn] = useState(value?.autoVatReturn ?? true);
+    const [filingReminders, setFilingReminders] = useState(value?.filingReminders ?? true);
+    const [rateDialogOpen, setRateDialogOpen] = useState(false);
+    const [editingRate, setEditingRate] = useState<TaxRate | null>(null);
+
+    // Sync from parent when value changes
+    useEffect(() => {
+        if (value) {
+            setRegion(value.region);
+            setTaxSystem(value.taxSystem);
+            setDefaultRate(value.defaultRate);
+            setReverseCharge(value.reverseCharge);
+            setZeroRated(value.zeroRated);
+            setTaxRates(value.taxRates);
+            setFilingFreq(value.filingFreq);
+            setMethodology(value.methodology);
+            setAutoVatReturn(value.autoVatReturn);
+            setFilingReminders(value.filingReminders);
+        }
+    }, []); // Only sync on mount
+
+    const emit = (patch: Partial<TaxConfigData>) => {
+        const full: TaxConfigData = {
+            region, taxSystem, defaultRate, reverseCharge, zeroRated,
+            taxRates, filingFreq, methodology, autoVatReturn, filingReminders,
+            ...patch
+        };
+        onChange(full);
+    };
+
+    const handleAddRate = () => {
+        setEditingRate({ id: 0, name: '', rate: '', type: 'Standard', status: 'Custom' });
+        setRateDialogOpen(true);
+    };
+
+    const handleEditRate = (rate: TaxRate) => {
+        setEditingRate({ ...rate });
+        setRateDialogOpen(true);
+    };
+
+    const handleDeleteRate = (id: number) => {
+        const updated = taxRates.filter(r => r.id !== id);
+        setTaxRates(updated);
+        emit({ taxRates: updated });
+        toast.success('Tax rate removed');
+    };
+
+    const handleSaveRate = () => {
+        if (!editingRate || !editingRate.name || !editingRate.rate) {
+            toast.error('Name and rate are required');
+            return;
+        }
+        let updated: TaxRate[];
+        if (editingRate.id) {
+            updated = taxRates.map(r => r.id === editingRate.id ? editingRate : r);
+        } else {
+            updated = [...taxRates, { ...editingRate, id: Date.now() }];
+        }
+        setTaxRates(updated);
+        emit({ taxRates: updated });
+        setRateDialogOpen(false);
+        toast.success(editingRate.id ? 'Tax rate updated' : 'Tax rate added');
+    };
+
+    const handleExportAuditLog = () => {
+        const log = {
+            exported_at: new Date().toISOString(),
+            region, taxSystem, defaultRate, reverseCharge, zeroRated,
+            taxRates, filingFreq, methodology,
+        };
+        const blob = new Blob([JSON.stringify(log, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `tax-audit-log-${new Date().toISOString().slice(0, 10)}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast.success('Audit log exported');
+    };
+
     return (
         <Tabs defaultValue="authority" className="space-y-6">
             <TabsList className="bg-muted/50 border">
@@ -127,25 +172,19 @@ export function TaxSystemConfig({ onChange }: TaxSystemConfigProps) {
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <Label className="text-xs">Tax Region</Label>
-                                    <Select defaultValue="AE">
-                                        <SelectTrigger className="h-9">
-                                            <SelectValue />
-                                        </SelectTrigger>
+                                    <Select value={region} onValueChange={(v) => { setRegion(v); emit({ region: v }); }}>
+                                        <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                                         <SelectContent>
-                                            <div className="max-h-[300px] overflow-y-auto">
-                                                {COUNTRIES.map((c) => (
-                                                    <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>
-                                                ))}
-                                            </div>
+                                            {COUNTRIES.map((c) => (
+                                                <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>
+                                            ))}
                                         </SelectContent>
                                     </Select>
                                 </div>
                                 <div className="space-y-2">
                                     <Label className="text-xs">Tax System</Label>
-                                    <Select defaultValue="vat">
-                                        <SelectTrigger className="h-9">
-                                            <SelectValue />
-                                        </SelectTrigger>
+                                    <Select value={taxSystem} onValueChange={(v) => { setTaxSystem(v); emit({ taxSystem: v }); }}>
+                                        <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="vat">VAT (Value Added Tax)</SelectItem>
                                             <SelectItem value="sales">Sales Tax</SelectItem>
@@ -155,10 +194,8 @@ export function TaxSystemConfig({ onChange }: TaxSystemConfigProps) {
                             </div>
                             <div className="space-y-2 pt-2">
                                 <Label className="text-xs">Global Default Rate</Label>
-                                <Select defaultValue="5">
-                                    <SelectTrigger className="h-9">
-                                        <SelectValue />
-                                    </SelectTrigger>
+                                <Select value={defaultRate} onValueChange={(v) => { setDefaultRate(v); emit({ defaultRate: v }); }}>
+                                    <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="5">Standard VAT (5%)</SelectItem>
                                         <SelectItem value="0">Zero-Rated (0%)</SelectItem>
@@ -166,9 +203,7 @@ export function TaxSystemConfig({ onChange }: TaxSystemConfigProps) {
                                         <SelectItem value="exempt">Exempt</SelectItem>
                                     </SelectContent>
                                 </Select>
-                                <p className="text-[10px] text-muted-foreground">
-                                    This rate will be applied automatically to all new invoices and quotes.
-                                </p>
+                                <p className="text-[10px] text-muted-foreground">Applied automatically to all new invoices and quotes.</p>
                             </div>
                         </CardContent>
                     </Card>
@@ -186,14 +221,14 @@ export function TaxSystemConfig({ onChange }: TaxSystemConfigProps) {
                                     <p className="text-sm font-medium">Reverse Charge</p>
                                     <p className="text-xs text-muted-foreground">Automate RC for foreign procurement</p>
                                 </div>
-                                <Switch defaultChecked />
+                                <Switch checked={reverseCharge} onCheckedChange={(v) => { setReverseCharge(v); emit({ reverseCharge: v }); }} />
                             </div>
                             <div className="flex items-center justify-between py-2">
                                 <div className="space-y-0.5">
                                     <p className="text-sm font-medium">Zero-Rated Support</p>
                                     <p className="text-xs text-muted-foreground">Handle exports and exempt goods</p>
                                 </div>
-                                <Switch defaultChecked />
+                                <Switch checked={zeroRated} onCheckedChange={(v) => { setZeroRated(v); emit({ zeroRated: v }); }} />
                             </div>
                         </CardContent>
                     </Card>
@@ -209,19 +244,14 @@ export function TaxSystemConfig({ onChange }: TaxSystemConfigProps) {
                             </CardTitle>
                             <CardDescription className="text-xs">Define custom tax brackets and regional overrides.</CardDescription>
                         </div>
-                        <Button size="sm" className="gap-2">
+                        <Button size="sm" className="gap-2" onClick={handleAddRate}>
                             <Plus className="h-4 w-4" /> Add Rate
                         </Button>
                     </CardHeader>
                     <CardContent className="p-0">
                         <div className="divide-y border-t">
-                            {[
-                                { name: 'Standard VAT', rate: '5%', type: 'Standard', status: 'Core' },
-                                { name: 'Export Rate', rate: '0%', type: 'Zero-Rated', status: 'Core' },
-                                { name: 'Luxury Surcharge', rate: '15%', type: 'Surcharge', status: 'Custom' },
-                                { name: 'Exempt Services', rate: '0%', type: 'Exempt', status: 'Core' },
-                            ].map((tax, i) => (
-                                <div key={i} className="flex items-center justify-between px-6 py-4 hover:bg-muted/50 transition-colors">
+                            {taxRates.map((tax) => (
+                                <div key={tax.id} className="flex items-center justify-between px-6 py-4 hover:bg-muted/50 transition-colors group">
                                     <div className="flex items-center gap-3">
                                         <div className="h-8 w-8 rounded bg-muted flex items-center justify-center text-muted-foreground">
                                             <span className="text-[10px] font-bold">{tax.rate}</span>
@@ -231,14 +261,24 @@ export function TaxSystemConfig({ onChange }: TaxSystemConfigProps) {
                                             <p className="text-xs text-muted-foreground">{tax.type}</p>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-4">
+                                    <div className="flex items-center gap-2">
                                         <Badge variant={tax.status === 'Core' ? 'outline' : 'secondary'} className="text-[10px] uppercase">{tax.status}</Badge>
-                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                            <Settings className="h-4 w-4" />
+                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleEditRate(tax)}>
+                                            <Edit2 className="h-3.5 w-3.5" />
                                         </Button>
+                                        {tax.status === 'Custom' && (
+                                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleDeleteRate(tax.id)}>
+                                                <Trash2 className="h-3.5 w-3.5" />
+                                            </Button>
+                                        )}
                                     </div>
                                 </div>
                             ))}
+                            {taxRates.length === 0 && (
+                                <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
+                                    No tax rates configured. Click &quot;Add Rate&quot; to create one.
+                                </div>
+                            )}
                         </div>
                     </CardContent>
                 </Card>
@@ -257,10 +297,8 @@ export function TaxSystemConfig({ onChange }: TaxSystemConfigProps) {
                             <div className="grid grid-cols-2 gap-6">
                                 <div className="space-y-2">
                                     <Label className="text-xs">Filing Frequency</Label>
-                                    <Select defaultValue="quarterly">
-                                        <SelectTrigger className="h-9">
-                                            <SelectValue />
-                                        </SelectTrigger>
+                                    <Select value={filingFreq} onValueChange={(v) => { setFilingFreq(v); emit({ filingFreq: v }); }}>
+                                        <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="monthly">Monthly</SelectItem>
                                             <SelectItem value="quarterly">Quarterly</SelectItem>
@@ -270,10 +308,8 @@ export function TaxSystemConfig({ onChange }: TaxSystemConfigProps) {
                                 </div>
                                 <div className="space-y-2">
                                     <Label className="text-xs">Methodology</Label>
-                                    <Select defaultValue="accrual">
-                                        <SelectTrigger className="h-9">
-                                            <SelectValue />
-                                        </SelectTrigger>
+                                    <Select value={methodology} onValueChange={(v) => { setMethodology(v); emit({ methodology: v }); }}>
+                                        <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="accrual">Accrual Basis</SelectItem>
                                             <SelectItem value="cash">Cash Basis</SelectItem>
@@ -281,7 +317,6 @@ export function TaxSystemConfig({ onChange }: TaxSystemConfigProps) {
                                     </Select>
                                 </div>
                             </div>
-
                             <div className="pt-4 border-t space-y-4">
                                 <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Automation Tokens</h4>
                                 <div className="grid grid-cols-1 gap-3">
@@ -293,7 +328,7 @@ export function TaxSystemConfig({ onChange }: TaxSystemConfigProps) {
                                                 <p className="text-[10px] text-muted-foreground">Generates XML for FTA portal</p>
                                             </div>
                                         </div>
-                                        <Switch defaultChecked />
+                                        <Switch checked={autoVatReturn} onCheckedChange={(v) => { setAutoVatReturn(v); emit({ autoVatReturn: v }); }} />
                                     </div>
                                     <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/20">
                                         <div className="flex items-center gap-3">
@@ -303,13 +338,12 @@ export function TaxSystemConfig({ onChange }: TaxSystemConfigProps) {
                                                 <p className="text-[10px] text-muted-foreground">7-day advance notice</p>
                                             </div>
                                         </div>
-                                        <Switch defaultChecked />
+                                        <Switch checked={filingReminders} onCheckedChange={(v) => { setFilingReminders(v); emit({ filingReminders: v }); }} />
                                     </div>
                                 </div>
                             </div>
                         </CardContent>
                     </Card>
-
                     <Card>
                         <CardHeader>
                             <CardTitle className="text-sm font-semibold">Audit Ready</CardTitle>
@@ -326,15 +360,53 @@ export function TaxSystemConfig({ onChange }: TaxSystemConfigProps) {
                                     </div>
                                 </div>
                             </div>
-                            <Button className="w-full gap-2" variant="outline" size="sm">
+                            <Button className="w-full gap-2" variant="outline" size="sm" onClick={handleExportAuditLog}>
                                 <Download className="h-3 w-3" /> Export Audit Log
                             </Button>
                         </CardContent>
                     </Card>
                 </div>
             </TabsContent>
-        </Tabs >
+
+            <Dialog open={rateDialogOpen} onOpenChange={setRateDialogOpen}>
+                <DialogContent className="sm:max-w-[420px]">
+                    <DialogHeader>
+                        <DialogTitle>{editingRate?.id ? 'Edit Tax Rate' : 'Add Tax Rate'}</DialogTitle>
+                        <DialogDescription className="text-xs">Define a custom tax formula or override an existing rate.</DialogDescription>
+                    </DialogHeader>
+                    {editingRate && (
+                        <div className="space-y-4 py-4">
+                            <div className="grid gap-2">
+                                <Label className="text-xs">Rate Name</Label>
+                                <Input value={editingRate.name} onChange={(e) => setEditingRate({ ...editingRate, name: e.target.value })} placeholder="e.g. Import VAT" className="h-9 text-xs" />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="grid gap-2">
+                                    <Label className="text-xs">Rate Value</Label>
+                                    <Input value={editingRate.rate} onChange={(e) => setEditingRate({ ...editingRate, rate: e.target.value })} placeholder="e.g. 12%" className="h-9 text-xs" />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label className="text-xs">Type</Label>
+                                    <Select value={editingRate.type} onValueChange={(v) => setEditingRate({ ...editingRate, type: v })}>
+                                        <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="Standard">Standard</SelectItem>
+                                            <SelectItem value="Zero-Rated">Zero-Rated</SelectItem>
+                                            <SelectItem value="Surcharge">Surcharge</SelectItem>
+                                            <SelectItem value="Exempt">Exempt</SelectItem>
+                                            <SelectItem value="Reduced">Reduced</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    <DialogFooter>
+                        <Button variant="outline" size="sm" onClick={() => setRateDialogOpen(false)}>Cancel</Button>
+                        <Button size="sm" onClick={handleSaveRate}>Save Rate</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </Tabs>
     );
 }
-
-

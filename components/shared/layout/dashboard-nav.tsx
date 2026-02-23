@@ -47,8 +47,9 @@ export const adminNavItems: NavItem[] = [
     { title: 'Procurement', href: '/admin/purchases', icon: Building2, section: 'Operations', moduleKey: 'purchases' },
     { title: 'Production', href: '/admin/manufacturing/production', icon: Factory, section: 'Operations', moduleKey: 'manufacturing', comingSoon: true },
     { title: 'HR & Teams', href: '/admin/hr', icon: Users, section: 'Operations', moduleKey: 'hr' },
+    { title: 'Operations Hub', href: '/admin/operations', icon: Cog, section: 'Operations', moduleKey: 'operations' },
     { title: 'Finance Hub', href: '/admin/finance', icon: DollarSign, section: 'Finance', moduleKey: 'finance' },
-    { title: 'Legal Hub', icon: ShieldCheck, section: 'Finance', comingSoon: true },
+    { title: 'Legal Hub', icon: ShieldCheck, section: 'Finance', moduleKey: 'compliance', comingSoon: true },
     { title: 'Analytics', href: '/admin/reports', icon: BarChart3, section: 'System', moduleKey: 'reports' },
     { title: 'System Hub', href: '/admin/settings', icon: Settings, section: 'System' },
 ];

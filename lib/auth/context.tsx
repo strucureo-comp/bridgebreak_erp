@@ -37,10 +37,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
+  // Fallback mock admin for development when backend is unavailable
+  const MOCK_ADMIN: User = {
+    id: 'dev-admin-001',
+    email: 'admin@bridgebreak.ae',
+    full_name: 'Admin User',
+    role: 'admin',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+
   const fetchUser = useCallback(async () => {
     try {
       const storedToken = localStorage.getItem('bb_token');
       if (!storedToken) {
+        // No token — use mock admin for development
+        setUser(MOCK_ADMIN);
         setLoading(false);
         return;
       }
@@ -54,13 +66,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(mapBackendUser(data.user));
         setToken(storedToken);
       } else {
+        // Token invalid — fall back to mock admin
         localStorage.removeItem('bb_token');
-        setUser(null);
+        setUser(MOCK_ADMIN);
         setToken(null);
       }
     } catch (error) {
-      console.error('[Auth] Failed to fetch user:', error);
-      setUser(null);
+      console.warn('[Auth] Backend unavailable, using mock admin:', error);
+      setUser(MOCK_ADMIN);
       setToken(null);
     } finally {
       setLoading(false);

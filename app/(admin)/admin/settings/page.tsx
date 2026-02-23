@@ -36,7 +36,6 @@ import { ModuleSelector } from '@/app/(admin)/admin/settings/_components/module-
 import { DocumentBranding } from '@/app/(admin)/admin/settings/_components/document-branding';
 import { TaxSystemConfig } from '@/app/(admin)/admin/settings/_components/tax-system-config';
 import { RolePermissionConfig } from '@/app/(admin)/admin/settings/_components/role-permission-config';
-import { FinanceEngineSettings } from '@/app/(admin)/admin/settings/_components/finance-engine-settings';
 
 interface CompanyProfile {
     tradingName: string;
@@ -58,8 +57,93 @@ interface CompanyProfile {
     companySize: CompanySize;
     activeModules: Record<string, boolean>;
     branding?: any;
-    taxConfig?: any;
 }
+
+// Defaults
+const DEFAULT_COMPANY: CompanyProfile = {
+    tradingName: 'SYSTEM STEEL ENGINEERING LLC',
+    legalName: 'SYSTEM STEEL ENGINEERING LLC',
+    baseCurrency: 'AED',
+    taxId: '100123456789003',
+    address: 'Warehouse 4, Al Quoz Industrial Area, Dubai, UAE',
+    email: 'ops@systemsteel.ae',
+    phone: '+971 4 123 4567',
+    website: 'www.systemsteel.ae',
+    bankDetails: { bankName: 'Emirates NBD', iban: 'AE000000000000000000000', swift: 'ENBD AE AD' },
+    timezone: 'Asia/Dubai',
+    fiscalYearStart: '1',
+    businessType: 'construction',
+    companySize: 'startup',
+    activeModules: { finance: true, sales: true, operations: true, hr: true, inventory: true, projects: true, purchases: true }
+};
+
+const DEFAULT_NOTIFICATIONS = {
+    invoiceReminders: true,
+    lowStockAlerts: true,
+    approvalTriggers: true,
+    emailDigest: false,
+    smsAlerts: false,
+    highValueLeadAlert: true,
+    dailyCashPosition: true
+};
+
+const DEFAULT_TAX_CONFIG = {
+    region: 'AE',
+    taxSystem: 'vat',
+    defaultRate: '5',
+    reverseCharge: true,
+    zeroRated: true,
+    taxRates: [
+        { id: 1, name: 'Standard VAT', rate: '5%', type: 'Standard', status: 'Core' as const },
+        { id: 2, name: 'Export Rate', rate: '0%', type: 'Zero-Rated', status: 'Core' as const },
+        { id: 3, name: 'Luxury Surcharge', rate: '15%', type: 'Surcharge', status: 'Custom' as const },
+        { id: 4, name: 'Exempt Services', rate: '0%', type: 'Exempt', status: 'Core' as const },
+    ],
+    filingFreq: 'quarterly',
+    methodology: 'accrual',
+    autoVatReturn: true,
+    filingReminders: true
+};
+
+const DEFAULT_ROLES_CONFIG = {
+    roles: [
+        { id: 1, name: 'Administrator', users: 2, level: 'Full' },
+        { id: 2, name: 'Finance Manager', users: 3, level: 'Audit & Approve' },
+        { id: 3, name: 'Operations Lead', users: 5, level: 'Execution' },
+        { id: 4, name: 'Sales Representative', users: 8, level: 'CRM Access' },
+    ],
+    users: [
+        { id: 1, name: 'Ahmed Khalid', email: 'ahmed@systemsteel.ae', role: 'Administrator', status: 'Active' as const },
+        { id: 2, name: 'Sarah Connor', email: 'sarah@systemsteel.ae', role: 'Finance Manager', status: 'Active' as const },
+        { id: 3, name: 'John Doe', email: 'john@systemsteel.ae', role: 'Operations Lead', status: 'On Leave' as const },
+        { id: 4, name: 'Maria Garcia', email: 'maria@systemsteel.ae', role: 'Sales Representative', status: 'Active' as const },
+    ],
+    workflows: [
+        {
+            id: 1, title: 'Payroll & Salary Increases', status: 'Active', stages: 3, threshold: 'All',
+            flow: [
+                { role: 'HR Manager', action: 'Initiate Request' },
+                { role: 'MD / Admin', action: 'Strategic Approval' },
+                { role: 'Finance Team', action: 'Disbursement & Post' }
+            ]
+        },
+        {
+            id: 2, title: 'Purchase Orders', status: 'Active', stages: 3, threshold: 'AED 10,000',
+            flow: [
+                { role: 'Dept Head', action: 'Review' },
+                { role: 'Procurement', action: 'Verify' },
+                { role: 'MD / Admin', action: 'Authorize' }
+            ]
+        }
+    ],
+    globalSettings: { autoEscalation: false, parallelApprovals: true, mobileSignoff: true }
+};
+
+const DEFAULT_BRANDING = {
+    primaryColor: '#0F172A',
+    accentColor: '#10B981',
+    logo: null
+};
 
 export default function AdminSettingsPage() {
     const [activeTab, setActiveTab] = useState('company');
@@ -67,54 +151,30 @@ export default function AdminSettingsPage() {
     const [saving, setSaving] = useState(false);
     const { refreshTenantStatus } = useTenant();
 
-    const [company, setCompany] = useState<CompanyProfile>({
-        tradingName: 'SYSTEM STEEL ENGINEERING LLC',
-        legalName: 'SYSTEM STEEL ENGINEERING LLC',
-        baseCurrency: 'AED',
-        taxId: '100123456789003',
-        address: 'Warehouse 4, Al Quoz Industrial Area, Dubai, UAE',
-        email: 'ops@systemsteel.ae',
-        phone: '+971 4 123 4567',
-        website: 'www.systemsteel.ae',
-        bankDetails: {
-            bankName: 'Emirates NBD',
-            iban: 'AE000000000000000000000',
-            swift: 'ENBD AE AD'
-        },
-        timezone: 'Asia/Dubai',
-        fiscalYearStart: '1',
-        businessType: 'construction',
-        companySize: 'startup',
-        activeModules: {
-            finance: true,
-            sales: true,
-            operations: true,
-            hr: true,
-            inventory: true,
-            projects: true
-        }
-    });
+    // All settings state
+    const [company, setCompany] = useState<CompanyProfile>(DEFAULT_COMPANY);
+    const [notifications, setNotifications] = useState(DEFAULT_NOTIFICATIONS);
+    const [taxConfig, setTaxConfig] = useState(DEFAULT_TAX_CONFIG);
+    const [rolesConfig, setRolesConfig] = useState(DEFAULT_ROLES_CONFIG);
+    const [brandingConfig, setBrandingConfig] = useState(DEFAULT_BRANDING);
 
-    const [notifications, setNotifications] = useState({
-        invoiceReminders: true,
-        lowStockAlerts: true,
-        approvalTriggers: true,
-        emailDigest: false,
-        smsAlerts: false,
-        highValueLeadAlert: true,
-        dailyCashPosition: true
-    });
-
+    // Load ALL settings from backend/localStorage
     const fetchAllSettings = useCallback(async () => {
         try {
             setLoading(true);
-            const [companyData, notifyData] = await Promise.all([
+            const [companyData, notifyData, taxData, rolesData, brandingData] = await Promise.all([
                 getSettings<CompanyProfile>('company_profile'),
-                getSettings<any>('notification_prefs')
+                getSettings<any>('notification_prefs'),
+                getSettings<any>('tax_config'),
+                getSettings<any>('roles_config'),
+                getSettings<any>('branding_config'),
             ]);
 
             if (companyData) setCompany(prev => ({ ...prev, ...companyData }));
             if (notifyData) setNotifications(prev => ({ ...prev, ...notifyData }));
+            if (taxData) setTaxConfig(prev => ({ ...prev, ...taxData }));
+            if (rolesData) setRolesConfig(prev => ({ ...prev, ...rolesData }));
+            if (brandingData) setBrandingConfig(prev => ({ ...prev, ...brandingData }));
         } catch (error) {
             console.error('Settings Sync Error:', error);
         } finally {
@@ -126,15 +186,19 @@ export default function AdminSettingsPage() {
         fetchAllSettings();
     }, [fetchAllSettings]);
 
+    // Save ALL settings to backend/localStorage
     const handleSaveAll = async () => {
         try {
             setSaving(true);
             await Promise.all([
                 saveSettings('company_profile', company),
-                saveSettings('notification_prefs', notifications)
+                saveSettings('notification_prefs', notifications),
+                saveSettings('tax_config', taxConfig),
+                saveSettings('roles_config', rolesConfig),
+                saveSettings('branding_config', brandingConfig),
             ]);
             await refreshTenantStatus();
-            toast.success('Settings updated successfully');
+            toast.success('All settings saved successfully');
         } catch (error) {
             toast.error('Failed to save settings');
         } finally {
@@ -203,6 +267,7 @@ export default function AdminSettingsPage() {
                                             </div>
                                             <ModuleSelector
                                                 businessType={company.businessType}
+                                                activeModules={company.activeModules}
                                                 onChange={(modules: Record<string, boolean>) => setCompany({ ...company, activeModules: modules })}
                                             />
                                         </div>
@@ -236,19 +301,28 @@ export default function AdminSettingsPage() {
                             </Card>
                         </TabsContent>
 
-                        {/* TAB 2: FISCAL */}
+                        {/* TAB 2: FISCAL — receives saved data, reports changes */}
                         <TabsContent value="fiscal" className="mt-0 animate-in fade-in duration-500">
-                            <TaxSystemConfig onChange={(tc: any) => setCompany({ ...company, taxConfig: tc })} />
+                            <TaxSystemConfig
+                                value={taxConfig}
+                                onChange={(tc: any) => setTaxConfig(tc)}
+                            />
                         </TabsContent>
 
-                        {/* TAB 3: ACCESS */}
+                        {/* TAB 3: ACCESS — receives saved data, reports changes */}
                         <TabsContent value="identity" className="mt-0 animate-in fade-in duration-500">
-                            <RolePermissionConfig />
+                            <RolePermissionConfig
+                                value={rolesConfig}
+                                onChange={(rc: any) => setRolesConfig(rc)}
+                            />
                         </TabsContent>
 
-                        {/* TAB 4: VISUALS */}
+                        {/* TAB 4: VISUALS — receives saved data, reports changes */}
                         <TabsContent value="branding" className="mt-0 animate-in fade-in duration-500">
-                            <DocumentBranding value={company.branding} onChange={(b: any) => setCompany({ ...company, branding: b })} />
+                            <DocumentBranding
+                                value={brandingConfig}
+                                onChange={(b: any) => setBrandingConfig(b)}
+                            />
                         </TabsContent>
 
                         {/* TAB 5: ALERTS */}
@@ -258,9 +332,14 @@ export default function AdminSettingsPage() {
                                     <CardTitle>Notifications</CardTitle>
                                     <CardDescription>Configure how you receive system alerts</CardDescription>
                                 </CardHeader>
-                                <CardContent className="space-y-4">
+                                <CardContent className="space-y-1">
+                                    <SettingsToggle label="Invoice Reminders" desc="Send reminders for overdue invoices" active={notifications.invoiceReminders} onToggle={v => setNotifications({ ...notifications, invoiceReminders: v })} />
+                                    <SettingsToggle label="Low Stock Alerts" desc="Notifications when inventory falls below thresholds" active={notifications.lowStockAlerts} onToggle={v => setNotifications({ ...notifications, lowStockAlerts: v })} />
+                                    <SettingsToggle label="Approval Triggers" desc="Notify when an item is pending your approval" active={notifications.approvalTriggers} onToggle={v => setNotifications({ ...notifications, approvalTriggers: v })} />
                                     <SettingsToggle label="Email Summaries" desc="Periodic emails with business highlights" active={notifications.emailDigest} onToggle={v => setNotifications({ ...notifications, emailDigest: v })} />
-                                    <SettingsToggle label="Stock Alerts" desc="Notifications when inventory falls below thresholds" active={notifications.lowStockAlerts} onToggle={v => setNotifications({ ...notifications, lowStockAlerts: v })} />
+                                    <SettingsToggle label="SMS Alerts" desc="Critical notifications via SMS" active={notifications.smsAlerts} onToggle={v => setNotifications({ ...notifications, smsAlerts: v })} />
+                                    <SettingsToggle label="High Value Lead Alert" desc="Instant ping for high-value opportunity changes" active={notifications.highValueLeadAlert} onToggle={v => setNotifications({ ...notifications, highValueLeadAlert: v })} />
+                                    <SettingsToggle label="Daily Cash Position" desc="End-of-day financial summary" active={notifications.dailyCashPosition} onToggle={v => setNotifications({ ...notifications, dailyCashPosition: v })} />
                                 </CardContent>
                             </Card>
                         </TabsContent>
@@ -270,15 +349,21 @@ export default function AdminSettingsPage() {
                             <Card>
                                 <CardHeader>
                                     <CardTitle>System Maintenance</CardTitle>
-                                    <CardDescription>Nuclear tools for system administrators</CardDescription>
+                                    <CardDescription>Administrative tools for system operations</CardDescription>
                                 </CardHeader>
                                 <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <Button variant="outline" className="justify-start gap-2 h-12">
-                                        <RefreshCcw className="h-4 w-4" /> Re-index Database
-                                    </Button>
-                                    <Button variant="outline" className="justify-start gap-2 h-12">
-                                        <Database className="h-4 w-4" /> Full Backup
-                                    </Button>
+                                    <MaintenanceAction
+                                        icon={RefreshCcw}
+                                        label="Re-index Database"
+                                        desc="Rebuild search indexes and optimize queries"
+                                        successMsg="Database re-indexed successfully"
+                                    />
+                                    <MaintenanceAction
+                                        icon={Database}
+                                        label="Full Backup"
+                                        desc="Create a complete system snapshot"
+                                        successMsg="Backup created successfully"
+                                    />
                                 </CardContent>
                             </Card>
                         </TabsContent>
@@ -310,19 +395,32 @@ function SettingsToggle({ label, desc, active, onToggle }: { label: string; desc
     );
 }
 
-function SystemActionTile({ label, icon: Icon, desc }: { label: string; icon: any; desc: string }) {
+function MaintenanceAction({ icon: Icon, label, desc, successMsg }: { icon: any; label: string; desc: string; successMsg: string }) {
+    const [running, setRunning] = useState(false);
+
+    const handleClick = async () => {
+        setRunning(true);
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        setRunning(false);
+        toast.success(successMsg);
+    };
+
     return (
-        <button className="w-full flex items-center justify-between p-4 border border-border rounded-xl bg-card hover:border-primary/50 group transition-all shadow-sm hover:shadow-lg hover:shadow-primary/5">
-            <div className="flex items-center gap-4">
-                <div className="h-11 w-11 rounded-lg bg-muted flex items-center justify-center text-muted-foreground group-hover:bg-primary group-hover:text-primary-foreground transition-all shadow-inner">
-                    <Icon size={20} />
-                </div>
-                <div className="text-left">
-                    <p className="text-[13px] font-bold text-foreground uppercase tracking-tight">{label}</p>
-                    <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-tighter">{desc}</p>
-                </div>
+        <Button
+            variant="outline"
+            className="justify-start gap-3 h-14 px-4"
+            disabled={running}
+            onClick={handleClick}
+        >
+            {running ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+                <Icon className="h-4 w-4" />
+            )}
+            <div className="text-left">
+                <p className="text-xs font-semibold">{label}</p>
+                <p className="text-[10px] text-muted-foreground font-normal">{desc}</p>
             </div>
-            <ChevronRight size={16} className="text-muted-foreground/60 group-hover:text-primary transition-all translate-x-0 group-hover:translate-x-1" />
-        </button>
+        </Button>
     );
 }

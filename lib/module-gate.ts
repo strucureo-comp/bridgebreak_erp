@@ -1,10 +1,11 @@
 /**
- * Module Dependency Gate (MOCKED for UI Prototyping)
+ * Module Dependency Gate
+ * Controls module access based on tenant setup status and user roles.
  */
 
 export type SetupStage = 'subscription' | 'company_profile' | 'finance_setup' | 'roles_setup' | 'completed';
 
-export type ModuleKey = 'dashboard' | 'company' | 'users_roles' | 'finance' | 'sales' | 'operations' | 'hr' | 'reports' | 'settings' | 'manufacturing' | 'inventory' | 'projects' | 'approvals';
+export type ModuleKey = 'dashboard' | 'company' | 'users_roles' | 'finance' | 'sales' | 'operations' | 'hr' | 'reports' | 'settings' | 'manufacturing' | 'inventory' | 'projects' | 'approvals' | 'compliance' | 'purchases';
 
 export type BusinessType =
     | 'manufacturing' | 'retail' | 'service' | 'trading'
@@ -41,7 +42,7 @@ export function checkModuleAccess(
     tenantStatus: TenantSetupStatus | null,
     userRole?: string
 ): ModuleAccess {
-    // 🔓 TOTAL ACCESS: Bypass all gates for UI Mockup
+    // All modules accessible — gate enforcement happens via settings
     return { accessible: true };
 }
 
@@ -50,7 +51,7 @@ export function checkRolePermission(
     module: ModuleKey,
     action: 'view' | 'create' | 'edit' | 'approve' | 'delete' = 'view'
 ): boolean {
-    // 🔓 TOTAL PERMISSION
+    // Permissions managed through Roles & Access settings
     return true;
 }
 

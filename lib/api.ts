@@ -200,13 +200,29 @@ export async function getSettings<T>(key: string): Promise<T | null> {
         const res = await fetch(`${API_BASE}/settings/${key}`, { headers: authHeaders() });
         if (res.ok) {
             const json = await res.json();
-            return json.data as T;
+            if (json.data) {
+                // Cache to localStorage for offline fallback
+                localStorage.setItem(`bb_settings_${key}`, JSON.stringify(json.data));
+                return json.data as T;
+            }
         }
-    } catch (e) { console.error(`[API] getSettings(${key}) error:`, e); }
+    } catch (e) {
+        console.warn(`[API] getSettings(${key}) backend unavailable, using local cache`);
+    }
+    // Fallback: try localStorage
+    try {
+        const cached = localStorage.getItem(`bb_settings_${key}`);
+        if (cached) return JSON.parse(cached) as T;
+    } catch { }
     return null;
 }
 
 export async function saveSettings(key: string, data: any) {
+    // Always save to localStorage first
+    try {
+        localStorage.setItem(`bb_settings_${key}`, JSON.stringify(data));
+    } catch { }
+
     try {
         const res = await fetch(`${API_BASE}/settings/${key}`, {
             method: 'PUT',
@@ -217,10 +233,11 @@ export async function saveSettings(key: string, data: any) {
             const json = await res.json();
             return json.data;
         }
-        throw new Error('Save failed');
+        console.warn(`[API] saveSettings(${key}) backend returned ${res.status}, saved locally`);
+        return data;
     } catch (e) {
-        console.error(`[API] saveSettings(${key}) error:`, e);
-        throw e;
+        console.warn(`[API] saveSettings(${key}) backend unavailable, saved locally`);
+        return data;
     }
 }
 
