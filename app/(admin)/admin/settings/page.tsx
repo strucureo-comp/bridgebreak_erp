@@ -103,7 +103,21 @@ const DEFAULT_TAX_CONFIG = {
     filingFreq: 'quarterly',
     methodology: 'accrual',
     autoVatReturn: true,
-    filingReminders: true
+    filingReminders: true,
+    // Enterprise fields required by TaxConfigData
+    jurisdictions: [
+        { id: 1, country: 'United Arab Emirates', code: 'AE', regNumber: '', system: 'vat', reportingPeriod: 'quarterly', filingMethod: 'fta', authority: 'Federal Tax Authority', status: 'active' },
+    ],
+    taxCodes: [
+        { id: 1, code: 'VAT5_OUTPUT', description: 'Standard Output VAT', jurisdiction: 'AE', type: 'output', rate: '5', glPayable: '2200', glReceivable: '', recoverablePct: '100', effectiveDate: '2018-01-01', expiryDate: '', autoSelfAccount: false },
+        { id: 2, code: 'VAT5_INPUT', description: 'Standard Input VAT', jurisdiction: 'AE', type: 'input', rate: '5', glPayable: '', glReceivable: '1400', recoverablePct: '100', effectiveDate: '2018-01-01', expiryDate: '', autoSelfAccount: false },
+        { id: 3, code: 'VAT_RC_IMPORT', description: 'Reverse Charge (Import)', jurisdiction: 'AE', type: 'reverse_charge', rate: '5', glPayable: '2200', glReceivable: '1400', recoverablePct: '100', effectiveDate: '2018-01-01', expiryDate: '', autoSelfAccount: true },
+        { id: 4, code: 'VAT_ZERO', description: 'Zero-Rated Export', jurisdiction: 'AE', type: 'zero_rated', rate: '0', glPayable: '', glReceivable: '', recoverablePct: '100', effectiveDate: '2018-01-01', expiryDate: '', autoSelfAccount: false },
+        { id: 5, code: 'VAT_EXEMPT', description: 'Exempt Supply', jurisdiction: 'AE', type: 'exempt', rate: '0', glPayable: '', glReceivable: '', recoverablePct: '0', effectiveDate: '2018-01-01', expiryDate: '', autoSelfAccount: false },
+    ],
+    taxLockAfterFiling: true,
+    periodVatFreeze: true,
+    adjustmentOnlyMode: true,
 };
 
 const DEFAULT_ROLES_CONFIG = {

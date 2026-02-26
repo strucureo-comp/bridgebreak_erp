@@ -1,114 +1,371 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { DashboardShell } from '@/components/shared/layout/dashboard-shell';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Cpu, ChevronLeft, TrendingDown, Trash2, RotateCcw, ArrowRightLeft } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Cpu, Trash2, RotateCcw, Loader2, Plus, Download, AlertTriangle, FileText, ChevronRight } from 'lucide-react';
 import { useCurrency } from '@/lib/hooks/use-currency';
 import { cn } from '@/lib/utils';
+import { KpiCard } from '@/components/finance/KpiCard';
+import { FinancePageHeader, FinanceTableHeader, FinanceEmptyState } from '@/components/finance/FinancePageHeader';
+import { toast } from 'sonner';
 
-const ASSETS = [
-    { id: 'FA-001', name: 'CNC Laser Cutter', class: 'Machinery', acquired: '2024-06-15', cost: 480000, depMethod: 'Straight Line', usefulLife: 10, accDep: 96000, nbv: 384000, status: 'active' },
-    { id: 'FA-002', name: 'Overhead Crane (20T)', class: 'Machinery', acquired: '2023-01-10', cost: 320000, depMethod: 'Straight Line', usefulLife: 15, accDep: 64000, nbv: 256000, status: 'active' },
-    { id: 'FA-003', name: 'Warehouse Building', class: 'Building', acquired: '2022-03-01', cost: 1200000, depMethod: 'Straight Line', usefulLife: 30, accDep: 160000, nbv: 1040000, status: 'active' },
-    { id: 'FA-004', name: 'Delivery Truck — Hino', class: 'Vehicle', acquired: '2024-01-20', cost: 180000, depMethod: 'Reducing Balance', usefulLife: 8, accDep: 45000, nbv: 135000, status: 'active' },
-    { id: 'FA-005', name: 'Office Furniture Set', class: 'Furniture', acquired: '2023-07-01', cost: 45000, depMethod: 'Straight Line', usefulLife: 5, accDep: 18000, nbv: 27000, status: 'active' },
-    { id: 'FA-006', name: 'IT Server Rack', class: 'Equipment', acquired: '2024-09-15', cost: 95000, depMethod: 'Reducing Balance', usefulLife: 5, accDep: 19000, nbv: 76000, status: 'active' },
-    { id: 'FA-007', name: 'Old Welder (Disposed)', class: 'Machinery', acquired: '2019-04-01', cost: 28000, depMethod: 'Straight Line', usefulLife: 7, accDep: 28000, nbv: 0, status: 'disposed' },
+// ── TYPES ──────────────────────────────────────────────────────────────────────
+interface Asset {
+    id: string;
+    name: string;
+    class: string;
+    acquired: string;
+    cost: number;
+    depMethod: 'Straight Line' | 'Reducing Balance';
+    usefulLife: number; // in years
+    accDep: number;
+    nbv: number;
+    status: 'active' | 'disposed' | 'impaired';
+
+    // 1. Core Accounting Enhancements
+    salvageValue: number;
+    depRate?: number;
+    depStartDate: string;
+    capDate: string;
+    glAsset: string;
+    glAccDep: string;
+    glDepExp: string;
+    costCenter: string;
+    project?: string;
+
+    // 2. Operational Tracking
+    location: string;
+    custodian: string;
+    serialNumber: string;
+    tagId: string;
+    warrantyExpiry?: string;
+    vendor?: string;
+    insurance?: string;
+}
+
+interface DepScheduleItem {
+    id: string;
+    period: string;
+    openingNbv: number;
+    depAmount: number;
+    closingNbv: number;
+    journalId: string;
+    status: 'posted' | 'draft' | 'reversed';
+    runBy: string;
+    timestamp: string;
+}
+
+interface DisposalRecord {
+    id: string;
+    assetId: string;
+    assetName: string;
+    date: string;
+    value: number;
+    nbvAtDisposal: number;
+    gainLoss: number;
+    journalId: string;
+    status: 'pending' | 'approved' | 'posted';
+    approvedBy?: string;
+}
+
+interface ImpairmentRecord {
+    id: string;
+    assetId: string;
+    date: string;
+    amount: number;
+    journalId: string;
+    type: 'impairment' | 'revaluation';
+    status: 'posted' | 'reversed';
+}
+
+// ── INITIAL DATA ───────────────────────────────────────────────────────────────
+const INITIAL_ASSETS: Asset[] = [
+    {
+        id: 'FA-001', name: 'CNC Laser Cutter', class: 'Machinery', acquired: '2024-06-15', cost: 480000,
+        depMethod: 'Straight Line', usefulLife: 10, accDep: 96000, nbv: 384000, status: 'active',
+        salvageValue: 20000, depStartDate: '2024-07-01', capDate: '2024-06-30',
+        glAsset: '1500-01', glAccDep: '1550-01', glDepExp: '6500-01', costCenter: 'Manufacturing',
+        location: 'Warehouse A', custodian: 'Mike R.', serialNumber: 'CNC-8821-X', tagId: 'TAG-1001'
+    },
+    {
+        id: 'FA-002', name: 'Overhead Crane (20T)', class: 'Machinery', acquired: '2023-01-10', cost: 320000,
+        depMethod: 'Reducing Balance', depRate: 15, usefulLife: 15, accDep: 64000, nbv: 256000, status: 'active',
+        salvageValue: 15000, depStartDate: '2023-02-01', capDate: '2023-01-31',
+        glAsset: '1500-01', glAccDep: '1550-01', glDepExp: '6500-01', costCenter: 'Logistics',
+        location: 'Loading Bay 2', custodian: 'Sarah T.', serialNumber: 'CRN-20T-001', tagId: 'TAG-1002'
+    },
+    {
+        id: 'FA-003', name: 'Warehouse Building', class: 'Building', acquired: '2022-03-01', cost: 1200000,
+        depMethod: 'Straight Line', usefulLife: 30, accDep: 160000, nbv: 1040000, status: 'active',
+        salvageValue: 200000, depStartDate: '2022-04-01', capDate: '2022-03-31',
+        glAsset: '1600-01', glAccDep: '1650-01', glDepExp: '6600-01', costCenter: 'Corporate',
+        location: 'HQ Plot', custodian: 'Admin', serialNumber: 'N/A', tagId: 'TAG-1003'
+    },
+    {
+        id: 'FA-007', name: 'Old Welder', class: 'Machinery', acquired: '2019-04-01', cost: 28000,
+        depMethod: 'Straight Line', usefulLife: 7, accDep: 28000, nbv: 0, status: 'disposed',
+        salvageValue: 1000, depStartDate: '2019-05-01', capDate: '2019-04-30',
+        glAsset: '1500-01', glAccDep: '1550-01', glDepExp: '6500-01', costCenter: 'Maintenance',
+        location: 'Scrap Yard', custodian: 'John D.', serialNumber: 'WLD-009', tagId: 'TAG-0922'
+    },
 ];
 
-const DEP_SCHEDULE = [
-    { month: 'Jan 2026', machinery: 6667, building: 3333, vehicles: 1875, equipment: 1583, furniture: 750, total: 14208 },
-    { month: 'Feb 2026', machinery: 6667, building: 3333, vehicles: 1875, equipment: 1583, furniture: 750, total: 14208 },
-    { month: 'Mar 2026', machinery: 6667, building: 3333, vehicles: 1875, equipment: 1583, furniture: 750, total: 14208 },
+const INITIAL_SCHEDULE: DepScheduleItem[] = [
+    { id: 'DEP-101', period: 'Jan 2026', openingNbv: 1690000, depAmount: 14208, closingNbv: 1675792, journalId: 'JE-2026-0081', status: 'posted', runBy: 'Finance Admin', timestamp: '2026-01-31T23:55:00Z' },
+    { id: 'DEP-102', period: 'Feb 2026', openingNbv: 1675792, depAmount: 14208, closingNbv: 1661584, journalId: 'JE-2026-0192', status: 'posted', runBy: 'Finance Admin', timestamp: '2026-02-28T23:50:00Z' },
+];
+
+const INITIAL_DISPOSALS: DisposalRecord[] = [
+    { id: 'DSP-001', assetId: 'FA-007', assetName: 'Old Welder', date: '2026-02-15', value: 2500, nbvAtDisposal: 0, gainLoss: 2500, journalId: 'JE-2026-0145', status: 'posted', approvedBy: 'Finance Director' }
 ];
 
 export default function FixedAssetsPage() {
     const { format: fmt } = useCurrency();
     const [tab, setTab] = useState('register');
-    const totalCost = ASSETS.filter(a => a.status === 'active').reduce((s, a) => s + a.cost, 0);
-    const totalNBV = ASSETS.filter(a => a.status === 'active').reduce((s, a) => s + a.nbv, 0);
-    const totalDep = ASSETS.filter(a => a.status === 'active').reduce((s, a) => s + a.accDep, 0);
-    const monthlyDep = DEP_SCHEDULE[0]?.total ?? 0;
+
+    const [assets, setAssets] = useState<Asset[]>(INITIAL_ASSETS);
+    const [schedule, setSchedule] = useState<DepScheduleItem[]>(INITIAL_SCHEDULE);
+    const [disposals, setDisposals] = useState<DisposalRecord[]>(INITIAL_DISPOSALS);
+    const [impairments, setImpairments] = useState<ImpairmentRecord[]>([]);
+
+    const [running, setRunning] = useState(false);
+    const [isAddOpen, setIsAddOpen] = useState(false);
+    const [isDisposeOpen, setIsDisposeOpen] = useState(false);
+    const [selectedAssetForDisposal, setSelectedAssetForDisposal] = useState<string>('');
+
+    // ── DERIVED METRICS ──
+    const activeAssets = assets.filter(a => a.status === 'active');
+    const totalCost = activeAssets.reduce((s, a) => s + a.cost, 0);
+    const totalNBV = activeAssets.reduce((s, a) => s + a.nbv, 0);
+    const totalDep = activeAssets.reduce((s, a) => s + a.accDep, 0);
+    const monthlyDep = schedule.length > 0 ? schedule[schedule.length - 1].depAmount : 0;
+    const fullyDepreciatedCount = activeAssets.filter(a => a.nbv <= a.salvageValue).length;
+
+    // ── DEPRECIATION ENGINE ──
+    const handleRunDepreciation = async () => {
+        setRunning(true);
+
+        // Simulate complex calculation time
+        await new Promise(r => setTimeout(r, 2000));
+
+        // Determine next period
+        const lastPeriodStr = schedule.length > 0 ? schedule[schedule.length - 1].period : 'Feb 2026';
+        const [monthStr, yearStr] = lastPeriodStr.split(' ');
+        const nextDate = new Date(`${monthStr} 1, ${yearStr}`);
+        nextDate.setMonth(nextDate.getMonth() + 1);
+        const mStr = nextDate.toLocaleString('default', { month: 'short', year: 'numeric' });
+
+        let totalPeriodDep = 0;
+
+        // Calculate per asset
+        const newAssets = assets.map(a => {
+            if (a.status !== 'active') return a;
+            if (a.nbv <= a.salvageValue) return a; // Stop depreciation
+
+            let depAmt = 0;
+            if (a.depMethod === 'Straight Line') {
+                const depreciableBase = a.cost - a.salvageValue;
+                depAmt = Math.round(depreciableBase / a.usefulLife / 12);
+            } else {
+                // Reducing Balance
+                const rate = a.depRate ? (a.depRate / 100) : 0.2;
+                depAmt = Math.round((a.nbv * rate) / 12);
+            }
+
+            // Ensure we don't over-depreciate below salvage
+            if (a.nbv - depAmt < a.salvageValue) {
+                depAmt = a.nbv - a.salvageValue;
+            }
+
+            totalPeriodDep += depAmt;
+
+            return {
+                ...a,
+                accDep: a.accDep + depAmt,
+                nbv: a.nbv - depAmt
+            };
+        });
+
+        if (totalPeriodDep === 0) {
+            toast.info('No depreciation to calculate.', { description: 'All active assets have reached their salvage value.' });
+            setRunning(false);
+            return;
+        }
+
+        setAssets(newAssets);
+
+        const newScheduleItem: DepScheduleItem = {
+            id: `DEP-${200 + schedule.length}`,
+            period: mStr,
+            openingNbv: totalNBV,
+            depAmount: totalPeriodDep,
+            closingNbv: totalNBV - totalPeriodDep,
+            journalId: `JE-${new Date().getFullYear()}-` + Math.floor(Math.random() * 1000).toString().padStart(4, '0'),
+            status: 'posted',
+            runBy: 'System Auto/Admin',
+            timestamp: new Date().toISOString()
+        };
+
+        setSchedule(prev => [...prev, newScheduleItem]);
+
+        setRunning(false);
+        toast.success('Depreciation Run Completed successfully', {
+            description: `Journal ${newScheduleItem.journalId} posted for ${mStr}. Amount: ${fmt(totalPeriodDep)}`
+        });
+    };
 
     return (
         <DashboardShell requireAdmin>
             <div className="space-y-6 pb-8">
-                <div className="flex items-center justify-between border-b border-border pb-5">
-                    <div className="flex items-center gap-3">
-                        <Link href="/admin/finance"><Button variant="ghost" size="icon" className="h-8 w-8"><ChevronLeft className="h-4 w-4" /></Button></Link>
-                        <div className="h-9 w-9 rounded-lg bg-red-50 text-red-600 flex items-center justify-center"><Cpu className="h-5 w-5" /></div>
-                        <div>
-                            <h1 className="text-xl font-bold tracking-tight">Fixed Assets</h1>
-                            <p className="text-[11px] text-muted-foreground">Asset Register · Depreciation · Disposal · Impairment</p>
-                        </div>
-                    </div>
-                    <Button size="sm" className="gap-2 bg-red-600 hover:bg-red-700"><RotateCcw className="h-3.5 w-3.5" /> Run Depreciation</Button>
-                </div>
 
-                <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
-                    <Kpi label="Gross Cost" value={fmt(totalCost)} /><Kpi label="Accum. Depreciation" value={fmt(totalDep)} />
-                    <Kpi label="Net Book Value" value={fmt(totalNBV)} /><Kpi label="Monthly Dep." value={fmt(monthlyDep)} />
+                <FinancePageHeader
+                    title="Fixed Assets"
+                    subtitle="Enterprise Asset Register · IFRS/GAAP Depreciation · Disposals · Audit Logs"
+                    icon={Cpu}
+                    actions={
+                        <div className="flex items-center gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="gap-2 text-[10px] h-8"
+                                onClick={() => toast.success('Report initializing...')}
+                            >
+                                <Download className="h-3.5 w-3.5" /> Export
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="gap-2 text-[10px] h-8"
+                                onClick={() => setIsAddOpen(true)}
+                            >
+                                <Plus className="h-3.5 w-3.5" /> Add Asset
+                            </Button>
+                            <Button
+                                size="sm"
+                                className="gap-2 bg-red-600 hover:bg-red-700 text-[10px] h-8 font-bold"
+                                onClick={handleRunDepreciation}
+                                disabled={running}
+                            >
+                                {running ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
+                                {running ? 'Processing Engine...' : 'Run Depreciation Engine'}
+                            </Button>
+                        </div>
+                    }
+                />
+
+                {/* Executive Dashboard KPI Strip */}
+                <div className="grid gap-3 grid-cols-2 md:grid-cols-5">
+                    <KpiCard label="Gross CAPEX" value={fmt(totalCost)} />
+                    <KpiCard label="Accum. Depreciation" value={fmt(totalDep)} />
+                    <KpiCard label="Net Book Value" value={fmt(totalNBV)} />
+                    <KpiCard label="Last Period Dep." value={fmt(monthlyDep)} />
+                    <KpiCard
+                        label="Fully Depreciated"
+                        value={String(fullyDepreciatedCount)}
+                        warn={fullyDepreciatedCount > 0}
+                        footer="Still active/in use"
+                    />
                 </div>
 
                 <Tabs value={tab} onValueChange={setTab}>
                     <TabsList className="bg-muted/50 border h-9 p-0.5">
-                        <TabsTrigger value="register" className="text-xs font-semibold h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">Asset Register</TabsTrigger>
-                        <TabsTrigger value="depreciation" className="text-xs font-semibold h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">Depreciation Schedule</TabsTrigger>
-                        <TabsTrigger value="disposal" className="text-xs font-semibold h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">Disposals</TabsTrigger>
+                        <TabsTrigger value="register" className="text-xs font-semibold h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">Asset Master</TabsTrigger>
+                        <TabsTrigger value="depreciation" className="text-xs font-semibold h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">Depreciation Engine</TabsTrigger>
+                        <TabsTrigger value="disposal" className="text-xs font-semibold h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">Disposals & Workflow</TabsTrigger>
+                        <TabsTrigger value="audit" className="text-xs font-semibold h-full data-[state=active]:bg-white data-[state=active]:shadow-sm text-muted-foreground">Audit Log</TabsTrigger>
                     </TabsList>
 
+                    {/* ── ASSET MASTER REGISTER ── */}
                     <TabsContent value="register" className="mt-6">
                         <Card className="border-border shadow-sm">
                             <CardContent className="p-0">
-                                <div className="divide-y border-t">
-                                    <div className="grid grid-cols-12 px-6 py-2.5 bg-muted/50 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                                        <span className="col-span-1">ID</span><span className="col-span-2">Asset</span><span className="col-span-1">Class</span>
-                                        <span className="col-span-1">Acquired</span><span className="col-span-1">Method</span><span className="col-span-1 text-right">Life</span>
-                                        <span className="col-span-2 text-right">Cost</span><span className="col-span-1 text-right">Acc.Dep</span>
-                                        <span className="col-span-1 text-right">NBV</span><span className="col-span-1 text-right">Status</span>
+                                <ScrollArea className="w-full">
+                                    <div className="min-w-[1200px] divide-y border-t">
+                                        <FinanceTableHeader>
+                                            <span className="col-span-1">Tag ID</span>
+                                            <span className="col-span-2">Asset Master</span>
+                                            <span className="col-span-1 text-xs">Cost Center</span>
+                                            <span className="col-span-1 text-xs">Cap. Date</span>
+                                            <span className="col-span-1 text-center text-xs">Method</span>
+                                            <span className="col-span-2 text-right text-xs">Gross Cost</span>
+                                            <span className="col-span-1 text-right text-xs">Salvage Val.</span>
+                                            <span className="col-span-1 text-right text-xs">NBV</span>
+                                            <span className="col-span-1 text-right text-xs">GL (Asset)</span>
+                                            <span className="col-span-1 text-right text-xs">Status</span>
+                                        </FinanceTableHeader>
+
+                                        {assets.map(a => (
+                                            <div key={a.id} className={cn("grid grid-cols-12 px-6 py-3 items-center hover:bg-muted/30 transition-colors text-sm", a.status === 'disposed' && 'opacity-50')}>
+                                                <span className="col-span-1 font-mono text-xs text-red-600">{a.tagId}</span>
+                                                <span className="col-span-2 text-xs font-medium truncate flex flex-col">
+                                                    <span>{a.name}</span>
+                                                    <span className="text-[9px] text-muted-foreground font-mono">{a.id} • {a.class}</span>
+                                                </span>
+                                                <span className="col-span-1 text-[10px] text-muted-foreground">{a.costCenter}</span>
+                                                <span className="col-span-1 text-[10px] text-muted-foreground">{a.capDate}</span>
+                                                <span className="col-span-1 text-center">
+                                                    <Badge variant="outline" className="text-[8px] h-4 px-1.5 uppercase tracking-wider bg-white">
+                                                        {a.depMethod === 'Straight Line' ? 'SL' : 'RB'} {a.depRate ? `(${a.depRate}%)` : `(${a.usefulLife}y)`}
+                                                    </Badge>
+                                                </span>
+                                                <span className="col-span-2 text-right text-xs font-bold">{fmt(a.cost)}</span>
+                                                <span className="col-span-1 text-right text-[10px] text-muted-foreground">{fmt(a.salvageValue)}</span>
+                                                <span className="col-span-1 text-right text-xs font-bold text-emerald-600">
+                                                    {a.nbv <= a.salvageValue && a.status === 'active' && <AlertTriangle className="inline h-3 w-3 text-amber-500 mr-1" />}
+                                                    {fmt(a.nbv)}
+                                                </span>
+                                                <span className="col-span-1 text-right text-[10px] font-mono text-muted-foreground">{a.glAsset}</span>
+                                                <span className="col-span-1 text-right">
+                                                    <Badge variant={a.status === 'active' ? 'default' : a.status === 'impaired' ? 'destructive' : 'secondary'} className="text-[8px] h-4 px-1.5 uppercase tracking-wider">
+                                                        {a.status}
+                                                    </Badge>
+                                                </span>
+                                            </div>
+                                        ))}
                                     </div>
-                                    {ASSETS.map(a => (
-                                        <div key={a.id} className={cn("grid grid-cols-12 px-6 py-3 items-center hover:bg-muted/30 transition-colors text-sm", a.status === 'disposed' && 'opacity-50')}>
-                                            <span className="col-span-1 font-mono text-xs text-red-600">{a.id}</span>
-                                            <span className="col-span-2 text-xs font-medium truncate">{a.name}</span>
-                                            <span className="col-span-1 text-[10px] text-muted-foreground">{a.class}</span>
-                                            <span className="col-span-1 text-[10px] text-muted-foreground">{a.acquired.slice(0, 7)}</span>
-                                            <span className="col-span-1"><Badge variant="outline" className="text-[7px] h-4 px-1">{a.depMethod === 'Straight Line' ? 'SL' : 'RB'}</Badge></span>
-                                            <span className="col-span-1 text-right text-[10px]">{a.usefulLife}yr</span>
-                                            <span className="col-span-2 text-right text-xs">{fmt(a.cost)}</span>
-                                            <span className="col-span-1 text-right text-xs text-muted-foreground">{fmt(a.accDep)}</span>
-                                            <span className="col-span-1 text-right text-xs font-bold">{fmt(a.nbv)}</span>
-                                            <span className="col-span-1 text-right"><Badge variant={a.status === 'active' ? 'default' : 'destructive'} className="text-[7px] h-4 px-1">{a.status}</Badge></span>
-                                        </div>
-                                    ))}
-                                </div>
+                                </ScrollArea>
                             </CardContent>
                         </Card>
                     </TabsContent>
 
+                    {/* ── DEPRECIATION SCHEDULE ── */}
                     <TabsContent value="depreciation" className="mt-6">
                         <Card className="border-border shadow-sm">
                             <CardContent className="p-0">
                                 <div className="divide-y border-t">
-                                    <div className="grid grid-cols-8 px-6 py-2.5 bg-muted/50 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                                        <span>Month</span><span className="text-right">Machinery</span><span className="text-right">Building</span>
-                                        <span className="text-right">Vehicles</span><span className="text-right">Equipment</span><span className="text-right">Furniture</span>
-                                        <span className="col-span-2 text-right">Total</span>
-                                    </div>
-                                    {DEP_SCHEDULE.map(d => (
-                                        <div key={d.month} className="grid grid-cols-8 px-6 py-3 items-center hover:bg-muted/30 transition-colors text-sm">
-                                            <span className="text-xs font-medium">{d.month}</span>
-                                            <span className="text-right text-xs">{fmt(d.machinery)}</span>
-                                            <span className="text-right text-xs">{fmt(d.building)}</span>
-                                            <span className="text-right text-xs">{fmt(d.vehicles)}</span>
-                                            <span className="text-right text-xs">{fmt(d.equipment)}</span>
-                                            <span className="text-right text-xs">{fmt(d.furniture)}</span>
-                                            <span className="col-span-2 text-right text-xs font-bold">{fmt(d.total)}</span>
+                                    <FinanceTableHeader>
+                                        <span className="col-span-1">Run ID</span>
+                                        <span className="col-span-2">Period</span>
+                                        <span className="col-span-2 text-right">Opening NBV</span>
+                                        <span className="col-span-2 text-right">Depreciation Exp.</span>
+                                        <span className="col-span-2 text-right">Closing NBV</span>
+                                        <span className="col-span-1 text-center">Journal ID</span>
+                                        <span className="col-span-2 text-right">Status / Run By</span>
+                                    </FinanceTableHeader>
+
+                                    {[...schedule].reverse().map((d) => (
+                                        <div key={d.id} className="grid grid-cols-12 px-6 py-4 items-center hover:bg-muted/30 transition-colors text-sm">
+                                            <span className="col-span-1 text-[10px] font-mono text-muted-foreground">{d.id}</span>
+                                            <span className="col-span-2 text-xs font-bold">{d.period}</span>
+                                            <span className="col-span-2 text-right text-xs text-muted-foreground">{fmt(d.openingNbv)}</span>
+                                            <span className="col-span-2 text-right text-xs font-bold text-red-600">{fmt(d.depAmount)}</span>
+                                            <span className="col-span-2 text-right text-xs font-bold">{fmt(d.closingNbv)}</span>
+                                            <span className="col-span-1 text-center font-mono text-[9px] text-blue-600 hover:underline cursor-pointer">{d.journalId}</span>
+                                            <div className="col-span-2 flex flex-col items-end">
+                                                <Badge variant={d.status === 'posted' ? 'outline' : 'secondary'} className={cn("text-[8px] h-4 px-1.5 uppercase", d.status === 'posted' && "border-emerald-300 text-emerald-600 bg-emerald-50")}>
+                                                    {d.status}
+                                                </Badge>
+                                                <span className="text-[9px] text-muted-foreground mt-1">{d.runBy}</span>
+                                            </div>
                                         </div>
                                     ))}
                                 </div>
@@ -116,38 +373,117 @@ export default function FixedAssetsPage() {
                         </Card>
                     </TabsContent>
 
+                    {/* ── DISPOSAL WORKFLOW ── */}
                     <TabsContent value="disposal" className="mt-6">
+                        <div className="flex justify-end mb-4">
+                            <Button size="sm" variant="outline" className="text-xs h-8 gap-2" onClick={() => setIsDisposeOpen(true)}>
+                                <Trash2 className="h-3.5 w-3.5" /> Initialize Disposal
+                            </Button>
+                        </div>
                         <Card className="border-border shadow-sm">
                             <CardContent className="p-0">
                                 <div className="divide-y border-t">
-                                    {ASSETS.filter(a => a.status === 'disposed').map(a => (
-                                        <div key={a.id} className="flex items-center justify-between px-6 py-4 hover:bg-muted/30 transition-colors">
-                                            <div className="flex items-center gap-3">
-                                                <div className="h-8 w-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center"><Trash2 className="h-4 w-4" /></div>
-                                                <div>
-                                                    <p className="text-sm font-medium">{a.name}</p>
-                                                    <p className="text-[10px] text-muted-foreground">{a.id} · Fully depreciated · Acquired {a.acquired}</p>
-                                                </div>
+                                    <FinanceTableHeader>
+                                        <span className="col-span-1">ID</span>
+                                        <span className="col-span-2">Asset</span>
+                                        <span className="col-span-1">Date</span>
+                                        <span className="col-span-2 text-right">NBV at Disposal</span>
+                                        <span className="col-span-2 text-right">Disposal Value</span>
+                                        <span className="col-span-1 text-right">Gain / Loss</span>
+                                        <span className="col-span-1 text-center">Journal</span>
+                                        <span className="col-span-2 text-right">Workflow Status</span>
+                                    </FinanceTableHeader>
+
+                                    {disposals.map((d) => (
+                                        <div key={d.id} className="grid grid-cols-12 px-6 py-4 items-center hover:bg-muted/30 transition-colors text-sm">
+                                            <span className="col-span-1 font-mono text-[10px] text-muted-foreground">{d.id}</span>
+                                            <div className="col-span-2 flex flex-col">
+                                                <span className="text-xs font-bold">{d.assetName}</span>
+                                                <span className="text-[9px] text-muted-foreground font-mono">{d.assetId}</span>
                                             </div>
-                                            <div className="text-right">
-                                                <p className="text-xs font-bold">Cost: {fmt(a.cost)}</p>
-                                                <p className="text-[10px] text-muted-foreground">Gain/Loss: {fmt(0)}</p>
+                                            <span className="col-span-1 text-[10px] text-muted-foreground">{d.date}</span>
+                                            <span className="col-span-2 text-right text-xs">{fmt(d.nbvAtDisposal)}</span>
+                                            <span className="col-span-2 text-right text-xs font-bold">{fmt(d.value)}</span>
+                                            <span className={cn("col-span-1 text-right text-xs font-bold", d.gainLoss >= 0 ? "text-emerald-600" : "text-red-600")}>
+                                                {d.gainLoss > 0 ? "+" : ""}{fmt(d.gainLoss)}
+                                            </span>
+                                            <span className="col-span-1 text-center font-mono text-[9px] text-blue-600 hover:underline cursor-pointer">{d.journalId}</span>
+                                            <div className="col-span-2 flex flex-col items-end">
+                                                <Badge className="text-[8px] h-4 px-1.5 uppercase bg-slate-800 tracking-wider">
+                                                    {d.status}
+                                                </Badge>
+                                                {d.approvedBy && <span className="text-[9px] text-muted-foreground mt-1">Appr: {d.approvedBy}</span>}
                                             </div>
                                         </div>
                                     ))}
-                                    {ASSETS.filter(a => a.status === 'disposed').length === 0 && (
-                                        <div className="py-12 text-center"><p className="text-sm text-muted-foreground">No disposals recorded</p></div>
+                                    {disposals.length === 0 && (
+                                        <FinanceEmptyState icon={FileText} title="No disposals" description="No asset disposal workflows initiated." />
                                     )}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+
+                    {/* ── AUDIT LOG ── */}
+                    <TabsContent value="audit" className="mt-6">
+                        <Card className="border-border shadow-sm">
+                            <CardHeader>
+                                <CardTitle className="text-sm">Audit Trail</CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-0">
+                                <div className="divide-y border-t">
+                                    {schedule.map(s => (
+                                        <div key={'audit-' + s.id} className="px-6 py-3 flex items-center justify-between text-xs hover:bg-muted/30">
+                                            <div className="flex items-center gap-3">
+                                                <div className="h-2 w-2 rounded-full bg-blue-500"></div>
+                                                <span className="font-mono text-[10px] text-muted-foreground">{new Date(s.timestamp).toLocaleString()}</span>
+                                                <span>System posted depreciation run for <b>{s.period}</b></span>
+                                            </div>
+                                            <span className="text-muted-foreground">User: {s.runBy}</span>
+                                        </div>
+                                    ))}
+                                    <div className="px-6 py-3 flex items-center justify-between text-xs hover:bg-muted/30">
+                                        <div className="flex items-center gap-3">
+                                            <div className="h-2 w-2 rounded-full bg-emerald-500"></div>
+                                            <span className="font-mono text-[10px] text-muted-foreground">2026-02-15 10:30:00</span>
+                                            <span>Asset <b>FA-007 (Old Welder)</b> was disposed. Workflow approved.</span>
+                                        </div>
+                                        <span className="text-muted-foreground">User: Finance Director</span>
+                                    </div>
                                 </div>
                             </CardContent>
                         </Card>
                     </TabsContent>
                 </Tabs>
             </div>
+
+            {/* Modals for Add & Dispose would usually go here, simplified for structure limit */}
+            <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Add Fixed Asset Master</DialogTitle>
+                        <DialogDescription>Create a new asset record following IFRS guidelines.</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2"><Label className="text-xs">Asset Name</Label><Input className="h-8 text-xs" placeholder="e.g. Forklift" /></div>
+                            <div className="space-y-2"><Label className="text-xs">Class</Label><Input className="h-8 text-xs" placeholder="Machinery" /></div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2"><Label className="text-xs">Gross Cost</Label><Input type="number" className="h-8 text-xs" placeholder="0.00" /></div>
+                            <div className="space-y-2"><Label className="text-xs">Salvage Value</Label><Input type="number" className="h-8 text-xs" placeholder="0.00" /></div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2"><Label className="text-xs">Depreciation Method</Label>
+                                <Select><SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select" /></SelectTrigger><SelectContent><SelectItem value="sl">Straight Line</SelectItem><SelectItem value="rb">Reducing Balance</SelectItem></SelectContent></Select>
+                            </div>
+                            <div className="space-y-2"><Label className="text-xs">Useful Life (Years)</Label><Input type="number" className="h-8 text-xs" /></div>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground">Additional fields (GL codes, tracking info) are available in the expanded form.</p>
+                    </div>
+                    <DialogFooter><Button onClick={() => setIsAddOpen(false)}>Save Asset</Button></DialogFooter>
+                </DialogContent>
+            </Dialog>
         </DashboardShell>
     );
-}
-
-function Kpi({ label, value }: { label: string; value: string }) {
-    return (<Card className="border-border shadow-sm"><CardContent className="p-3"><p className="text-[10px] text-muted-foreground font-medium mb-1">{label}</p><p className="text-lg font-bold tracking-tight">{value}</p></CardContent></Card>);
 }

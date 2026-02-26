@@ -1,29 +1,22 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { DashboardShell } from '@/components/shared/layout/dashboard-shell';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Globe, ChevronLeft, RefreshCcw, ArrowUpRight, ArrowDownRight, AlertTriangle } from 'lucide-react';
+import { Globe, RefreshCcw, ArrowUpRight, ArrowDownRight, Loader2 } from 'lucide-react';
 import { useCurrency } from '@/lib/hooks/use-currency';
 import { CURRENCY_SYMBOLS, CURRENCY_NAMES, MOCK_FX_RATES } from '@/lib/currency';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { KpiCard } from '@/components/finance/KpiCard';
+import { FinancePageHeader, FinanceTableHeader } from '@/components/finance/FinancePageHeader';
 
 const TRACKED_CURRENCIES = ['AED', 'USD', 'EUR', 'GBP', 'SAR', 'INR'];
 
-const FX_HISTORY = [
-    { date: '2026-02-22', pair: 'USD/AED', rate: 3.6725, change: 0.0000 },
-    { date: '2026-02-22', pair: 'EUR/AED', rate: 3.9950, change: +0.0120 },
-    { date: '2026-02-22', pair: 'GBP/AED', rate: 4.6490, change: -0.0080 },
-    { date: '2026-02-22', pair: 'SAR/AED', rate: 0.9793, change: 0.0000 },
-    { date: '2026-02-22', pair: 'INR/AED', rate: 0.0442, change: +0.0002 },
-];
-
-const EXPOSURE = [
+const INITIAL_EXPOSURE = [
     { currency: 'USD', receivable: 128000, payable: 42000, net: 86000 },
     { currency: 'EUR', receivable: 45000, payable: 18000, net: 27000 },
     { currency: 'GBP', receivable: 22000, payable: 8500, net: 13500 },
@@ -41,27 +34,67 @@ const REVALUATION_LOG = [
 export default function MultiCurrencyPage() {
     const { format: fmt, currencyCode: baseCurrency } = useCurrency();
     const [tab, setTab] = useState('rates');
-    const totalExposure = EXPOSURE.reduce((s, e) => s + Math.abs(e.net), 0);
+
+    const [rates, setRates] = useState<Record<string, number>>(MOCK_FX_RATES);
+    const [refreshing, setRefreshing] = useState(false);
+    const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+
+    const totalExposure = INITIAL_EXPOSURE.reduce((s, e) => s + Math.abs(e.net), 0);
     const netFxImpact = REVALUATION_LOG.reduce((s, r) => s + r.netImpact, 0);
+
+    const handleRefresh = async () => {
+        setRefreshing(true);
+        // Simulate real rate fetching
+        await new Promise(r => setTimeout(r, 1200));
+
+        // Slightly jitter the rates to show a change happened
+        const newRates = { ...rates };
+        ['EUR', 'GBP', 'INR'].forEach(c => {
+            if (newRates[c]) {
+                const jitter = (Math.random() - 0.5) * 0.005; // +/- small amount
+                newRates[c] = newRates[c] * (1 + jitter);
+            }
+        });
+
+        setRates(newRates);
+        setLastUpdated(new Date());
+        setRefreshing(false);
+        toast.success('FX Rates Refreshed');
+    };
 
     return (
         <DashboardShell requireAdmin>
             <div className="space-y-6 pb-8">
-                <div className="flex items-center justify-between border-b border-border pb-5">
-                    <div className="flex items-center gap-3">
-                        <Link href="/admin/finance"><Button variant="ghost" size="icon" className="h-8 w-8"><ChevronLeft className="h-4 w-4" /></Button></Link>
-                        <div className="h-9 w-9 rounded-lg bg-red-50 text-red-600 flex items-center justify-center"><Globe className="h-5 w-5" /></div>
-                        <div>
-                            <h1 className="text-xl font-bold tracking-tight">Multi-Currency Management</h1>
-                            <p className="text-[11px] text-muted-foreground">FX Rates · Revaluation · Exposure · Translation — Base: <span className="font-bold text-red-600">{baseCurrency}</span></p>
-                        </div>
-                    </div>
-                    <Button size="sm" className="gap-2 bg-red-600 hover:bg-red-700" onClick={() => toast.success('FX rates refreshed')}><RefreshCcw className="h-3.5 w-3.5" /> Refresh Rates</Button>
-                </div>
+
+                <FinancePageHeader
+                    title="Multi-Currency Management"
+                    subtitle={`FX Rates · Revaluation · Exposure · Translation — Base: ${baseCurrency}`}
+                    icon={Globe}
+                    actions={
+                        <Button
+                            size="sm"
+                            className="gap-2 bg-red-600 hover:bg-red-700 text-[10px] h-8 transition-all"
+                            onClick={handleRefresh}
+                            disabled={refreshing}
+                        >
+                            <RefreshCcw className={cn("h-3.5 w-3.5", refreshing && "animate-spin")} />
+                            {refreshing ? 'Fetching...' : 'Refresh Rates'}
+                        </Button>
+                    }
+                />
 
                 <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
-                    <Kpi label="Base Currency" value={baseCurrency} /><Kpi label="Tracked Currencies" value={String(TRACKED_CURRENCIES.length)} />
-                    <Kpi label="Total Exposure" value={fmt(totalExposure)} /><Kpi label="Net FX Impact YTD" value={fmt(netFxImpact)} alert={netFxImpact < 0} />
+                    <KpiCard label="Base Currency" value={baseCurrency} />
+                    <KpiCard label="Tracked Currencies" value={String(TRACKED_CURRENCIES.length)} />
+                    <KpiCard label="Total Exposure" value={fmt(totalExposure)} />
+                    <KpiCard
+                        label="Net FX Impact YTD"
+                        value={fmt(Math.abs(netFxImpact))}
+                        alert={netFxImpact < 0}
+                        footer={netFxImpact < 0 ? 'Unfavorable' : 'Favorable'}
+                        positive={netFxImpact >= 0}
+                        delta={netFxImpact >= 0 ? '+Impact' : '-Loss'}
+                    />
                 </div>
 
                 <Tabs value={tab} onValueChange={setTab}>
@@ -71,27 +104,39 @@ export default function MultiCurrencyPage() {
                         <TabsTrigger value="revaluation" className="text-xs font-semibold h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">FX Revaluation</TabsTrigger>
                     </TabsList>
 
+                    {/* ── RATES ── */}
                     <TabsContent value="rates" className="mt-6">
                         <Card className="border-border shadow-sm">
+                            <div className="p-4 border-b bg-muted/30 flex justify-between items-center">
+                                <p className="text-sm font-bold">Exchange Rates</p>
+                                <p className="text-[10px] text-muted-foreground flex items-center gap-1.5">
+                                    <RefreshCcw className="h-3 w-3" /> Last updated: {lastUpdated.toLocaleTimeString()}
+                                </p>
+                            </div>
                             <CardContent className="p-0">
-                                <div className="divide-y border-t">
-                                    <div className="grid grid-cols-12 px-6 py-2.5 bg-muted/50 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                                        <span className="col-span-2">Currency</span><span className="col-span-2">Name</span>
-                                        <span className="col-span-1">Symbol</span><span className="col-span-2">Rate vs USD</span>
-                                        <span className="col-span-2">Rate vs {baseCurrency}</span><span className="col-span-3 text-right">Status</span>
-                                    </div>
+                                <div className="divide-y">
+                                    <FinanceTableHeader>
+                                        <span className="col-span-2">Currency</span>
+                                        <span className="col-span-2">Name</span>
+                                        <span className="col-span-1 border-r pr-4 text-right">Symbol</span>
+                                        <span className="col-span-2 pl-4 text-right">Rate vs USD</span>
+                                        <span className="col-span-2 text-right">Rate vs {baseCurrency}</span>
+                                        <span className="col-span-3 text-right">Status</span>
+                                    </FinanceTableHeader>
                                     {TRACKED_CURRENCIES.map(c => {
-                                        const rateVsUsd = MOCK_FX_RATES[c] ?? 1;
-                                        const baseRate = MOCK_FX_RATES[baseCurrency] ?? 1;
+                                        const rateVsUsd = rates[c] ?? 1;
+                                        const baseRate = rates[baseCurrency] ?? 1;
                                         const rateVsBase = rateVsUsd / baseRate;
                                         return (
                                             <div key={c} className="grid grid-cols-12 px-6 py-3 items-center hover:bg-muted/30 transition-colors text-sm">
                                                 <span className="col-span-2 font-mono text-xs font-bold text-red-600">{c}</span>
                                                 <span className="col-span-2 text-xs text-muted-foreground">{CURRENCY_NAMES[c] ?? c}</span>
-                                                <span className="col-span-1 text-xs">{CURRENCY_SYMBOLS[c] ?? c}</span>
-                                                <span className="col-span-2 text-xs font-bold">{rateVsUsd.toFixed(4)}</span>
-                                                <span className="col-span-2 text-xs font-bold">{rateVsBase.toFixed(4)}</span>
-                                                <span className="col-span-3 text-right"><Badge variant="outline" className="text-[8px] h-4 px-1">Live</Badge></span>
+                                                <span className="col-span-1 text-xs font-bold border-r pr-4 text-right">{CURRENCY_SYMBOLS[c] ?? c}</span>
+                                                <span className="col-span-2 text-xs font-bold pl-4 text-right">{rateVsUsd.toFixed(4)}</span>
+                                                <span className="col-span-2 text-xs font-bold text-right">{rateVsBase.toFixed(4)}</span>
+                                                <span className="col-span-3 text-right">
+                                                    <Badge variant="outline" className="text-[8px] h-4 px-1.5 border-emerald-300 text-emerald-600 bg-emerald-50">Live</Badge>
+                                                </span>
                                             </div>
                                         );
                                     })}
@@ -100,20 +145,23 @@ export default function MultiCurrencyPage() {
                         </Card>
                     </TabsContent>
 
+                    {/* ── EXPOSURE ── */}
                     <TabsContent value="exposure" className="mt-6">
                         <Card className="border-border shadow-sm">
                             <CardContent className="p-0">
                                 <div className="divide-y border-t">
-                                    <div className="grid grid-cols-12 px-6 py-2.5 bg-muted/50 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                                        <span className="col-span-2">Currency</span><span className="col-span-3 text-right">Receivable</span>
-                                        <span className="col-span-3 text-right">Payable</span><span className="col-span-4 text-right">Net Exposure</span>
-                                    </div>
-                                    {EXPOSURE.map(e => (
+                                    <FinanceTableHeader>
+                                        <span className="col-span-2">Currency</span>
+                                        <span className="col-span-3 text-right">Receivable</span>
+                                        <span className="col-span-3 text-right">Payable</span>
+                                        <span className="col-span-4 text-right">Net Exposure</span>
+                                    </FinanceTableHeader>
+                                    {INITIAL_EXPOSURE.map(e => (
                                         <div key={e.currency} className="grid grid-cols-12 px-6 py-3 items-center hover:bg-muted/30 transition-colors text-sm">
                                             <span className="col-span-2 font-mono text-xs font-bold text-red-600">{e.currency}</span>
-                                            <span className="col-span-3 text-right text-xs">{fmt(e.receivable)}</span>
-                                            <span className="col-span-3 text-right text-xs">{fmt(e.payable)}</span>
-                                            <span className={cn("col-span-4 text-right text-xs font-bold flex items-center justify-end gap-1", e.net >= 0 ? "text-emerald-600" : "text-red-600")}>
+                                            <span className="col-span-3 text-right text-xs font-medium">{fmt(e.receivable)}</span>
+                                            <span className="col-span-3 text-right text-xs font-medium">{fmt(e.payable)}</span>
+                                            <span className={cn("col-span-4 text-right text-xs font-bold flex items-center justify-end gap-1.5", e.net >= 0 ? "text-emerald-600" : "text-red-600")}>
                                                 {e.net >= 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
                                                 {fmt(Math.abs(e.net))}
                                             </span>
@@ -124,25 +172,33 @@ export default function MultiCurrencyPage() {
                         </Card>
                     </TabsContent>
 
+                    {/* ── REVALUATION ── */}
                     <TabsContent value="revaluation" className="mt-6">
                         <Card className="border-border shadow-sm">
                             <CardContent className="p-0">
                                 <div className="divide-y border-t">
-                                    <div className="grid grid-cols-12 px-6 py-2.5 bg-muted/50 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                                        <span className="col-span-1">ID</span><span className="col-span-2">Date</span>
-                                        <span className="col-span-1">CCY</span><span className="col-span-2 text-right">Gain</span>
-                                        <span className="col-span-2 text-right">Loss</span><span className="col-span-2 text-right">Net Impact</span>
+                                    <FinanceTableHeader>
+                                        <span className="col-span-1">ID</span>
+                                        <span className="col-span-2">Date</span>
+                                        <span className="col-span-1">CCY</span>
+                                        <span className="col-span-2 text-right">Gain</span>
+                                        <span className="col-span-2 text-right">Loss</span>
+                                        <span className="col-span-2 text-right">Net Impact</span>
                                         <span className="col-span-2 text-right">Status</span>
-                                    </div>
+                                    </FinanceTableHeader>
                                     {REVALUATION_LOG.map(r => (
                                         <div key={r.id} className="grid grid-cols-12 px-6 py-3 items-center hover:bg-muted/30 transition-colors text-sm">
                                             <span className="col-span-1 font-mono text-xs text-red-600">{r.id}</span>
                                             <span className="col-span-2 text-xs text-muted-foreground">{r.date}</span>
                                             <span className="col-span-1 text-xs font-bold">{r.currency}</span>
-                                            <span className="col-span-2 text-right text-xs text-emerald-600">{r.unrealizedGain > 0 ? fmt(r.unrealizedGain) : '—'}</span>
-                                            <span className="col-span-2 text-right text-xs text-red-600">{r.unrealizedLoss < 0 ? fmt(Math.abs(r.unrealizedLoss)) : '—'}</span>
-                                            <span className={cn("col-span-2 text-right text-xs font-bold", r.netImpact >= 0 ? "text-emerald-600" : "text-red-600")}>{fmt(r.netImpact)}</span>
-                                            <span className="col-span-2 text-right"><Badge variant="default" className="text-[8px] h-4 px-1">{r.status}</Badge></span>
+                                            <span className="col-span-2 text-right text-xs font-bold text-emerald-600">{r.unrealizedGain > 0 ? fmt(r.unrealizedGain) : '—'}</span>
+                                            <span className="col-span-2 text-right text-xs font-bold text-red-600">{r.unrealizedLoss < 0 ? fmt(Math.abs(r.unrealizedLoss)) : '—'}</span>
+                                            <span className={cn("col-span-2 text-right text-xs font-bold", r.netImpact >= 0 ? "text-emerald-600" : "text-red-600")}>
+                                                {fmt(r.netImpact)}
+                                            </span>
+                                            <span className="col-span-2 text-right">
+                                                <Badge variant="default" className="text-[8px] h-4 px-1 uppercase tracking-wider">{r.status}</Badge>
+                                            </span>
                                         </div>
                                     ))}
                                 </div>
@@ -153,8 +209,4 @@ export default function MultiCurrencyPage() {
             </div>
         </DashboardShell>
     );
-}
-
-function Kpi({ label, value, alert }: { label: string; value: string; alert?: boolean }) {
-    return (<Card className={cn("border-border shadow-sm", alert && "border-red-200")}><CardContent className="p-3"><p className="text-[10px] text-muted-foreground font-medium mb-1">{label}</p><p className={cn("text-lg font-bold tracking-tight", alert && "text-red-600")}>{value}</p></CardContent></Card>);
 }

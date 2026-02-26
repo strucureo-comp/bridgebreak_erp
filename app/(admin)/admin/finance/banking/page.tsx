@@ -18,12 +18,14 @@ import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import {
   Plus, Building2, Search, ArrowUpRight, ArrowDownRight,
-  Loader2, Wallet, Landmark, ArrowRightLeft, CheckCircle2, DollarSign
+  Loader2, Wallet, Landmark, ArrowRightLeft, CheckCircle2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { BankAccount, BankTransaction } from '@/lib/db/types';
 import { cn } from '@/lib/utils';
 import { useCurrency } from '@/lib/hooks/use-currency';
+import { KpiCard } from '@/components/finance/KpiCard';
+import { FinancePageHeader } from '@/components/finance/FinancePageHeader';
 
 export default function BankingPage() {
   const { user } = useAuth();
@@ -52,6 +54,7 @@ export default function BankingPage() {
       setTransactions(txData || []);
     } catch (error) {
       console.error('Banking Fetch Error:', error);
+      toast.error('Failed to load banking data');
     } finally {
       setLoading(false);
     }
@@ -68,7 +71,7 @@ export default function BankingPage() {
 
   if (!isMounted) return null;
 
-  if (loading) {
+  if (loading && accounts.length === 0) {
     return (
       <DashboardShell requireAdmin>
         <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
@@ -82,85 +85,43 @@ export default function BankingPage() {
   return (
     <DashboardShell requireAdmin>
       <div className="space-y-6 pb-8">
+
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <h1 className="text-xl font-bold tracking-tight text-foreground">Banking & Cash</h1>
-            <p className="text-sm text-muted-foreground flex items-center gap-2">
-              <Landmark className="h-3.5 w-3.5" />
-              Manage bank accounts and cash movements
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Dialog open={isAccountOpen} onOpenChange={setIsAccountOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2">
-                  <Plus className="h-3.5 w-3.5" /> Add Account
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md">
-                <AccountForm onSuccess={() => { setIsAccountOpen(false); fetchData(); }} />
-              </DialogContent>
-            </Dialog>
-            <Dialog open={isTxOpen} onOpenChange={setIsTxOpen}>
-              <DialogTrigger asChild>
-                <Button size="sm" className="gap-2">
-                  <ArrowRightLeft className="h-3.5 w-3.5" /> New Entry
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md">
-                <TransactionForm accounts={accounts} onSuccess={() => { setIsTxOpen(false); fetchData(); }} />
-              </DialogContent>
-            </Dialog>
-          </div>
-        </div>
+        <FinancePageHeader
+          title="Banking & Cash"
+          subtitle="Manage bank accounts and cash movements"
+          icon={Landmark}
+          actions={
+            <>
+              <Dialog open={isAccountOpen} onOpenChange={setIsAccountOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2 text-[10px] h-8">
+                    <Plus className="h-3.5 w-3.5" /> Add Account
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md">
+                  <AccountForm onSuccess={() => { setIsAccountOpen(false); fetchData(); }} />
+                </DialogContent>
+              </Dialog>
+              <Dialog open={isTxOpen} onOpenChange={setIsTxOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm" className="gap-2 bg-red-600 hover:bg-red-700 text-[10px] h-8">
+                    <ArrowRightLeft className="h-3.5 w-3.5" /> Record Entry
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md">
+                  <TransactionForm accounts={accounts} onSuccess={() => { setIsTxOpen(false); fetchData(); }} />
+                </DialogContent>
+              </Dialog>
+            </>
+          }
+        />
 
         {/* KPI Cards */}
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card className="border-border shadow-sm">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Total Balance</p>
-                  <p className="text-2xl font-bold">{fmtCurrency(totalLiquidity)}</p>
-                </div>
-                <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-                  <DollarSign className="h-5 w-5" />
-                </div>
-              </div>
-              <p className="text-[11px] text-muted-foreground mt-2">Cash in hand across all accounts</p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-border shadow-sm">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Accounts</p>
-                  <p className="text-2xl font-bold">{accounts.length}</p>
-                </div>
-                <div className="h-10 w-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-                  <Building2 className="h-5 w-5" />
-                </div>
-              </div>
-              <p className="text-[11px] text-muted-foreground mt-2">Active bank & cash accounts</p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-border shadow-sm">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Transactions</p>
-                  <p className="text-2xl font-bold">{transactions.length}</p>
-                </div>
-                <div className="h-10 w-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                  <ArrowRightLeft className="h-5 w-5" />
-                </div>
-              </div>
-              <p className="text-[11px] text-muted-foreground mt-2">Total movements recorded</p>
-            </CardContent>
-          </Card>
+        <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
+          <KpiCard label="Total Balance" value={fmtCurrency(totalLiquidity)} />
+          <KpiCard label="Accounts" value={String(accounts.length)} />
+          <KpiCard label="Transactions" value={String(transactions.length)} />
         </div>
 
         {/* Account Cards */}
@@ -170,15 +131,15 @@ export default function BankingPage() {
               <Card key={acc.id} className="border-border shadow-sm hover:shadow-md transition-shadow">
                 <CardContent className="p-5">
                   <div className="flex items-center justify-between mb-3">
-                    <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center text-muted-foreground">
+                    <div className="h-9 w-9 rounded-lg bg-red-50 flex items-center justify-center text-red-600">
                       {acc.type === 'cash' ? <Wallet className="h-4 w-4" /> : <Building2 className="h-4 w-4" />}
                     </div>
                     <Badge variant="secondary" className="text-[9px] uppercase">{acc.type}</Badge>
                   </div>
                   <h3 className="text-sm font-bold">{acc.name}</h3>
                   <p className="text-[11px] text-muted-foreground mb-3">{acc.bank_name || 'Cash Account'}</p>
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                    <span className="text-[11px] text-muted-foreground">Balance</span>
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border">
+                    <span className="text-[11px] text-muted-foreground font-medium">Current Balance</span>
                     <span className="text-sm font-bold">{fmtCurrency(Number(acc.current_balance))}</span>
                   </div>
                 </CardContent>
@@ -228,6 +189,8 @@ export default function BankingPage() {
                     <div className="min-w-0">
                       <p className="text-sm font-medium truncate">{tx.description}</p>
                       <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                        <span className="font-mono text-[9px]">{tx.id.slice(0, 8)}</span>
+                        <span>·</span>
                         <span>{tx.bank_account?.name}</span>
                         <span>·</span>
                         <span>{new Date(tx.date).toLocaleDateString()}</span>
@@ -270,35 +233,35 @@ function AccountForm({ onSuccess }: { onSuccess: () => void }) {
       await createBankAccount(formData);
       toast.success('Account added');
       onSuccess();
-    } catch { toast.error('Failed'); } finally { setSubmitting(false); }
+    } catch { toast.error('Failed to add account'); } finally { setSubmitting(false); }
   };
 
   return (
     <div className="space-y-5">
       <div>
         <h3 className="text-lg font-bold">Add Account</h3>
-        <p className="text-sm text-muted-foreground">Link a bank or cash account.</p>
+        <p className="text-[11px] text-muted-foreground">Link a bank or cash account.</p>
       </div>
       <div className="space-y-4">
         <div className="space-y-2">
           <Label className="text-xs">Account Name *</Label>
-          <Input placeholder="e.g. Corporate Current" className="h-9" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+          <Input placeholder="e.g. Corporate Current" className="h-9 text-xs" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label className="text-xs">Bank Name</Label>
-            <Input placeholder="HSBC / Cash" className="h-9" value={formData.bank_name} onChange={e => setFormData({ ...formData, bank_name: e.target.value })} />
+            <Input placeholder="HSBC / Cash" className="h-9 text-xs" value={formData.bank_name} onChange={e => setFormData({ ...formData, bank_name: e.target.value })} />
           </div>
           <div className="space-y-2">
             <Label className="text-xs">Account No.</Label>
-            <Input placeholder="XXXX-XXXX" className="h-9 font-mono" value={formData.account_number} onChange={e => setFormData({ ...formData, account_number: e.target.value })} />
+            <Input placeholder="XXXX-XXXX" className="h-9 text-xs font-mono" value={formData.account_number} onChange={e => setFormData({ ...formData, account_number: e.target.value })} />
           </div>
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label className="text-xs">Type</Label>
             <Select value={formData.type} onValueChange={v => setFormData({ ...formData, type: v })}>
-              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="bank">Bank</SelectItem>
                 <SelectItem value="cash">Cash</SelectItem>
@@ -308,11 +271,11 @@ function AccountForm({ onSuccess }: { onSuccess: () => void }) {
           </div>
           <div className="space-y-2">
             <Label className="text-xs">Opening Balance</Label>
-            <Input type="number" placeholder="0.00" className="h-9" value={formData.current_balance} onChange={e => setFormData({ ...formData, current_balance: e.target.value })} />
+            <Input type="number" placeholder="0.00" className="h-9 text-xs text-right" value={formData.current_balance} onChange={e => setFormData({ ...formData, current_balance: e.target.value })} />
           </div>
         </div>
       </div>
-      <Button onClick={handleSubmit} disabled={submitting} className="w-full gap-2">
+      <Button onClick={handleSubmit} disabled={submitting} className="w-full gap-2 bg-red-600 hover:bg-red-700">
         {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
         {submitting ? 'Adding...' : 'Add Account'}
       </Button>
@@ -334,44 +297,44 @@ function TransactionForm({ accounts, onSuccess }: { accounts: BankAccount[], onS
       await createBankTransaction(formData);
       toast.success('Entry recorded');
       onSuccess();
-    } catch { toast.error('Failed'); } finally { setSubmitting(false); }
+    } catch { toast.error('Failed to log transaction'); } finally { setSubmitting(false); }
   };
 
   return (
     <div className="space-y-5">
       <div>
         <h3 className="text-lg font-bold">New Transaction</h3>
-        <p className="text-sm text-muted-foreground">Record a money movement.</p>
+        <p className="text-[11px] text-muted-foreground">Record a money movement.</p>
       </div>
       <div className="space-y-4">
         <div className="space-y-2">
           <Label className="text-xs">Account *</Label>
           <Select value={formData.bank_account_id} onValueChange={v => setFormData({ ...formData, bank_account_id: v })}>
-            <SelectTrigger className="h-9"><SelectValue placeholder="Select account" /></SelectTrigger>
+            <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Select account" /></SelectTrigger>
             <SelectContent>
-              {accounts.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}
+              {accounts.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name} — {acc.current_balance}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label className="text-xs">Direction</Label>
-            <div className="flex p-0.5 bg-muted rounded-md">
-              <button className={cn("flex-1 py-1.5 text-xs font-medium rounded-sm transition-all", formData.type === 'deposit' ? "bg-background shadow-sm text-emerald-600" : "text-muted-foreground")} onClick={() => setFormData({ ...formData, type: 'deposit' })}>In</button>
-              <button className={cn("flex-1 py-1.5 text-xs font-medium rounded-sm transition-all", formData.type === 'withdrawal' ? "bg-background shadow-sm text-rose-600" : "text-muted-foreground")} onClick={() => setFormData({ ...formData, type: 'withdrawal' })}>Out</button>
+            <div className="flex p-0.5 bg-muted rounded-md h-9">
+              <button className={cn("flex-1 text-xs font-bold rounded-sm transition-all", formData.type === 'deposit' ? "bg-background shadow-sm text-emerald-600" : "text-muted-foreground")} onClick={() => setFormData({ ...formData, type: 'deposit' })}>In (Deposit)</button>
+              <button className={cn("flex-1 text-xs font-bold rounded-sm transition-all", formData.type === 'withdrawal' ? "bg-background shadow-sm text-rose-600" : "text-muted-foreground")} onClick={() => setFormData({ ...formData, type: 'withdrawal' })}>Out (Withdrawal)</button>
             </div>
           </div>
           <div className="space-y-2">
             <Label className="text-xs">Amount *</Label>
-            <Input type="number" placeholder="0.00" className="h-9" value={formData.amount} onChange={e => setFormData({ ...formData, amount: e.target.value })} />
+            <Input type="number" placeholder="0.00" className="h-9 text-xs text-right" value={formData.amount} onChange={e => setFormData({ ...formData, amount: e.target.value })} />
           </div>
         </div>
         <div className="space-y-2">
-          <Label className="text-xs">Description</Label>
-          <Input placeholder="e.g. Client payment" className="h-9" value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} />
+          <Label className="text-xs">Description *</Label>
+          <Input placeholder="e.g. Client payment from LLC" className="h-9 text-xs" value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} />
         </div>
       </div>
-      <Button onClick={handleSubmit} disabled={submitting} className="w-full gap-2">
+      <Button onClick={handleSubmit} disabled={submitting} className="w-full gap-2 bg-red-600 hover:bg-red-700">
         {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRightLeft className="h-4 w-4" />}
         {submitting ? 'Recording...' : 'Record Entry'}
       </Button>
