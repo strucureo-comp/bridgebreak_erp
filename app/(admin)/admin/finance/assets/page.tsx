@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Cpu, Trash2, RotateCcw, Loader2, Plus, Download, AlertTriangle, FileText, ChevronRight } from 'lucide-react';
+import { Cpu, Trash2, RotateCcw, Plus, Download, AlertTriangle, FileText, ChevronRight } from 'lucide-react';
 import { useCurrency } from '@/lib/hooks/use-currency';
 import { cn } from '@/lib/utils';
 import { KpiCard } from '@/components/finance/KpiCard';
@@ -137,7 +137,6 @@ export default function FixedAssetsPage() {
     const [disposals, setDisposals] = useState<DisposalRecord[]>(INITIAL_DISPOSALS);
     const [impairments, setImpairments] = useState<ImpairmentRecord[]>([]);
 
-    const [running, setRunning] = useState(false);
     const [isAddOpen, setIsAddOpen] = useState(false);
     const [isDisposeOpen, setIsDisposeOpen] = useState(false);
     const [selectedAssetForDisposal, setSelectedAssetForDisposal] = useState<string>('');
@@ -150,78 +149,9 @@ export default function FixedAssetsPage() {
     const monthlyDep = schedule.length > 0 ? schedule[schedule.length - 1].depAmount : 0;
     const fullyDepreciatedCount = activeAssets.filter(a => a.nbv <= a.salvageValue).length;
 
-    // ── DEPRECIATION ENGINE ──
-    const handleRunDepreciation = async () => {
-        setRunning(true);
-
-        // Simulate complex calculation time
-        await new Promise(r => setTimeout(r, 2000));
-
-        // Determine next period
-        const lastPeriodStr = schedule.length > 0 ? schedule[schedule.length - 1].period : 'Feb 2026';
-        const [monthStr, yearStr] = lastPeriodStr.split(' ');
-        const nextDate = new Date(`${monthStr} 1, ${yearStr}`);
-        nextDate.setMonth(nextDate.getMonth() + 1);
-        const mStr = nextDate.toLocaleString('default', { month: 'short', year: 'numeric' });
-
-        let totalPeriodDep = 0;
-
-        // Calculate per asset
-        const newAssets = assets.map(a => {
-            if (a.status !== 'active') return a;
-            if (a.nbv <= a.salvageValue) return a; // Stop depreciation
-
-            let depAmt = 0;
-            if (a.depMethod === 'Straight Line') {
-                const depreciableBase = a.cost - a.salvageValue;
-                depAmt = Math.round(depreciableBase / a.usefulLife / 12);
-            } else {
-                // Reducing Balance
-                const rate = a.depRate ? (a.depRate / 100) : 0.2;
-                depAmt = Math.round((a.nbv * rate) / 12);
-            }
-
-            // Ensure we don't over-depreciate below salvage
-            if (a.nbv - depAmt < a.salvageValue) {
-                depAmt = a.nbv - a.salvageValue;
-            }
-
-            totalPeriodDep += depAmt;
-
-            return {
-                ...a,
-                accDep: a.accDep + depAmt,
-                nbv: a.nbv - depAmt
-            };
-        });
-
-        if (totalPeriodDep === 0) {
-            toast.info('No depreciation to calculate.', { description: 'All active assets have reached their salvage value.' });
-            setRunning(false);
-            return;
-        }
-
-        setAssets(newAssets);
-
-        const newScheduleItem: DepScheduleItem = {
-            id: `DEP-${200 + schedule.length}`,
-            period: mStr,
-            openingNbv: totalNBV,
-            depAmount: totalPeriodDep,
-            closingNbv: totalNBV - totalPeriodDep,
-            journalId: `JE-${new Date().getFullYear()}-` + Math.floor(Math.random() * 1000).toString().padStart(4, '0'),
-            status: 'posted',
-            runBy: 'System Auto/Admin',
-            timestamp: new Date().toISOString()
-        };
-
-        setSchedule(prev => [...prev, newScheduleItem]);
-
-        setRunning(false);
-        toast.success('Depreciation Run Completed successfully', {
-            description: `Journal ${newScheduleItem.journalId} posted for ${mStr}. Amount: ${fmt(totalPeriodDep)}`
-        });
-    };
+    // ── DEPRECIATION ENGINE (Automated) ──
+    // The depreciation engine is designed to run automatically at the end of each period via a scheduled background job.
+    // It will calculate per asset, deduct from NBV, add to AccDep, and post a summary journal entry.
 
     return (
         <DashboardShell requireAdmin>
@@ -249,15 +179,10 @@ export default function FixedAssetsPage() {
                             >
                                 <Plus className="h-3.5 w-3.5" /> Add Asset
                             </Button>
-                            <Button
-                                size="sm"
-                                className="gap-2 bg-red-600 hover:bg-red-700 text-[10px] h-8 font-bold"
-                                onClick={handleRunDepreciation}
-                                disabled={running}
-                            >
-                                {running ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
-                                {running ? 'Processing Engine...' : 'Run Depreciation Engine'}
-                            </Button>
+                            <Badge variant="outline" className="h-8 flex items-center gap-1.5 bg-blue-50/50 text-blue-700 hover:bg-blue-50/50 border-blue-200">
+                                <RotateCcw className="h-3.5 w-3.5" />
+                                <span className="text-[10px] font-bold">Auto-Depreciation: ON</span>
+                            </Badge>
                         </div>
                     }
                 />
