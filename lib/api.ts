@@ -395,8 +395,24 @@ export async function createDepartment(data: any) {
     } catch (e) { console.warn('[API] createDepartment error:', e); }
     return null;
 }
-export async function getHRRoles() { return mockDelay([]); }
-export async function createHRRole(data: any) { return mockDelay(data); }
+export async function getHRRoles() {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/roles`, { headers: authHeaders() });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] getHRRoles error:', e); }
+    return [];
+}
+export async function createHRRole(data: any) {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/roles`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify(data)
+        });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] createHRRole error:', e); }
+    return null;
+}
 export async function getPayrolls() {
     try {
         const res = await fetch(`${API_BASE}/hrms/payrolls`, { headers: authHeaders() });
@@ -404,10 +420,69 @@ export async function getPayrolls() {
     } catch (e) { console.warn('[API] getPayrolls error:', e); }
     return [];
 }
-export async function generatePayroll(month: string) { return mockDelay({ message: 'Success' }); }
-export async function postPayrollToFinance(id: string) { return mockDelay({ message: 'Success' }); }
-export async function getSalaryStructures(empId?: string) { return mockDelay([]); }
-export async function createSalaryStructure(data: any) { return mockDelay(data); }
+
+export async function previewPayroll(month: string) {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/payrolls/preview`, {
+            method: 'POST',
+            headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+            body: JSON.stringify({ month })
+        });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] previewPayroll error:', e); }
+    throw new Error('Failed to preview payroll');
+}
+
+export async function generatePayroll(month: string, force = false) {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/payrolls/generate`, {
+            method: 'POST',
+            headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+            body: JSON.stringify({ month, force })
+        });
+        if (res.ok) return res.json();
+        
+        // Handle duplicate cycle error
+        if (res.status === 409) {
+            const errorData = await res.json();
+            throw { code: 'DUPLICATE_CYCLE', ...errorData };
+        }
+    } catch (e) { console.warn('[API] generatePayroll error:', e); throw e; }
+    throw new Error('Failed to generate payroll');
+}
+
+export async function postPayrollToFinance(id: string) {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/payrolls/${id}/post`, {
+            method: 'POST',
+            headers: authHeaders()
+        });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] postPayrollToFinance error:', e); }
+    throw new Error('Failed to post payroll to finance');
+}
+
+export async function getSalaryStructures(empId?: string) {
+    try {
+        const url = empId ? `${API_BASE}/hrms/salary-structures?employee_id=${empId}` : `${API_BASE}/hrms/salary-structures`;
+        const res = await fetch(url, { headers: authHeaders() });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] getSalaryStructures error:', e); }
+    return [];
+}
+
+export async function createSalaryStructure(data: any) {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/salary-structures`, {
+            method: 'POST',
+            headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] createSalaryStructure error:', e); }
+    throw new Error('Failed to create salary structure');
+}
+
 export async function getLeaves(f?: any) {
     try {
         const res = await fetch(`${API_BASE}/hrms/leaves`, { headers: authHeaders() });
@@ -426,11 +501,53 @@ export async function applyLeave(data: any) {
     } catch (e) { console.warn('[API] applyLeave error:', e); }
     return null;
 }
-export async function updateLeaveStatus(id: string, s: string) { return mockDelay(true); }
-export async function getLeaveTypes() { return mockDelay([]); }
-export async function createLeaveType(data: any) { return mockDelay(data); }
-export async function getHolidays() { return mockDelay([]); }
-export async function createHoliday(data: any) { return mockDelay(data); }
+export async function updateLeaveStatus(id: string, s: string) {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/leaves/${id}`, {
+            method: 'PUT',
+            headers: authHeaders(),
+            body: JSON.stringify({ status: s })
+        });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] updateLeaveStatus error:', e); }
+    return null;
+}
+export async function getLeaveTypes() {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/leave-types`, { headers: authHeaders() });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] getLeaveTypes error:', e); }
+    return [];
+}
+export async function createLeaveType(data: any) {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/leave-types`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify(data)
+        });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] createLeaveType error:', e); }
+    return null;
+}
+export async function getHolidays() {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/holidays`, { headers: authHeaders() });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] getHolidays error:', e); }
+    return [];
+}
+export async function createHoliday(data: any) {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/holidays`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify(data)
+        });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] createHoliday error:', e); }
+    return null;
+}
 export async function getHREvents(f?: any) { return mockDelay([]); }
 export async function createHREvent(data: any) { return mockDelay(data); }
 export async function allocateLabour(data: any) { return mockDelay(data); }

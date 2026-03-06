@@ -33,7 +33,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 
 type ConfigMode = 'statutory' | 'roles' | 'departments' | 'employment-types' | 'components' | 'templates';
 
-export function HRMSSettings() {
+interface HRMSSettingsProps {
+  roles?: any[];
+  departments?: any[];
+  onRefresh?: () => void;
+}
+
+export function HRMSSettings({ roles = [], departments = [], onRefresh = () => {} }: HRMSSettingsProps) {
   const [mode, setConfigMode] = useState<ConfigMode>('statutory');
   const [editingItem, setEditingItem] = useState<any>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -157,6 +163,7 @@ export function HRMSSettings() {
                         await createHRRole({ title: input.value, code: input.value.toLowerCase().replace(/\s+/g, '_') });
                         toast.success('Designation added');
                         input.value = '';
+                        onRefresh();
                       } catch { toast.error('Failed to add'); }
                     }}>Add</Button>
                   </div>
@@ -166,20 +173,24 @@ export function HRMSSettings() {
               <div className="space-y-3 pt-4 border-t border-border">
                 <Label className="text-xs font-medium text-foreground">Configured Roles</Label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  {['Structural Engineer', 'Site Supervisor', 'Lead Fabricator', 'Project Manager'].map(role => (
-                    <div key={role} className="flex items-center justify-between p-3 border rounded-md bg-muted hover:bg-white transition-all group">
-                      <div className="flex items-center gap-3">
-                        <Users size={14} className="text-muted-foreground group-hover:text-primary transition-colors" />
-                        <span className="text-sm font-medium text-foreground">{role}</span>
+                  {roles && roles.length > 0 ? (
+                    roles.map(role => (
+                      <div key={role.id} className="flex items-center justify-between p-3 border rounded-md bg-muted hover:bg-white transition-all group">
+                        <div className="flex items-center gap-3">
+                          <Users size={14} className="text-muted-foreground group-hover:text-primary transition-colors" />
+                          <span className="text-sm font-medium text-foreground">{role.title}</span>
+                        </div>
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => handleEdit({ type: 'role', name: role.title })}>
+                            <Pencil size={12} />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground/60 hover:text-rose-500"><Trash2 size={12} /></Button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => handleEdit({ type: 'role', name: role })}>
-                          <Pencil size={12} />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground/60 hover:text-rose-500"><Trash2 size={12} /></Button>
-                      </div>
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    <p className="text-xs text-muted-foreground italic col-span-full">No roles configured yet</p>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -205,6 +216,7 @@ export function HRMSSettings() {
                         await createDepartment({ name: input.value, code: input.value.toUpperCase().slice(0, 3) });
                         toast.success('Department created');
                         input.value = '';
+                        onRefresh();
                       } catch { toast.error('Failed to create'); }
                     }}>Add</Button>
                   </div>
@@ -214,20 +226,24 @@ export function HRMSSettings() {
               <div className="space-y-3 pt-4 border-t border-border">
                 <Label className="text-xs font-medium text-foreground">Active Units</Label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  {['Engineering', 'Production', 'Operations', 'Finance', 'Logistics'].map(dept => (
-                    <div key={dept} className="flex items-center justify-between p-3 border rounded-md bg-muted hover:bg-white transition-all group">
-                      <div className="flex items-center gap-3">
-                        <Building2 size={14} className="text-muted-foreground group-hover:text-primary transition-colors" />
-                        <span className="text-sm font-medium text-foreground">{dept}</span>
+                  {departments && departments.length > 0 ? (
+                    departments.map(dept => (
+                      <div key={dept.id} className="flex items-center justify-between p-3 border rounded-md bg-muted hover:bg-white transition-all group">
+                        <div className="flex items-center gap-3">
+                          <Building2 size={14} className="text-muted-foreground group-hover:text-primary transition-colors" />
+                          <span className="text-sm font-medium text-foreground">{dept.name}</span>
+                        </div>
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => handleEdit({ type: 'dept', name: dept.name })}>
+                            <Pencil size={12} />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground/60 hover:text-rose-500"><Trash2 size={12} /></Button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => handleEdit({ type: 'dept', name: dept })}>
-                          <Pencil size={12} />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground/60 hover:text-rose-500"><Trash2 size={12} /></Button>
-                      </div>
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    <p className="text-xs text-muted-foreground italic col-span-full">No departments configured yet</p>
+                  )}
                 </div>
               </div>
             </CardContent>

@@ -8,17 +8,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { 
-  Plus, 
-  Search, 
-  Mail, 
-  Phone, 
-  MapPin, 
-  Briefcase, 
-  Calendar, 
-  ChevronRight, 
-  ShieldCheck, 
-  DollarSign, 
+import {
+  Plus,
+  Search,
+  Mail,
+  Phone,
+  MapPin,
+  Briefcase,
+  Calendar,
+  ChevronRight,
+  ShieldCheck,
+  DollarSign,
   Users,
   Fingerprint,
   LayoutTemplate
@@ -29,6 +29,7 @@ import { cn } from '@/lib/utils';
 import type { Employee, HRDepartment, HRRole } from '@/lib/db/types';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useTenant } from '@/lib/tenant-context';
 
 interface EmployeeDirectoryProps {
   employees: Employee[];
@@ -49,25 +50,40 @@ export function EmployeeDirectory({ employees, departments, roles, onRefresh }: 
     return true;
   });
 
+  const { companyProfile } = useTenant();
+  const currency = companyProfile?.baseCurrency || 'AED';
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const fd = new FormData(e.currentTarget);
+    const form = e.currentTarget;
+    const fd = new FormData(form);
     try {
-      await createEmployee({
+      const empData = {
         employee_id: fd.get('employee_id') as string,
         name: fd.get('name') as string,
-        role: fd.get('role') as string, // This will now come from the dropdown
+        hr_role_id: (fd.get('role') as string) || undefined,
         employment_type: fd.get('employment_type') as string,
         department_id: (fd.get('department_id') as string) || undefined,
         joining_date: fd.get('joining_date') as string,
-        basic_salary: fd.get('basic_salary') as string,
+        basic_salary: parseFloat(fd.get('basic_salary') as string) || 0,
         email: fd.get('email') as string,
         phone: fd.get('phone') as string,
-      });
-      toast.success('Employee onboarded');
-      setOpen(false);
-      onRefresh();
-    } catch { toast.error('Onboarding failed'); }
+        status: 'active'
+      };
+
+      const result = await createEmployee(empData);
+      if (result) {
+        toast.success('Employee onboarded successfully');
+        form.reset();
+        setOpen(false);
+        setTimeout(() => onRefresh(), 500);
+      } else {
+        toast.error('Failed to save employee');
+      }
+    } catch (err) {
+      console.error('Employee creation error:', err);
+      toast.error('Onboarding failed. Check if roles/departments exist.');
+    }
   };
 
   return (
@@ -76,11 +92,11 @@ export function EmployeeDirectory({ employees, departments, roles, onRefresh }: 
         <div className="flex flex-wrap gap-2 flex-1 w-full md:w-auto">
           <div className="relative flex-1 min-w-[240px]">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Find staff member..." 
-              value={search} 
-              onChange={e => setSearch(e.target.value)} 
-              className="pl-9 h-10 border-border text-sm" 
+            <Input
+              placeholder="Find staff member..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="pl-9 h-10 border-border text-sm"
             />
           </div>
           <Select value={deptFilter} onValueChange={setDeptFilter}>
@@ -133,24 +149,27 @@ export function EmployeeDirectory({ employees, departments, roles, onRefresh }: 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <Label className="text-xs font-medium text-muted-foreground">Designation (Role)</Label>
-                    <select 
-                      name="role" 
-                      required 
+                    <select
+                      name="role"
+                      required
                       className="flex h-10 w-full rounded-md border border-border bg-card px-3 py-2 text-xs font-medium tracking-wide outline-none focus:ring-1 focus:ring-primary/20"
                     >
                       <option value="">Select Role...</option>
-                      {roles.map(r => <option key={r.id} value={r.title}>{r.title}</option>)}
-                      {roles.length === 0 && <option value="Architect">Architect (Default)</option>}
+                      {roles && roles.length > 0 ? (
+                        roles.map(r => <option key={r.id} value={r.id}>{r.title}</option>)
+                      ) : (
+                        <option value="">No roles available</option>
+                      )}
                     </select>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-medium text-muted-foreground">Base Salary (AED)</Label>
+                    <Label className="text-xs font-medium text-muted-foreground">Base Salary ({currency})</Label>
                     <Input name="basic_salary" type="number" required placeholder="0.00" className="font-medium" />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs font-medium text-muted-foreground">Work Unit</Label>
-                    <select 
-                      name="department_id" 
+                    <select
+                      name="department_id"
                       className="flex h-10 w-full rounded-md border border-border bg-card px-3 py-2 text-xs font-medium tracking-wide outline-none focus:ring-1 focus:ring-primary/20"
                     >
                       <option value="">Select Dept...</option>
@@ -159,14 +178,14 @@ export function EmployeeDirectory({ employees, departments, roles, onRefresh }: 
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs font-medium text-muted-foreground">Employment Type</Label>
-                    <select 
-                      name="employment_type" 
+                    <select
+                      name="employment_type"
                       required
                       className="flex h-10 w-full rounded-md border border-border bg-card px-3 py-2 text-xs font-medium tracking-wide outline-none focus:ring-1 focus:ring-primary/20"
                     >
-                      <option value="Permanent">Permanent</option>
-                      <option value="Contract">Contract</option>
-                      <option value="Intern">Intern</option>
+                      <option value="full-time">Full-Time</option>
+                      <option value="contract">Contract</option>
+                      <option value="part-time">Part-Time</option>
                     </select>
                   </div>
                 </div>
@@ -179,8 +198,8 @@ export function EmployeeDirectory({ employees, departments, roles, onRefresh }: 
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {filtered.map(emp => (
-          <Card 
-            key={emp.id} 
+          <Card
+            key={emp.id || (emp as any)._id}
             onClick={() => setSelectedEmployee(emp)}
             className="border shadow-sm rounded-md hover:border-primary/50 transition-colors cursor-pointer group bg-card"
           >
@@ -190,13 +209,13 @@ export function EmployeeDirectory({ employees, departments, roles, onRefresh }: 
                   {emp.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                 </div>
                 <Badge variant="outline" className={cn(
-                 "text-xs font-semibold",
-                  emp.status === 'active' ?"border-emerald-100 text-emerald-700 bg-emerald-50" :"text-muted-foreground"
+                  "text-xs font-semibold",
+                  emp.status === 'active' ? "border-emerald-100 text-emerald-700 bg-emerald-50" : "text-muted-foreground"
                 )}>
                   {emp.status}
                 </Badge>
               </div>
-              
+
               <div className="space-y-0.5 mb-4">
                 <h3 className="text-sm font-medium text-foreground truncate">{emp.name}</h3>
                 <p className="text-xs font-medium text-muted-foreground">{emp.role}</p>
@@ -208,7 +227,7 @@ export function EmployeeDirectory({ employees, departments, roles, onRefresh }: 
                   <span className="text-xs font-medium">{emp.employee_id}</span>
                 </div>
                 <div className="flex items-center gap-2 text-muted-foreground justify-end">
-                  <DollarSign className="h-3 w-3 text-emerald-500" />
+                  <span className="text-xs font-semibold text-emerald-500">{currency}</span>
                   <span className="text-xs font-semibold text-foreground">{Number(emp.basic_salary).toLocaleString()}</span>
                 </div>
               </div>
@@ -228,7 +247,7 @@ export function EmployeeDirectory({ employees, departments, roles, onRefresh }: 
                   </div>
                   <Badge className="bg-primary text-card-foreground border-none font-medium text-xs px-3 py-1">{selectedEmployee.status}</Badge>
                 </div>
-                
+
                 <div className="space-y-1">
                   <p className="text-primary text-xs font-medium">{selectedEmployee.employee_id}</p>
                   <h2 className="text-3xl font-medium">{selectedEmployee.name}</h2>
@@ -258,11 +277,11 @@ export function EmployeeDirectory({ employees, departments, roles, onRefresh }: 
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-4">
                             <div className="h-10 w-10 rounded-md bg-primary/10 text-primary flex items-center justify-center shadow-sm">
-                              <DollarSign className="h-5 w-5" />
+                              <span className="h-5 w-5 font-bold flex items-center justify-center">{currency}</span>
                             </div>
                             <div>
                               <p className="text-xs font-medium text-muted-foreground">Base Rate</p>
-                              <p className="text-xl font-semibold text-foreground">AED {Number(selectedEmployee.basic_salary || 0).toLocaleString()}</p>
+                              <p className="text-xl font-semibold text-foreground">{currency} {Number(selectedEmployee.basic_salary || 0).toLocaleString()}</p>
                             </div>
                           </div>
                           <Button size="sm" className="bg-primary hover:bg-primary/90 h-8 text-xs font-medium">Adjust</Button>

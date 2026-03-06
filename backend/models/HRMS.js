@@ -87,7 +87,7 @@ const leaveSchema = new mongoose.Schema({
 // ── PAYROLL ──────────────────────────────────────────────────────────────────
 const payrollSchema = new mongoose.Schema({
     month: { type: String, required: true }, // YYYY-MM
-    status: { type: String, enum: ['draft', 'processed', 'posted', 'paid'], default: 'draft' },
+    status: { type: String, enum: ['draft', 'pending', 'approved', 'processed', 'posted', 'paid'], default: 'draft' },
     total_gross: { type: Number, default: 0 },
     total_deductions: { type: Number, default: 0 },
     total_net: { type: Number, default: 0 },
@@ -102,12 +102,68 @@ const payrollSchema = new mongoose.Schema({
     }]
 }, { timestamps: true });
 
+// Add unique index on month to prevent duplicate payroll cycles
+payrollSchema.index({ month: 1 }, { unique: true });
+
+// ── SALARY STRUCTURE ─────────────────────────────────────────────────────────
+const salaryStructureSchema = new mongoose.Schema({
+    employee_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee', required: true },
+    effective_from: { type: Date, required: true },
+    basic: { type: Number, required: true, default: 0 },
+    hra: { type: Number, default: 0 },
+    da: { type: Number, default: 0 },
+    ta: { type: Number, default: 0 },
+    special_allowance: { type: Number, default: 0 },
+    pf_employee: { type: Number, default: 0 },
+    pf_employer: { type: Number, default: 0 },
+    esi_employee: { type: Number, default: 0 },
+    esi_employer: { type: Number, default: 0 },
+    professional_tax: { type: Number, default: 0 },
+    tds: { type: Number, default: 0 },
+    gross_salary: { type: Number, default: 0 },
+    net_salary: { type: Number, default: 0 },
+    is_current: { type: Boolean, default: true },
+    notes: String
+}, { timestamps: true });
+
+// Virtual fields for calculations
+salaryStructureSchema.pre('save', function (next) {
+    // Calculate gross salary (all earnings)
+    this.gross_salary = this.basic + this.hra + this.da + this.ta + this.special_allowance;
+
+    // Calculate net salary (gross - all deductions)
+    this.net_salary = this.gross_salary - (this.pf_employee + this.esi_employee + this.professional_tax + this.tds);
+
+    next();
+});
+
+// ── LEAVE TYPE ───────────────────────────────────────────────────────────────
+const leaveTypeSchema = new mongoose.Schema({
+    name: { type: String, required: true, unique: true },
+    code: { type: String, required: true, unique: true },
+    max_days: { type: Number, default: 0 },
+    is_active: { type: Boolean, default: true },
+    description: String
+}, { timestamps: true });
+
+// ── HOLIDAY ──────────────────────────────────────────────────────────────────
+const holidaySchema = new mongoose.Schema({
+    name: { type: String, required: true },
+    date: { type: Date, required: true },
+    type: { type: String, enum: ['national', 'regional', 'company'], default: 'company' },
+    description: String,
+    is_active: { type: Boolean, default: true }
+}, { timestamps: true });
+
 const HRDepartment = mongoose.models.HRDepartment || mongoose.model('HRDepartment', hrDepartmentSchema);
 const HRRole = mongoose.models.HRRole || mongoose.model('HRRole', hrRoleSchema);
 const Employee = mongoose.models.Employee || mongoose.model('Employee', employeeSchema);
 const Attendance = mongoose.models.Attendance || mongoose.model('Attendance', attendanceSchema);
 const Leave = mongoose.models.Leave || mongoose.model('Leave', leaveSchema);
 const Payroll = mongoose.models.Payroll || mongoose.model('Payroll', payrollSchema);
+const SalaryStructure = mongoose.models.SalaryStructure || mongoose.model('SalaryStructure', salaryStructureSchema);
+const LeaveType = mongoose.models.LeaveType || mongoose.model('LeaveType', leaveTypeSchema);
+const Holiday = mongoose.models.Holiday || mongoose.model('Holiday', holidaySchema);
 
 module.exports = {
     HRDepartment,
@@ -115,5 +171,8 @@ module.exports = {
     Employee,
     Attendance,
     Leave,
-    Payroll
+    Payroll,
+    SalaryStructure,
+    LeaveType,
+    Holiday
 };

@@ -62,35 +62,35 @@ export function HRDashboard({ employees, attendance, payrolls, leaves, holidays 
     <div className="space-y-6">
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard 
-          title="Workforce Size" 
-          value={stats.total} 
-          icon={Users} 
+        <MetricCard
+          title="Workforce Size"
+          value={stats.total}
+          icon={Users}
           trend={`+${stats.growth}%`}
           trendUp={true}
-          description="Active employees" 
+          description="Active employees"
         />
-        <MetricCard 
-          title="Attendance" 
-          value={`${((stats.onDuty / (stats.active || 1)) * 100).toFixed(0)}%`} 
-          icon={CheckCircle2} 
+        <MetricCard
+          title="Attendance"
+          value={`${((stats.onDuty / (stats.active || 1)) * 100).toFixed(0)}%`}
+          icon={CheckCircle2}
           trend="Daily"
-          description={`${stats.onDuty} staff on-site`} 
+          description={`${stats.onDuty} staff on-site`}
         />
-        <MetricCard 
-          title="Monthly Payroll" 
-          value={fmt(stats.monthlyCost)} 
-          icon={DollarSign} 
+        <MetricCard
+          title="Monthly Payroll"
+          value={fmt(stats.monthlyCost)}
+          icon={DollarSign}
           trend="Est."
-          description="Current cycle" 
+          description="Current cycle"
         />
-        <MetricCard 
-          title="Leave Requests" 
-          value={stats.pendingLeaves} 
-          icon={AlertTriangle} 
+        <MetricCard
+          title="Leave Requests"
+          value={stats.pendingLeaves}
+          icon={AlertTriangle}
           trend="Pending"
           trendUp={false}
-          description="Requires review" 
+          description="Requires review"
         />
       </div>
 
@@ -104,27 +104,27 @@ export function HRDashboard({ employees, attendance, payrolls, leaves, holidays 
           </CardHeader>
           <CardContent className="pt-6">
             <div className="h-[240px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                 <AreaChart data={attendanceTrends}>
                   <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#f1f5f9" />
-                  <XAxis 
-                    dataKey="name" 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }} 
+                  <XAxis
+                    dataKey="name"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }}
                     dy={10}
                   />
                   <YAxis hide />
-                  <Tooltip 
-                    contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: 'none', fontSize: '10px', fontWeight: 'bold' }} 
+                  <Tooltip
+                    contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: 'none', fontSize: '10px', fontWeight: 'bold' }}
                   />
-                  <Area 
-                    type="monotone" 
-                    dataKey="present" 
-                    stroke="#09090b" 
-                    strokeWidth={2} 
-                    fill="#09090b" 
-                    fillOpacity={0.05} 
+                  <Area
+                    type="monotone"
+                    dataKey="present"
+                    stroke="#09090b"
+                    strokeWidth={2}
+                    fill="#09090b"
+                    fillOpacity={0.05}
                   />
                 </AreaChart>
               </ResponsiveContainer>
@@ -144,9 +144,9 @@ export function HRDashboard({ employees, attendance, payrolls, leaves, holidays 
                   <span>{dept.value} Units</span>
                 </div>
                 <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-primary transition-all duration-1000" 
-                    style={{ width: `${(dept.value / stats.total) * 100}%` }} 
+                  <div
+                    className="h-full bg-primary transition-all duration-1000"
+                    style={{ width: `${(dept.value / stats.total) * 100}%` }}
                   />
                 </div>
               </div>
@@ -183,7 +183,7 @@ export function HRDashboard({ employees, attendance, payrolls, leaves, holidays 
               <div key={l.id} className="flex items-center justify-between p-4 hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer group">
                 <div>
                   <p className="text-xs font-medium text-foreground">{l.employee?.name}</p>
-                  <p className="text-xs text-muted-foreground font-medium">{l.leave_type?.name} · {l.days} days</p>
+                  <p className="text-xs text-muted-foreground font-medium">{l.leave_type} · {l.days} days</p>
                 </div>
                 <ChevronRight className="h-3 w-3 text-muted-foreground/60 group-hover:text-primary transition-colors" />
               </div>
@@ -200,22 +200,22 @@ export function HRDashboard({ employees, attendance, payrolls, leaves, holidays 
           </CardHeader>
           <CardContent className="pt-4 flex flex-col items-center">
             <div className="h-[140px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                 <PieChart>
-                  <Pie 
-                    data={typeDistribution} 
-                    cx="50%" 
-                    cy="50%" 
-                    innerRadius={45} 
-                    outerRadius={60} 
-                    dataKey="value" 
-                    paddingAngle={4} 
+                  <Pie
+                    data={typeDistribution}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={45}
+                    outerRadius={60}
+                    dataKey="value"
+                    paddingAngle={4}
                     stroke="none"
                   >
                     {typeDistribution.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                   </Pie>
-                  <Tooltip 
-                    contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: 'none', fontSize: '10px' }} 
+                  <Tooltip
+                    contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: 'none', fontSize: '10px' }}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -241,8 +241,8 @@ function MetricCard({ title, value, icon: Icon, trend, trendUp, description }: a
       <CardHeader className="pb-1 flex flex-row items-center justify-between space-y-0">
         <CardTitle className="text-xs font-medium text-muted-foreground">{title}</CardTitle>
         <div className={cn(
-         "text-xs font-semibold px-1.5 py-0.5 rounded",
-          trendUp ?"bg-emerald-50 text-emerald-600" : trendUp === false ?"bg-rose-50 text-rose-600" :"bg-muted text-muted-foreground"
+          "text-xs font-semibold px-1.5 py-0.5 rounded",
+          trendUp ? "bg-emerald-50 text-emerald-600" : trendUp === false ? "bg-rose-50 text-rose-600" : "bg-muted text-muted-foreground"
         )}>
           {trend}
         </div>

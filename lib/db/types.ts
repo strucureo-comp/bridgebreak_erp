@@ -503,7 +503,7 @@ export interface LeaveType {
 export interface Leave {
   id: string;
   employee_id: string;
-  leave_type_id: string;
+  leave_type: string;
   from_date: string;
   to_date: string;
   days: number;
@@ -514,7 +514,6 @@ export interface Leave {
   remarks?: string;
   created_at: string;
   employee?: Employee;
-  leave_type?: LeaveType;
 }
 
 export interface Holiday {

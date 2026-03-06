@@ -29,13 +29,16 @@ export function AttendanceLeave({ employees, leaves, leaveTypes, holidays, onRef
   const handleApplyLeave = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
+    const fromDate = new Date(fd.get('from_date') as string);
+    const toDate = new Date(fd.get('to_date') as string);
+    const days = Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
     try {
       await applyLeave({
         employee_id: fd.get('employee_id') as string,
-        leave_type_id: fd.get('leave_type_id') as string,
+        leave_type: fd.get('leave_type') as string,
         from_date: fd.get('from_date') as string,
         to_date: fd.get('to_date') as string,
-        days: fd.get('days') as string,
+        days: days,
         reason: fd.get('reason') as string,
       });
       toast.success('Leave application submitted successfully');
@@ -56,10 +59,10 @@ export function AttendanceLeave({ employees, leaves, leaveTypes, holidays, onRef
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     try {
-      await createHoliday({ 
-        name: fd.get('name') as string, 
-        date: fd.get('date') as string, 
-        type: fd.get('type') as string 
+      await createHoliday({
+        name: fd.get('name') as string,
+        date: fd.get('date') as string,
+        type: fd.get('type') as string
       });
       toast.success('Holiday added to calendar');
       setHolidayOpen(false);
@@ -79,7 +82,7 @@ export function AttendanceLeave({ employees, leaves, leaveTypes, holidays, onRef
               Company Calendar
             </TabsTrigger>
           </TabsList>
-          
+
           <div className="flex items-center gap-2">
             <Dialog open={leaveOpen} onOpenChange={setLeaveOpen}>
               <DialogTrigger asChild>
@@ -98,6 +101,20 @@ export function AttendanceLeave({ employees, leaves, leaveTypes, holidays, onRef
                     <select name="employee_id" required className="flex h-10 w-full rounded-md border border-border bg-card px-3 py-2 text-sm">
                       <option value="">Select Architect</option>
                       {employees.filter(e => e.status === 'active').map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-muted-foreground">Leave Type</Label>
+                    <select name="leave_type" required className="flex h-10 w-full rounded-md border border-border bg-card px-3 py-2 text-sm">
+                      <option value="">Select Leave Type</option>
+                      {leaveTypes.map(lt => <option key={lt.id} value={lt.id}>{lt.name}</option>)}
+                      {leaveTypes.length === 0 && (
+                        <>
+                          <option value="Annual">Annual</option>
+                          <option value="Medical">Medical</option>
+                          <option value="Emergency">Emergency</option>
+                        </>
+                      )}
                     </select>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
@@ -138,6 +155,14 @@ export function AttendanceLeave({ employees, leaves, leaveTypes, holidays, onRef
                     <Label className="text-xs font-medium text-muted-foreground">Date</Label>
                     <Input name="date" type="date" required />
                   </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-muted-foreground">Type</Label>
+                    <select name="type" required className="flex h-10 w-full rounded-md border border-border bg-card px-3 py-2 text-sm">
+                      <option value="company">Company Holiday</option>
+                      <option value="national">National Holiday</option>
+                      <option value="regional">Regional Holiday</option>
+                    </select>
+                  </div>
                   <Button type="submit" className="w-full bg-primary h-10 font-medium text-xs">Save Holiday</Button>
                 </form>
               </DialogContent>
@@ -170,14 +195,14 @@ export function AttendanceLeave({ employees, leaves, leaveTypes, holidays, onRef
                         <div className="flex items-center gap-2">
                           <p className="text-sm font-medium text-foreground truncate">{leave.employee?.name}</p>
                           <Badge variant="outline" className={cn(
-                           "text-xs font-semibold",
-                            leave.status === 'approved' ?"border-emerald-100 text-emerald-700 bg-emerald-50" :
-                            leave.status === 'pending' ?"border-amber-100 text-amber-700 bg-amber-50" :
-                           "border-border text-muted-foreground"
+                            "text-xs font-semibold",
+                            leave.status === 'approved' ? "border-emerald-100 text-emerald-700 bg-emerald-50" :
+                              leave.status === 'pending' ? "border-amber-100 text-amber-700 bg-amber-50" :
+                                "border-border text-muted-foreground"
                           )}>{leave.status}</Badge>
                         </div>
                         <p className="text-xs text-muted-foreground font-medium mt-0.5">
-                          {leave.leave_type?.name} · {new Date(leave.from_date).toLocaleDateString()} to {new Date(leave.to_date).toLocaleDateString()} ({leave.days}d)
+                          {leave.leave_type} · {new Date(leave.from_date).toLocaleDateString()} to {new Date(leave.to_date).toLocaleDateString()} ({leave.days}d)
                         </p>
                       </div>
                     </div>
@@ -185,17 +210,17 @@ export function AttendanceLeave({ employees, leaves, leaveTypes, holidays, onRef
                     <div className="flex items-center gap-2 ml-4">
                       {leave.status === 'pending' && (
                         <>
-                          <Button 
-                            size="sm" 
-                            variant="ghost" 
+                          <Button
+                            size="sm"
+                            variant="ghost"
                             className="h-8 w-8 p-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-full"
                             onClick={() => handleLeaveAction(leave.id, 'approved')}
                           >
                             <CheckCircle className="h-4 w-4" />
                           </Button>
-                          <Button 
-                            size="sm" 
-                            variant="ghost" 
+                          <Button
+                            size="sm"
+                            variant="ghost"
                             className="h-8 w-8 p-0 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-full"
                             onClick={() => handleLeaveAction(leave.id, 'rejected')}
                           >

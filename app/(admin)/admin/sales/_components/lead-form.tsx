@@ -7,13 +7,16 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { createLead } from '@/lib/api';
 import { toast } from 'sonner';
-import { DollarSign } from 'lucide-react';
+import { useTenant } from '@/lib/tenant-context';
 
 interface LeadFormProps {
     onSuccess: () => void;
 }
 
 export function LeadForm({ onSuccess }: LeadFormProps) {
+    const { companyProfile } = useTenant();
+    const currency = companyProfile?.baseCurrency || '$';
+
     const [loading, setLoading] = useState(false);
 
     // Using controlled state to match inside behaviors
@@ -84,8 +87,10 @@ export function LeadForm({ onSuccess }: LeadFormProps) {
                     <div className="space-y-1.5">
                         <Label className="text-xs font-bold ml-1">Potential Value</Label>
                         <div className="relative">
-                            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                            <Input type="number" className="h-10 pl-8 bg-background" value={formData.potential_value || ''} onChange={e => setFormData({ ...formData, potential_value: parseInt(e.target.value) || 0 })} />
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground mr-1">
+                                {currency}
+                            </span>
+                            <Input type="number" className="h-10 pl-10 bg-background" value={formData.potential_value || ''} onChange={e => setFormData({ ...formData, potential_value: parseInt(e.target.value) || 0 })} />
                         </div>
                     </div>
 

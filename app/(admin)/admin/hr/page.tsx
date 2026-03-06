@@ -186,7 +186,7 @@ export default function HRPage() {
               )}
             </TabsContent>
             <TabsContent value="setup" className="m-0 focus-visible:outline-none">
-              <HRMSSettings />
+              <HRMSSettings roles={roles} departments={departments} onRefresh={fetchAll} />
             </TabsContent>
           </div>
         </Tabs>
