@@ -192,118 +192,185 @@ export function TaxSystemConfig({ value, onChange }: TaxSystemConfigProps) {
             </TabsList>
 
             {/* ── JURISDICTIONS ── */}
-            <TabsContent value="jurisdictions" className="space-y-6">
-                <div className="flex items-center justify-between">
-                    <div><p className="text-sm font-bold">Tax Jurisdictions</p><p className="text-[11px] text-muted-foreground">Register each country where you have a tax obligation</p></div>
-                    <Button size="sm" className="gap-2" onClick={handleAddJur}><Plus className="h-3.5 w-3.5" /> Add Jurisdiction</Button>
+            <TabsContent value="jurisdictions" className="space-y-6 animate-in fade-in duration-500">
+                <div className="flex items-center justify-between px-1">
+                    <div>
+                        <p className="text-xs font-black uppercase tracking-[0.2em] text-red-600">Tax Jurisdictions</p>
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-0.5">Primary and regional nexus registration directory</p>
+                    </div>
+                    <Button size="sm" className="bg-slate-900 hover:bg-slate-800 text-[10px] font-black uppercase tracking-widest px-4 h-9" onClick={handleAddJur}><Plus className="h-3.5 w-3.5 mr-2" /> Add Jurisdiction</Button>
                 </div>
-                {jurisdictions.map(j => (
-                    <Card key={j.id} className="border-border shadow-sm">
-                        <CardContent className="p-5">
-                            <div className="flex items-start justify-between mb-3">
-                                <div className="flex items-center gap-2">
-                                    <Globe className="h-4 w-4 text-red-600" />
-                                    <h3 className="text-sm font-bold">{j.country || COUNTRIES.find(c => c.code === j.code)?.name || j.code}</h3>
-                                    <Badge variant="default" className="text-[8px] h-4 px-1 bg-red-600">{j.system.toUpperCase()}</Badge>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {jurisdictions.map(j => (
+                        <Card key={j.id} className="border-border shadow-md hover:border-red-500 transition-all group overflow-hidden">
+                            <CardContent className="p-0">
+                                <div className="p-5 flex items-start justify-between bg-muted/20 border-b">
+                                    <div className="flex items-center gap-3">
+                                        <div className="h-10 w-10 rounded bg-white border shadow-sm flex items-center justify-center">
+                                            <Globe className="h-5 w-5 text-red-600" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-xs font-black uppercase tracking-tight leading-none">{j.country || COUNTRIES.find(c => c.code === j.code)?.name || j.code}</h3>
+                                            <div className="flex items-center gap-2 mt-1.5">
+                                                <Badge variant="outline" className="text-[8px] h-4 font-black uppercase tracking-tighter bg-white">{j.system.toUpperCase()}</Badge>
+                                                <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Nexus Active</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => { setEditingJur({ ...j }); setJurDialogOpen(true); }}><Edit2 className="h-3 w-3" /></Button>
+                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive" onClick={() => handleDeleteJur(j.id)}><Trash2 className="h-3 w-3" /></Button>
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-1">
-                                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => { setEditingJur({ ...j }); setJurDialogOpen(true); }}><Edit2 className="h-3 w-3" /></Button>
-                                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive" onClick={() => handleDeleteJur(j.id)}><Trash2 className="h-3 w-3" /></Button>
+                                <div className="p-5 grid grid-cols-2 gap-y-4 gap-x-6">
+                                    <div className="space-y-1">
+                                        <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest opacity-60">Registration (TRN)</span>
+                                        <p className="font-mono text-[10px] font-black text-slate-900">{j.regNumber || 'PENDING'}</p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest opacity-60">Reporting Period</span>
+                                        <p className="text-[10px] font-black text-slate-900 uppercase tracking-tighter">{j.reportingPeriod}</p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest opacity-60">Filing Method</span>
+                                        <p className="text-[10px] font-black text-slate-900 uppercase tracking-tighter">{j.filingMethod || 'ELECTRONIC'}</p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest opacity-60">Primary Authority</span>
+                                        <p className="text-[10px] font-black text-red-600 uppercase tracking-tighter truncate">{j.authority || '—'}</p>
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-[11px]">
-                                <div><span className="text-muted-foreground">Registration</span><p className="font-mono font-medium mt-0.5">{j.regNumber || '—'}</p></div>
-                                <div><span className="text-muted-foreground">Reporting</span><p className="font-medium mt-0.5 capitalize">{j.reportingPeriod}</p></div>
-                                <div><span className="text-muted-foreground">Filing</span><p className="font-medium mt-0.5">{j.filingMethod || '—'}</p></div>
-                                <div><span className="text-muted-foreground">Authority</span><p className="font-medium mt-0.5">{j.authority || '—'}</p></div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                ))}
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
             </TabsContent>
 
             {/* ── TAX CODES ── */}
-            <TabsContent value="codes" className="space-y-6">
-                <div className="flex items-center justify-between">
-                    <div><p className="text-sm font-bold">Tax Codes with GL Mapping</p><p className="text-[11px] text-muted-foreground">Each code maps to GL accounts with effective date versioning</p></div>
-                    <Button size="sm" className="gap-2" onClick={handleAddCode}><Plus className="h-3.5 w-3.5" /> Add Tax Code</Button>
+            <TabsContent value="codes" className="space-y-6 animate-in fade-in duration-500">
+                <div className="flex items-center justify-between px-1">
+                    <div>
+                        <p className="text-xs font-black uppercase tracking-[0.2em] text-red-600">Code Master Registry</p>
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-0.5">High-Precision tax mapping & account integration</p>
+                    </div>
+                    <Button size="sm" className="bg-slate-900 text-[10px] font-black uppercase tracking-widest h-9" onClick={handleAddCode}><Plus className="h-3.5 w-3.5 mr-2" /> New CodeDef</Button>
                 </div>
-                <Card className="border-border shadow-sm">
+                <Card className="border-border shadow-md overflow-hidden">
                     <CardContent className="p-0">
-                        <div className="divide-y border-t">
-                            <div className="grid grid-cols-12 px-6 py-2.5 bg-muted/50 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                                <span className="col-span-2">Code</span><span className="col-span-1">Type</span><span className="col-span-1 text-right">Rate%</span>
-                                <span className="col-span-2">GL Payable</span><span className="col-span-2">GL Receivable</span>
-                                <span className="col-span-1 text-right">Recov%</span><span className="col-span-1">From</span><span className="col-span-2 text-right">Actions</span>
-                            </div>
-                            {taxCodes.map(tc => (
-                                <div key={tc.id} className="grid grid-cols-12 px-6 py-3 items-center hover:bg-muted/30 transition-colors text-sm group">
-                                    <div className="col-span-2">
-                                        <p className="font-mono text-[10px] text-red-600 font-bold">{tc.code}</p>
-                                        <p className="text-[10px] text-muted-foreground truncate">{tc.description}</p>
-                                    </div>
-                                    <span className="col-span-1"><TaxTypeBadge type={tc.type} /></span>
-                                    <span className="col-span-1 text-right text-xs font-bold">{tc.rate}%</span>
-                                    <span className="col-span-2 text-[10px] text-muted-foreground font-mono">{tc.glPayable || '—'}</span>
-                                    <span className="col-span-2 text-[10px] text-muted-foreground font-mono">{tc.glReceivable || '—'}</span>
-                                    <span className={cn("col-span-1 text-right text-xs font-bold", Number(tc.recoverablePct) < 100 && "text-amber-600")}>{tc.recoverablePct}%</span>
-                                    <span className="col-span-1 text-[10px] text-muted-foreground">{tc.effectiveDate.slice(0, 7)}</span>
-                                    <span className="col-span-2 text-right flex items-center justify-end gap-1">
-                                        {tc.autoSelfAccount && <Badge variant="outline" className="text-[7px] h-3.5 px-1 border-violet-300 text-violet-600">RC</Badge>}
-                                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100" onClick={() => { setEditingCode({ ...tc }); setCodeDialogOpen(true); }}><Edit2 className="h-2.5 w-2.5" /></Button>
-                                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-destructive opacity-0 group-hover:opacity-100" onClick={() => handleDeleteCode(tc.id)}><Trash2 className="h-2.5 w-2.5" /></Button>
-                                    </span>
-                                </div>
-                            ))}
+                        <div className="overflow-x-auto">
+                            <table className="w-full border-collapse">
+                                <thead>
+                                    <tr className="bg-muted/30 border-b">
+                                        <th className="px-6 py-4 text-left text-[9px] font-black uppercase tracking-widest text-muted-foreground">Tax Code ID</th>
+                                        <th className="px-6 py-4 text-left text-[9px] font-black uppercase tracking-widest text-muted-foreground">Classification</th>
+                                        <th className="px-6 py-4 text-right text-[9px] font-black uppercase tracking-widest text-muted-foreground">Precision %</th>
+                                        <th className="px-6 py-4 text-left text-[9px] font-black uppercase tracking-widest text-muted-foreground">GL Integration</th>
+                                        <th className="px-6 py-4 text-right text-[9px] font-black uppercase tracking-widest text-muted-foreground">Policy</th>
+                                        <th className="px-6 py-4 text-right text-[9px] font-black uppercase tracking-widest text-muted-foreground">Audit</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-border/50">
+                                    {taxCodes.map(tc => (
+                                        <tr key={tc.id} className="hover:bg-muted/10 transition-colors group">
+                                            <td className="px-6 py-4">
+                                                <p className="font-mono text-[10px] font-black text-red-600 uppercase tracking-tighter">{tc.code}</p>
+                                                <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest opacity-60 truncate max-w-[120px]">{tc.description}</p>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <TaxTypeBadge type={tc.type} />
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <span className="text-[11px] font-black text-slate-900">{tc.rate}%</span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex flex-col gap-0.5">
+                                                    {tc.glPayable && <span className="text-[9px] font-bold uppercase text-slate-500 tracking-tighter flex items-center gap-1"><BookOpen className="h-2 w-2" /> {tc.glPayable} (CR)</span>}
+                                                    {tc.glReceivable && <span className="text-[9px] font-bold uppercase text-slate-500 tracking-tighter flex items-center gap-1"><BookOpen className="h-2 w-2" /> {tc.glReceivable} (DR)</span>}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <span className={cn("text-[10px] font-black uppercase tracking-tighter", Number(tc.recoverablePct) < 100 ? "text-amber-500" : "text-slate-900")}>Recov {tc.recoverablePct}%</span>
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => { setEditingCode({ ...tc }); setCodeDialogOpen(true); }}><Edit2 className="h-3 w-3" /></Button>
+                                                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive" onClick={() => handleDeleteCode(tc.id)}><Trash2 className="h-3 w-3" /></Button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
                     </CardContent>
                 </Card>
             </TabsContent>
 
             {/* ── COMPLIANCE ── */}
-            <TabsContent value="compliance" className="space-y-6">
+            <TabsContent value="compliance" className="space-y-6 animate-in fade-in duration-500">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <Card>
-                        <CardHeader><CardTitle className="text-sm flex items-center gap-2"><Landmark className="h-4 w-4" /> Primary Jurisdiction</CardTitle></CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
+                    <Card className="border-border shadow-md rounded-xl overflow-hidden bg-white">
+                        <CardHeader className="bg-muted/10 border-b py-5">
+                            <CardTitle className="text-xs font-black uppercase tracking-[0.2em] flex items-center gap-3">
+                                <div className="h-7 w-7 rounded bg-red-600 flex items-center justify-center text-white">
+                                    <Landmark className="h-3.5 w-3.5" />
+                                </div>
+                                Primary Jurisdiction
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-6 space-y-6">
+                            <div className="grid grid-cols-2 gap-6">
                                 <div className="space-y-2">
-                                    <Label className="text-xs">Tax Region</Label>
+                                    <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500">Tax Region</Label>
                                     <Select value={region} onValueChange={v => { setRegion(v); emit({ region: v }); }}>
-                                        <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                                        <SelectTrigger className="h-11 rounded-lg border-slate-100 font-bold text-xs uppercase bg-slate-50/50"><SelectValue /></SelectTrigger>
                                         <SelectContent>{COUNTRIES.map(c => <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>)}</SelectContent>
                                     </Select>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label className="text-xs">Tax System</Label>
+                                    <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500">Tax System</Label>
                                     <Select value={taxSystem} onValueChange={v => { setTaxSystem(v); emit({ taxSystem: v }); }}>
-                                        <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                                        <SelectTrigger className="h-11 rounded-lg border-slate-100 font-bold text-xs uppercase bg-slate-50/50"><SelectValue /></SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="vat">VAT</SelectItem>
+                                            <SelectItem value="vat">Value Added Tax (VAT)</SelectItem>
                                             <SelectItem value="sales">Sales Tax</SelectItem>
-                                            <SelectItem value="gst">GST</SelectItem>
+                                            <SelectItem value="gst">Goods & Services Tax (GST)</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <Label className="text-xs">Standard Rate (%)</Label>
-                                <div className="flex items-center gap-2">
-                                    <Input value={defaultRate} onChange={e => { setDefaultRate(e.target.value); emit({ defaultRate: e.target.value }); }} className="h-9 w-24 text-sm" />
-                                    <span className="text-xs text-muted-foreground">%</span>
+                                <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500">Standard Baseline Rate (%)</Label>
+                                <div className="relative flex items-center">
+                                    <Input value={defaultRate} onChange={e => { setDefaultRate(e.target.value); emit({ defaultRate: e.target.value }); }} className="h-11 pl-4 pr-12 rounded-lg border-slate-100 font-black text-xs bg-slate-50/50 focus:bg-white transition-all shadow-inner" />
+                                    <span className="absolute right-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">% SCALE</span>
                                 </div>
                             </div>
                         </CardContent>
                     </Card>
-                    <Card>
-                        <CardHeader><CardTitle className="text-sm flex items-center gap-2"><Shield className="h-4 w-4" /> Compliance Defaults</CardTitle></CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="flex items-center justify-between py-2 border-b border-border/50">
-                                <div><p className="text-sm font-medium">Reverse Charge</p><p className="text-[10px] text-muted-foreground">Auto RC for foreign procurement</p></div>
+
+                    <Card className="border-border shadow-md rounded-xl overflow-hidden bg-white">
+                        <CardHeader className="bg-muted/10 border-b py-5">
+                            <CardTitle className="text-xs font-black uppercase tracking-[0.2em] flex items-center gap-3">
+                                <div className="h-7 w-7 rounded bg-slate-800 flex items-center justify-center text-white">
+                                    <Shield className="h-3.5 w-3.5" />
+                                </div>
+                                Compliance Configuration
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-6 space-y-6">
+                            <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50/50 border border-slate-100 transition-all hover:bg-white hover:shadow-sm">
+                                <div className="space-y-0.5">
+                                    <Label className="text-xs font-black uppercase tracking-tight text-slate-700">Reverse Charge Protocol</Label>
+                                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-60">Auto RC for foreign procurement</p>
+                                </div>
                                 <Switch checked={reverseCharge} onCheckedChange={v => { setReverseCharge(v); emit({ reverseCharge: v }); }} />
                             </div>
-                            <div className="flex items-center justify-between py-2">
-                                <div><p className="text-sm font-medium">Zero-Rated Support</p><p className="text-[10px] text-muted-foreground">Handle exports and exempt goods</p></div>
+                            <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50/50 border border-slate-100 transition-all hover:bg-white hover:shadow-sm">
+                                <div className="space-y-0.5">
+                                    <Label className="text-xs font-black uppercase tracking-tight text-slate-700">Zero-Rated Exemption</Label>
+                                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-60">Handle exports and exempt supply</p>
+                                </div>
                                 <Switch checked={zeroRated} onCheckedChange={v => { setZeroRated(v); emit({ zeroRated: v }); }} />
                             </div>
                         </CardContent>
@@ -312,27 +379,34 @@ export function TaxSystemConfig({ value, onChange }: TaxSystemConfigProps) {
             </TabsContent>
 
             {/* ── FILING & CONTROLS ── */}
-            <TabsContent value="filing" className="space-y-6">
+            <TabsContent value="filing" className="space-y-6 animate-in fade-in duration-500">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <Card>
-                        <CardHeader><CardTitle className="text-sm flex items-center gap-2"><FileText className="h-4 w-4" /> Filing Engine</CardTitle></CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
+                    <Card className="border-border shadow-md rounded-xl overflow-hidden bg-white">
+                        <CardHeader className="bg-muted/10 border-b py-5">
+                            <CardTitle className="text-xs font-black uppercase tracking-[0.2em] flex items-center gap-3">
+                                <div className="h-7 w-7 rounded bg-red-600 flex items-center justify-center text-white">
+                                    <FileText className="h-3.5 w-3.5" />
+                                </div>
+                                Filing Engine
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-6 space-y-6">
+                            <div className="grid grid-cols-2 gap-6">
                                 <div className="space-y-2">
-                                    <Label className="text-xs">Filing Frequency</Label>
+                                    <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500">Filing Cycle</Label>
                                     <Select value={filingFreq} onValueChange={v => { setFilingFreq(v); emit({ filingFreq: v }); }}>
-                                        <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                                        <SelectTrigger className="h-11 rounded-lg border-slate-100 font-bold text-xs uppercase bg-slate-50/50"><SelectValue /></SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="monthly">Monthly</SelectItem>
-                                            <SelectItem value="quarterly">Quarterly</SelectItem>
-                                            <SelectItem value="annual">Annual</SelectItem>
+                                            <SelectItem value="monthly">Monthly Posting</SelectItem>
+                                            <SelectItem value="quarterly">Quarterly Submission</SelectItem>
+                                            <SelectItem value="annual">Fiscal Year End</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label className="text-xs">Methodology</Label>
+                                    <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500">Accounting Basis</Label>
                                     <Select value={methodology} onValueChange={v => { setMethodology(v); emit({ methodology: v }); }}>
-                                        <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                                        <SelectTrigger className="h-11 rounded-lg border-slate-100 font-bold text-xs uppercase bg-slate-50/50"><SelectValue /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="accrual">Accrual Basis</SelectItem>
                                             <SelectItem value="cash">Cash Basis</SelectItem>
@@ -340,29 +414,60 @@ export function TaxSystemConfig({ value, onChange }: TaxSystemConfigProps) {
                                     </Select>
                                 </div>
                             </div>
-                            <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/20">
-                                <div className="flex items-center gap-3"><FileText className="h-4 w-4 text-muted-foreground" /><div><p className="text-xs font-medium">Auto VAT Return</p><p className="text-[10px] text-muted-foreground">Generate XML for FTA portal</p></div></div>
-                                <Switch checked={autoVatReturn} onCheckedChange={v => { setAutoVatReturn(v); emit({ autoVatReturn: v }); }} />
-                            </div>
-                            <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/20">
-                                <div className="flex items-center gap-3"><AlertCircle className="h-4 w-4 text-muted-foreground" /><div><p className="text-xs font-medium">Filing Reminders</p><p className="text-[10px] text-muted-foreground">7-day advance notice</p></div></div>
-                                <Switch checked={filingReminders} onCheckedChange={v => { setFilingReminders(v); emit({ filingReminders: v }); }} />
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50/50 border border-slate-100 transition-all hover:bg-white hover:shadow-sm">
+                                    <div className="flex items-center gap-4">
+                                        <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500"><Zap className="h-3.5 w-3.5" /></div>
+                                        <div>
+                                            <p className="text-xs font-black uppercase tracking-tight text-slate-700">Auto Return (FTA XML)</p>
+                                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-60">Ready for e-Filing Portal</p>
+                                        </div>
+                                    </div>
+                                    <Switch checked={autoVatReturn} onCheckedChange={v => { setAutoVatReturn(v); emit({ autoVatReturn: v }); }} />
+                                </div>
+                                <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50/50 border border-slate-100 transition-all hover:bg-white hover:shadow-sm">
+                                    <div className="flex items-center gap-4">
+                                        <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500"><AlertCircle className="h-3.5 w-3.5" /></div>
+                                        <div>
+                                            <p className="text-xs font-black uppercase tracking-tight text-slate-700">Compliance Alerts</p>
+                                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-60">Critical Filing Deadlines</p>
+                                        </div>
+                                    </div>
+                                    <Switch checked={filingReminders} onCheckedChange={v => { setFilingReminders(v); emit({ filingReminders: v }); }} />
+                                </div>
                             </div>
                         </CardContent>
                     </Card>
-                    <Card>
-                        <CardHeader><CardTitle className="text-sm flex items-center gap-2"><Lock className="h-4 w-4 text-red-600" /> Audit Controls</CardTitle><CardDescription className="text-[11px]">Enterprise-grade controls to prevent post-filing tampering</CardDescription></CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="flex items-center justify-between py-2 border-b border-border/50">
-                                <div><p className="text-sm font-medium">Tax lock after filing</p><p className="text-[10px] text-muted-foreground">Prevents modification of transactions in filed periods</p></div>
+
+                    <Card className="border-border shadow-md rounded-xl overflow-hidden bg-white">
+                        <CardHeader className="bg-muted/10 border-b py-5">
+                            <CardTitle className="text-xs font-black uppercase tracking-[0.2em] flex items-center gap-3">
+                                <div className="h-7 w-7 rounded bg-slate-800 flex items-center justify-center text-white">
+                                    <Lock className="h-3.5 w-3.5" />
+                                </div>
+                                System Integrity Audit
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-6 space-y-6">
+                            <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50/50 border border-slate-100 transition-all hover:bg-white hover:shadow-sm">
+                                <div className="space-y-0.5">
+                                    <Label className="text-xs font-black uppercase tracking-tight text-slate-700">Hard Period Lock</Label>
+                                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-60">Anti-tampering post-filing</p>
+                                </div>
                                 <Switch checked={taxLockAfterFiling} onCheckedChange={v => { setTaxLockAfterFiling(v); emit({ taxLockAfterFiling: v }); }} />
                             </div>
-                            <div className="flex items-center justify-between py-2 border-b border-border/50">
-                                <div><p className="text-sm font-medium">Period VAT freeze</p><p className="text-[10px] text-muted-foreground">Freezes all VAT-bearing entries once filed</p></div>
+                            <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50/50 border border-slate-100 transition-all hover:bg-white hover:shadow-sm">
+                                <div className="space-y-0.5">
+                                    <Label className="text-xs font-black uppercase tracking-tight text-slate-700">VAT Transaction Freeze</Label>
+                                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-60">Immutable logs for audit</p>
+                                </div>
                                 <Switch checked={periodVatFreeze} onCheckedChange={v => { setPeriodVatFreeze(v); emit({ periodVatFreeze: v }); }} />
                             </div>
-                            <div className="flex items-center justify-between py-2">
-                                <div><p className="text-sm font-medium">Adjustment-only mode</p><p className="text-[10px] text-muted-foreground">Only tagged adjustments allowed after filing</p></div>
+                            <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50/50 border border-slate-100 transition-all hover:bg-white hover:shadow-sm">
+                                <div className="space-y-0.5">
+                                    <Label className="text-xs font-black uppercase tracking-tight text-slate-700">Correction-Only Phase</Label>
+                                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-60">Restricted modification zone</p>
+                                </div>
                                 <Switch checked={adjustmentOnlyMode} onCheckedChange={v => { setAdjustmentOnlyMode(v); emit({ adjustmentOnlyMode: v }); }} />
                             </div>
                         </CardContent>
@@ -373,62 +478,66 @@ export function TaxSystemConfig({ value, onChange }: TaxSystemConfigProps) {
             {/* ── Jurisdiction Dialog ── */}
             <Dialog open={jurDialogOpen} onOpenChange={setJurDialogOpen}>
                 <DialogContent className="sm:max-w-[500px]">
-                    <DialogHeader>
-                        <DialogTitle>{editingJur?.id ? 'Edit Jurisdiction' : 'Add Tax Jurisdiction'}</DialogTitle>
-                        <DialogDescription className="text-xs">Register a tax jurisdiction where your organization has obligations.</DialogDescription>
+                    <DialogHeader className="border-b pb-4">
+                        <DialogTitle className="text-xs font-black uppercase tracking-[0.2em] text-red-600">
+                            {editingJur?.id ? 'Edit Internal Jurisdiction' : 'Add Strategic Tax Jurisdiction'}
+                        </DialogTitle>
+                        <DialogDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">
+                            Register a tax nexus where your organization maintains legal reporting obligations.
+                        </DialogDescription>
                     </DialogHeader>
                     {editingJur && (
                         <div className="space-y-4 py-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label className="text-xs">Country</Label>
+                                    <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500">Regulatory Country</Label>
                                     <Select value={editingJur.code} onValueChange={v => { const c = COUNTRIES.find(cc => cc.code === v); setEditingJur({ ...editingJur, code: v, country: c?.name || '' }); }}>
-                                        <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                                        <SelectTrigger className="h-10 rounded-lg border-slate-100 font-bold text-xs uppercase bg-slate-50/50"><SelectValue /></SelectTrigger>
                                         <SelectContent>{COUNTRIES.map(c => <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>)}</SelectContent>
                                     </Select>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label className="text-xs">Tax System</Label>
+                                    <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500">Tax Protocol</Label>
                                     <Select value={editingJur.system} onValueChange={v => setEditingJur({ ...editingJur, system: v })}>
-                                        <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                                        <SelectTrigger className="h-10 rounded-lg border-slate-100 font-bold text-xs uppercase bg-slate-50/50"><SelectValue /></SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="vat">VAT</SelectItem>
-                                            <SelectItem value="gst">GST</SelectItem>
-                                            <SelectItem value="sales">Sales Tax</SelectItem>
+                                            <SelectItem value="vat">Value Added Tax (VAT)</SelectItem>
+                                            <SelectItem value="gst">Goods & Services Tax (GST)</SelectItem>
+                                            <SelectItem value="sales">Sales & Use Tax</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <Label className="text-xs">Tax Registration Number</Label>
-                                <Input value={editingJur.regNumber} onChange={e => setEditingJur({ ...editingJur, regNumber: e.target.value })} placeholder="TRN-100234567890003" className="h-9 text-xs font-mono" />
+                                <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500">Tax Registration Number (TRN)</Label>
+                                <Input value={editingJur.regNumber} onChange={e => setEditingJur({ ...editingJur, regNumber: e.target.value })} placeholder="TRN-100234567890003" className="h-10 rounded-lg border-slate-100 font-mono text-xs bg-slate-50/50" />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label className="text-xs">Reporting Period</Label>
+                                    <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500">Reporting Cycle</Label>
                                     <Select value={editingJur.reportingPeriod} onValueChange={v => setEditingJur({ ...editingJur, reportingPeriod: v })}>
-                                        <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                                        <SelectTrigger className="h-10 rounded-lg border-slate-100 font-bold text-xs uppercase bg-slate-50/50"><SelectValue /></SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="monthly">Monthly</SelectItem>
-                                            <SelectItem value="quarterly">Quarterly</SelectItem>
-                                            <SelectItem value="annual">Annual</SelectItem>
+                                            <SelectItem value="monthly">Monthly Filing</SelectItem>
+                                            <SelectItem value="quarterly">Quarterly Filing</SelectItem>
+                                            <SelectItem value="annual">Annual Filing</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label className="text-xs">Filing Method</Label>
-                                    <Input value={editingJur.filingMethod} onChange={e => setEditingJur({ ...editingJur, filingMethod: e.target.value })} placeholder="FTA E-Filing" className="h-9 text-xs" />
+                                    <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500">Filing Interface</Label>
+                                    <Input value={editingJur.filingMethod} onChange={e => setEditingJur({ ...editingJur, filingMethod: e.target.value })} placeholder="FTA E-Filing Portal" className="h-10 rounded-lg border-slate-100 font-black text-xs bg-slate-50/50" />
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <Label className="text-xs">Tax Authority Name</Label>
-                                <Input value={editingJur.authority} onChange={e => setEditingJur({ ...editingJur, authority: e.target.value })} placeholder="Federal Tax Authority" className="h-9 text-xs" />
+                                <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500">Primary Tax Authority Name</Label>
+                                <Input value={editingJur.authority} onChange={e => setEditingJur({ ...editingJur, authority: e.target.value })} placeholder="Federal Tax Authority" className="h-10 rounded-lg border-slate-100 font-black text-xs bg-slate-50/50" />
                             </div>
                         </div>
                     )}
-                    <DialogFooter>
-                        <Button variant="outline" size="sm" onClick={() => setJurDialogOpen(false)}>Cancel</Button>
-                        <Button size="sm" onClick={handleSaveJur}>Save Jurisdiction</Button>
+                    <DialogFooter className="border-t pt-4">
+                        <Button variant="outline" size="sm" className="text-[10px] font-black uppercase tracking-widest" onClick={() => setJurDialogOpen(false)}>Cancel</Button>
+                        <Button size="sm" className="bg-slate-900 text-[10px] font-black uppercase tracking-widest px-6" onClick={handleSaveJur}>Commit Jurisdiction</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -436,75 +545,88 @@ export function TaxSystemConfig({ value, onChange }: TaxSystemConfigProps) {
             {/* ── Tax Code Dialog ── */}
             <Dialog open={codeDialogOpen} onOpenChange={setCodeDialogOpen}>
                 <DialogContent className="sm:max-w-[560px]">
-                    <DialogHeader>
-                        <DialogTitle>{editingCode?.id ? 'Edit Tax Code' : 'Add Tax Code'}</DialogTitle>
-                        <DialogDescription className="text-xs">Define a tax code with GL mapping, recoverability, and effective dates.</DialogDescription>
+                    <DialogHeader className="border-b pb-4">
+                        <DialogTitle className="text-xs font-black uppercase tracking-[0.2em] text-red-600">
+                            {editingCode?.id ? 'Adjust Tax Definition' : 'Define New Tax Code'}
+                        </DialogTitle>
+                        <DialogDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">
+                            Configure GL mapping, recoverability rules, and effective lifecycle for this tax code.
+                        </DialogDescription>
                     </DialogHeader>
                     {editingCode && (
                         <div className="space-y-4 py-4">
                             <div className="grid grid-cols-3 gap-4">
                                 <div className="space-y-2">
-                                    <Label className="text-xs">Code</Label>
-                                    <Input value={editingCode.code} onChange={e => setEditingCode({ ...editingCode, code: e.target.value })} placeholder="VAT5_OUTPUT" className="h-9 text-xs font-mono" />
+                                    <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500">Internal Code</Label>
+                                    <Input value={editingCode.code} onChange={e => setEditingCode({ ...editingCode, code: e.target.value })} placeholder="VAT5_OUTPUT" className="h-10 rounded-lg border-slate-100 font-mono text-xs bg-slate-50/50" />
                                 </div>
                                 <div className="col-span-2 space-y-2">
-                                    <Label className="text-xs">Description</Label>
-                                    <Input value={editingCode.description} onChange={e => setEditingCode({ ...editingCode, description: e.target.value })} placeholder="Standard Output VAT" className="h-9 text-xs" />
+                                    <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500">Code Description</Label>
+                                    <Input value={editingCode.description} onChange={e => setEditingCode({ ...editingCode, description: e.target.value })} placeholder="Standard Output VAT" className="h-10 rounded-lg border-slate-100 font-bold text-xs bg-slate-50/50" />
                                 </div>
                             </div>
                             <div className="grid grid-cols-3 gap-4">
                                 <div className="space-y-2">
-                                    <Label className="text-xs">Tax Type</Label>
+                                    <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500">Tax Type</Label>
                                     <Select value={editingCode.type} onValueChange={v => setEditingCode({ ...editingCode, type: v })}>
-                                        <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                                        <SelectTrigger className="h-10 rounded-lg border-slate-100 font-bold text-xs uppercase bg-slate-50/50"><SelectValue /></SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="output">Output</SelectItem>
-                                            <SelectItem value="input">Input</SelectItem>
+                                            <SelectItem value="output">Output VAT</SelectItem>
+                                            <SelectItem value="input">Input VAT</SelectItem>
                                             <SelectItem value="reverse_charge">Reverse Charge</SelectItem>
-                                            <SelectItem value="withholding">Withholding</SelectItem>
+                                            <SelectItem value="withholding">Withholding Tax</SelectItem>
                                             <SelectItem value="zero_rated">Zero-Rated</SelectItem>
-                                            <SelectItem value="exempt">Exempt</SelectItem>
+                                            <SelectItem value="exempt">Exempt Supply</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label className="text-xs">Rate (%)</Label>
-                                    <Input value={editingCode.rate} onChange={e => setEditingCode({ ...editingCode, rate: e.target.value })} placeholder="5" className="h-9 text-xs" />
+                                    <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500">Tax Rate (%)</Label>
+                                    <div className="relative">
+                                        <Input value={editingCode.rate} onChange={e => setEditingCode({ ...editingCode, rate: e.target.value })} placeholder="5" className="h-10 rounded-lg border-slate-100 font-black text-xs bg-slate-50/50 pr-8" />
+                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400">%</span>
+                                    </div>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label className="text-xs">Recoverable %</Label>
-                                    <Input value={editingCode.recoverablePct} onChange={e => setEditingCode({ ...editingCode, recoverablePct: e.target.value })} placeholder="100" className="h-9 text-xs" />
+                                    <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500">Recoverable %</Label>
+                                    <div className="relative">
+                                        <Input value={editingCode.recoverablePct} onChange={e => setEditingCode({ ...editingCode, recoverablePct: e.target.value })} placeholder="100" className="h-10 rounded-lg border-slate-100 font-black text-xs bg-slate-50/50 pr-8" />
+                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400">%</span>
+                                    </div>
                                 </div>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label className="text-xs">GL Payable Account</Label>
-                                    <Input value={editingCode.glPayable} onChange={e => setEditingCode({ ...editingCode, glPayable: e.target.value })} placeholder="2200 – VAT Payable" className="h-9 text-xs font-mono" />
+                                    <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500">GL Payable Account (CR)</Label>
+                                    <Input value={editingCode.glPayable} onChange={e => setEditingCode({ ...editingCode, glPayable: e.target.value })} placeholder="2200 – VAT Payable" className="h-10 rounded-lg border-slate-100 font-mono text-xs bg-slate-50/50" />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label className="text-xs">GL Receivable Account</Label>
-                                    <Input value={editingCode.glReceivable} onChange={e => setEditingCode({ ...editingCode, glReceivable: e.target.value })} placeholder="1400 – VAT Receivable" className="h-9 text-xs font-mono" />
+                                    <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500">GL Receivable Account (DR)</Label>
+                                    <Input value={editingCode.glReceivable} onChange={e => setEditingCode({ ...editingCode, glReceivable: e.target.value })} placeholder="1400 – VAT Receivable" className="h-10 rounded-lg border-slate-100 font-mono text-xs bg-slate-50/50" />
                                 </div>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label className="text-xs">Effective Date</Label>
-                                    <Input type="date" value={editingCode.effectiveDate} onChange={e => setEditingCode({ ...editingCode, effectiveDate: e.target.value })} className="h-9 text-xs" />
+                                    <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500">Effective Date</Label>
+                                    <Input type="date" value={editingCode.effectiveDate} onChange={e => setEditingCode({ ...editingCode, effectiveDate: e.target.value })} className="h-10 rounded-lg border-slate-100 font-bold text-xs bg-slate-50/50" />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label className="text-xs">Expiry Date (optional)</Label>
-                                    <Input type="date" value={editingCode.expiryDate} onChange={e => setEditingCode({ ...editingCode, expiryDate: e.target.value })} className="h-9 text-xs" />
+                                    <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500">Expiry Policy</Label>
+                                    <Input type="date" value={editingCode.expiryDate} onChange={e => setEditingCode({ ...editingCode, expiryDate: e.target.value })} className="h-10 rounded-lg border-slate-100 font-bold text-xs bg-slate-50/50" />
                                 </div>
                             </div>
-                            <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/20">
-                                <div><p className="text-xs font-medium">Auto Self-Account (Reverse Charge)</p><p className="text-[10px] text-muted-foreground">Auto-generate mirror entry for reverse charge</p></div>
+                            <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50/50 border border-slate-100 transition-all hover:bg-white hover:shadow-sm">
+                                <div className="space-y-0.5">
+                                    <p className="text-xs font-black uppercase tracking-tight text-slate-700">Auto Self-Account (Reverse Charge)</p>
+                                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-60">Trigger duplicate entry for RC compliance</p>
+                                </div>
                                 <Switch checked={editingCode.autoSelfAccount} onCheckedChange={v => setEditingCode({ ...editingCode, autoSelfAccount: v })} />
                             </div>
                         </div>
                     )}
-                    <DialogFooter>
-                        <Button variant="outline" size="sm" onClick={() => setCodeDialogOpen(false)}>Cancel</Button>
-                        <Button size="sm" onClick={handleSaveCode}>Save Tax Code</Button>
+                    <DialogFooter className="border-t pt-4">
+                        <Button variant="outline" size="sm" className="text-[10px] font-black uppercase tracking-widest" onClick={() => setCodeDialogOpen(false)}>Cancel</Button>
+                        <Button size="sm" className="bg-slate-900 text-[10px] font-black uppercase tracking-widest px-6" onClick={handleSaveCode}>Commit Tax Code</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -514,9 +636,14 @@ export function TaxSystemConfig({ value, onChange }: TaxSystemConfigProps) {
 
 function TaxTypeBadge({ type }: { type: string }) {
     const c: Record<string, string> = {
-        output: 'bg-red-50 text-red-700', input: 'bg-emerald-50 text-emerald-700',
-        reverse_charge: 'bg-violet-50 text-violet-700', withholding: 'bg-amber-50 text-amber-700',
-        exempt: 'bg-gray-100 text-gray-600', zero_rated: 'bg-blue-50 text-blue-700',
+        output: 'bg-red-50 text-red-600 border-red-100',
+        input: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+        reverse_charge: 'bg-violet-50 text-violet-600 border-violet-100',
+        withholding: 'bg-amber-50 text-amber-600 border-amber-100',
+        exempt: 'bg-slate-100 text-slate-500 border-slate-200',
+        zero_rated: 'bg-blue-50 text-blue-600 border-blue-100',
     };
-    return <span className={cn("text-[9px] font-bold px-1.5 py-0.5 rounded", c[type] ?? 'bg-muted')}>{type.replace('_', ' ')}</span>;
+    return <span className={cn("text-[8px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded-full border", c[type] ?? 'bg-muted border-transparent')}>
+        {type.replace('_', ' ')}
+    </span>;
 }

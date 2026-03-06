@@ -35,7 +35,29 @@ const sodRuleSchema = new mongoose.Schema({
     enforced: { type: Boolean, default: true },
 }, { timestamps: true });
 
+// ── APPROVAL REQUEST ────────────────────────────────────────────────────────────
+const approvalRequestSchema = new mongoose.Schema({
+    reqId: { type: String, required: true, unique: true },
+    type: { type: String, required: true },
+    department: { type: String, required: true },
+    requester: { type: String, required: true },
+    requesterRole: { type: String, required: true },
+    amount: { type: String, required: true },
+    priority: { type: String, enum: ['high', 'medium', 'low'], default: 'medium' },
+    status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+    description: { type: String },
+    metadata: [{ label: String, value: String }],
+    documents: [{ type: String }],
+    history: [{
+        action: String,
+        user: String,
+        time: String,
+        notes: String
+    }]
+}, { timestamps: true });
+
 const ApprovalWorkflowV2 = mongoose.models.ApprovalWorkflowV2 || mongoose.model('ApprovalWorkflowV2', approvalWorkflowV2Schema);
 const SodRule = mongoose.models.SodRule || mongoose.model('SodRule', sodRuleSchema);
+const ApprovalRequest = mongoose.models.ApprovalRequest || mongoose.model('ApprovalRequest', approvalRequestSchema);
 
-module.exports = { ApprovalWorkflowV2, SodRule };
+module.exports = { ApprovalWorkflowV2, SodRule, ApprovalRequest };

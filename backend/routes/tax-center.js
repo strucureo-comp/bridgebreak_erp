@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const { TaxJurisdiction, TaxCode, FilingPeriod, TaxAdjustment } = require('../models/TaxCenter');
+const { auth } = require('../middleware/auth');
+
+router.use(auth);
 
 // ======================================================
 // TAX JURISDICTIONS

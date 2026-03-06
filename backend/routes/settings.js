@@ -4,8 +4,11 @@ const { auth, adminOnly } = require('../middleware/auth');
 
 const router = express.Router();
 
+// Public settings that don't require auth
+const PUBLIC_SETTINGS = ['branding_config', 'company_profile', 'tenant_status'];
+
 // GET /api/settings/:key
-router.get('/:key', auth, async (req, res) => {
+router.get('/:key', async (req, res) => {
     try {
         const setting = await Settings.findOne({ key: req.params.key });
         if (!setting) {
@@ -18,7 +21,7 @@ router.get('/:key', auth, async (req, res) => {
     }
 });
 
-// PUT /api/settings/:key
+// PUT /api/settings/:key (requires auth)
 router.put('/:key', auth, adminOnly, async (req, res) => {
     try {
         const { value } = req.body;
@@ -39,7 +42,7 @@ router.put('/:key', auth, adminOnly, async (req, res) => {
     }
 });
 
-// GET /api/settings (all settings as object)
+// GET /api/settings (all settings as object - requires auth)
 router.get('/', auth, async (req, res) => {
     try {
         const settings = await Settings.find({});

@@ -160,21 +160,23 @@ export default function FinancePage() {
                                 <DollarSign className="h-5 w-5" />
                             </div>
                             <div>
-                                <h1 className="text-xl font-bold tracking-tight">
+                                <h1 className="text-xl font-bold tracking-tight uppercase leading-none">
                                     {getModuleLabel('finance')}
                                 </h1>
-                                <p className="text-[11px] text-muted-foreground flex items-center gap-1.5">
-                                    <span className="font-mono font-bold text-red-600">{currencyCode}</span>
-                                    <span>·</span>
-                                    <span>{kpi.currentPeriod}</span>
-                                    <span>·</span>
-                                    <Badge
-                                        variant="outline"
-                                        className="h-4 text-[8px] px-1.5 border-emerald-300 text-emerald-600"
-                                    >
-                                        {kpi.periodStatus}
-                                    </Badge>
-                                </p>
+                                <div className="flex items-center gap-2 mt-1">
+                                    <span className="text-[10px] font-black text-red-600 uppercase tracking-[0.2em]">Strategic Ops Center</span>
+                                    <span className="text-muted-foreground/30">·</span>
+                                    <div className="flex items-center gap-1.5 text-[10px] font-black text-slate-500 uppercase">
+                                        <span className="font-mono text-red-600/80">{currencyCode}</span>
+                                        <span className="text-slate-400">{kpi.currentPeriod}</span>
+                                        <Badge
+                                            variant="outline"
+                                            className="h-4 text-[8px] px-1.5 border-emerald-300 text-emerald-600 font-black uppercase"
+                                        >
+                                            {kpi.periodStatus}
+                                        </Badge>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

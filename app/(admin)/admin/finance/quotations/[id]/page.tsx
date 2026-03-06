@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/context';
 import { getQuotation, updateQuotation, getUsers, getProjects } from '@/lib/api';
 import { generateQuotationPDF, createQuotationDoc } from '@/lib/pdf-generator';
-import { QuotationPreview } from '@/components/admin/quotation-preview';
+import { QuotationPreview } from '../_components/quotation-preview';
 import { DashboardShell } from '@/components/shared/layout/dashboard-shell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

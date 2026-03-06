@@ -26,13 +26,13 @@ import { InventoryDialogs } from "./_components/inventory-dialogs";
 export default function InventoryControlPage() {
   const [currentRole, setCurrentRole] = useState("warehouseManager");
   const {
-    settings, skus, wasteLogs, movements, allocations, searchQuery, setSearchQuery,
+    settings, skus, warehouses, wasteLogs, movements, allocations, searchQuery, setSearchQuery,
     isRegisterOpen, setIsRegisterOpen, isAdjustOpen, setIsAdjustOpen,
     isWasteOpen, setIsWasteOpen, isAllocateOpen, setIsAllocateOpen,
     isSettingsOpen, setIsSettingsOpen, skuForm, setSkuForm, adjustForm, setAdjustForm,
     wasteForm, setWasteForm, allocateForm, setAllocateForm, settingsForm, setSettingsForm,
     handleRegisterSku, handleAdjustStock, handleReportWaste, handleAllocate,
-    handleSaveSettings, handleApproveWaste, role
+    handleSaveSettings, handleApproveWaste, role, loading
   } = useInventory(currentRole);
 
   // --- Computed Metrics ---
@@ -65,11 +65,11 @@ export default function InventoryControlPage() {
           <div className="flex items-center gap-4">
             <Factory className="h-8 w-8 text-primary" />
             <div>
-              <h1 className="text-3xl font-black tracking-tight text-foreground">Inventory Control</h1>
-              <div className="flex items-center gap-2 mt-1">
-                <p className="text-muted-foreground">Manage centralized and site-allocated stock levels.</p>
-                <Badge variant="secondary" className="hidden sm:inline-flex bg-muted text-foreground/80 font-medium">
-                  Local Simulation
+              <h1 className="text-xl font-bold tracking-tight text-foreground uppercase">Inventory Control</h1>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Operational Registry</span>
+                <Badge variant="secondary" className={`hidden sm:inline-flex font-bold uppercase text-[9px] tracking-widest ${loading ? 'bg-slate-100 text-slate-400' : 'bg-emerald-100 text-emerald-700'}`}>
+                  {loading ? 'Syncing...' : 'Perpetual Ledger'}
                 </Badge>
               </div>
             </div>

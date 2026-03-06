@@ -73,17 +73,20 @@ export default function ReportsPage() {
                                 <BarChart3 className="h-6 w-6" />
                             </div>
                             <div>
-                                <h1 className="text-xl font-bold tracking-tight text-foreground">Intelligence Hub</h1>
-                                <p className="text-[13px] text-muted-foreground font-medium">
-                                    Strategic reporting and cross-module business analytics
-                                </p>
+                                <h1 className="text-xl font-bold tracking-tight text-foreground uppercase leading-none">Intelligence Hub</h1>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                    <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Cross-Module Telemetry</span>
+                                    <Badge variant="secondary" className="hidden sm:inline-flex font-bold uppercase text-[9px] tracking-widest bg-slate-100 text-slate-600">
+                                        Data Grid
+                                    </Badge>
+                                </div>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
                             <div className="relative group mr-2">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                                <input 
-                                    placeholder="Search reports..." 
+                                <input
+                                    placeholder="Search reports..."
                                     className="h-9 w-56 pl-9 rounded-lg border border-border bg-card text-[12px] font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm"
                                 />
                             </div>

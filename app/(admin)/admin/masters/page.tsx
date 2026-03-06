@@ -5,8 +5,8 @@ import { DashboardShell } from '@/components/shared/layout/dashboard-shell';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-    Database, Package, ShoppingCart, UserCheck, 
+import {
+    Database, Package, ShoppingCart, UserCheck,
     Users, ChevronRight, Search, Zap, Activity,
     ShieldCheck, Filter, Plus
 } from 'lucide-react';
@@ -73,17 +73,20 @@ export default function MasterDataPage() {
                             <Database className="h-6 w-6" />
                         </div>
                         <div>
-                            <h1 className="text-xl font-bold tracking-tight text-foreground">Master Registry</h1>
-                            <p className="text-[13px] text-muted-foreground font-medium">
-                                Centralized core business entities and system records
-                            </p>
+                            <h1 className="text-xl font-bold tracking-tight text-foreground uppercase leading-none">Master Registry</h1>
+                            <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Core Entity Control</span>
+                                <Badge variant="secondary" className="hidden sm:inline-flex font-bold uppercase text-[9px] tracking-widest bg-slate-100 text-slate-600">
+                                    System Global
+                                </Badge>
+                            </div>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
                         <div className="relative group">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                            <input 
-                                placeholder="Search registries..." 
+                            <input
+                                placeholder="Search registries..."
                                 className="h-9 w-64 pl-9 rounded-lg border border-border bg-card text-[12px] font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm"
                             />
                         </div>
@@ -115,9 +118,9 @@ export default function MasterDataPage() {
                             <CardContent className="p-0">
                                 <div className="divide-y divide-border">
                                     {cat.links.map((link) => (
-                                        <Link 
-                                            key={link.label} 
-                                            href={link.href} 
+                                        <Link
+                                            key={link.label}
+                                            href={link.href}
                                             className="flex items-center justify-between p-4 hover:bg-primary/5 transition-all group/link"
                                         >
                                             <div className="flex items-center gap-3">

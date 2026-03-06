@@ -13,14 +13,23 @@ interface SidebarProps {
 }
 
 export function Sidebar({ isCollapsed, toggleCollapse }: SidebarProps) {
-  const { brandingConfig, companyProfile } = useTenant();
+  // Safely get tenant data with fallbacks
+  let brandingConfig = null;
+  let companyProfile = null;
+
+  try {
+    const tenant = useTenant();
+    brandingConfig = tenant.brandingConfig;
+    companyProfile = tenant.companyProfile;
+  } catch (error) {
+    console.warn('Tenant context not available in Sidebar');
+  }
+
   const logo = brandingConfig?.logo;
   const companyName = companyProfile?.tradingName || 'BridgeBreak';
 
   return (
     <aside
-      onMouseEnter={() => isCollapsed && toggleCollapse()}
-      onMouseLeave={() => !isCollapsed && toggleCollapse()}
       className={cn(
         "fixed left-0 top-0 z-40 hidden h-screen md:block transition-all duration-300 ease-in-out bg-background border-r border-border",
         isCollapsed ? "w-[72px]" : "w-[250px]"

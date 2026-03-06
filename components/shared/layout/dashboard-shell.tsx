@@ -29,7 +29,7 @@ export function DashboardShell({
       if (!user) {
         router.push('/login');
       } else if (requireAdmin && user.role !== 'admin') {
-        router.push('/dashboard');
+        router.push('/admin/dashboard');
       }
     }
   }, [user, loading, requireAuth, requireAdmin, router]);

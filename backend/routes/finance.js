@@ -1,6 +1,10 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const router = express.Router();
 const { Invoice, Expense, Account, JournalEntry } = require('../models/Finance');
+const { auth } = require('../middleware/auth');
+
+router.use(auth);
 
 // =====================================
 // INVOICES CRUD
@@ -279,27 +283,39 @@ router.post('/journals', async (req, res) => {
 
 router.get('/summary', async (req, res) => {
     try {
-        const [invoices, expenses, accounts] = await Promise.all([
+        const [invoices, expenses, accounts, arInvoices, apBills] = await Promise.all([
             Invoice.find().lean(),
             Expense.find().lean(),
             Account.find().lean(),
+            mongoose.models.InvoiceAR ? mongoose.models.InvoiceAR.find().lean() : Promise.resolve([]),
+            mongoose.models.Bill ? mongoose.models.Bill.find().lean() : Promise.resolve([])
         ]);
 
         const totalRevenue = invoices
             .filter(i => i.status === 'paid')
-            .reduce((s, i) => s + Number(i.total || 0), 0);
+            .reduce((s, i) => s + Number(i.total || 0), 0) +
+            arInvoices
+                .filter(i => i.status === 'paid' || i.status === 'sent' || i.status === 'partial')
+                .reduce((s, i) => s + Number(i.total_amount || 0), 0);
 
         const totalReceivable = invoices
             .filter(i => ['sent', 'overdue', 'partial'].includes(i.status))
-            .reduce((s, i) => s + (Number(i.total || 0) - Number(i.amount_paid || 0)), 0);
+            .reduce((s, i) => s + (Number(i.total || 0) - Number(i.amount_paid || 0)), 0) +
+            arInvoices
+                .reduce((s, i) => s + (Number(i.balance_due || 0)), 0);
 
         const totalExpenses = expenses
             .filter(e => ['approved', 'paid'].includes(e.status))
-            .reduce((s, e) => s + Number(e.total || 0), 0);
+            .reduce((s, e) => s + Number(e.total || 0), 0) +
+            apBills
+                .filter(b => ['approved', 'paid', 'partial'].includes(b.status))
+                .reduce((s, b) => s + Number(b.total_amount || 0), 0);
 
         const totalPayable = expenses
             .filter(e => e.status === 'approved')
-            .reduce((s, e) => s + Number(e.total || 0), 0);
+            .reduce((s, e) => s + Number(e.total || 0), 0) +
+            apBills
+                .reduce((s, b) => s + Number(b.balance_due || 0), 0);
 
         const taxCollected = invoices
             .filter(i => i.status === 'paid')

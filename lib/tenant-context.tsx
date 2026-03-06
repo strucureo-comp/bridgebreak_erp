@@ -121,10 +121,11 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
   const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
   const [brandingConfig, setBrandingConfig] = useState<{ logo?: string | null; primaryColor?: string; accentColor?: string } | null>(null);
   const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
 
   const refreshTenantStatus = useCallback(async () => {
     try {
+      setLoading(true);
       const [status, profile, branding] = await Promise.all([
         getTenantStatus(),
         getSettings<CompanyProfile>('company_profile'),
@@ -135,14 +136,32 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       setBrandingConfig(branding);
     } catch (error) {
       console.error('Failed to load tenant context:', error);
+      // Set defaults on error
+      setTenantStatus({
+        setup_stage: 'completed',
+        business_type: 'service',
+        company_setup_complete: true,
+        finance_setup_complete: true,
+        roles_setup_complete: true,
+        module_finance: true,
+        module_sales: true,
+        module_operations: true,
+        module_hr: true
+      } as any);
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    refreshTenantStatus();
-  }, [refreshTenantStatus]);
+    // Only fetch tenant data after auth is done loading
+    if (!authLoading) {
+      refreshTenantStatus();
+    } else {
+      // If auth is still loading, keep tenant loading too
+      setLoading(true);
+    }
+  }, [authLoading]);
 
   const getModuleLabel = (moduleId: string) => {
     const sector = companyProfile?.businessType || tenantStatus?.business_type || 'service';

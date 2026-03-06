@@ -139,8 +139,13 @@ export default function PurchasesPage() {
                                 <ShoppingCart className="h-5 w-5" />
                             </div>
                             <div>
-                                <h1 className="text-2xl font-bold tracking-tight text-foreground uppercase">{getModuleLabel('purchases')}</h1>
-                                <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium">Supply Chain & Material Control</p>
+                                <h1 className="text-xl font-bold tracking-tight text-foreground uppercase leading-none">{getModuleLabel('purchases')}</h1>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                    <span className="text-[10px] font-black text-red-600 uppercase tracking-[0.2em]">Supply Chain Control</span>
+                                    <Badge variant="secondary" className="hidden sm:inline-flex font-bold uppercase text-[9px] tracking-widest bg-slate-100 text-slate-600">
+                                        Material Flow
+                                    </Badge>
+                                </div>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">

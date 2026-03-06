@@ -606,6 +606,8 @@ export interface HREvent {
   employee?: Employee;
 }
 
+export type BankAccountStatus = 'active' | 'frozen' | 'closed';
+
 export interface BankAccount {
   id: string;
   name: string;
@@ -613,20 +615,113 @@ export interface BankAccount {
   bank_name?: string;
   currency: string;
   current_balance: number;
-  type: string;
+  type: 'current' | 'savings' | 'petty_cash' | 'credit_card';
+  gl_bank_account_id?: string;
+  gl_cash_account_id?: string;
+  gl_clearing_account_id?: string;
+  branch?: string;
+  opening_balance_date?: string;
+  reconciliation_start_date?: string;
+  iban_swift?: string;
+  status: BankAccountStatus;
   updated_at: string;
+  created_at?: string;
 }
+
+export type PaymentMethod = 'bank_transfer' | 'cheque' | 'cash' | 'online' | 'card';
 
 export interface BankTransaction {
   id: string;
   bank_account_id: string;
-  date: string;
-  description: string;
+  transaction_date: string;
+  posting_date?: string;
+  reference_no?: string;
+  linked_document_type?: 'invoice' | 'expense' | 'payroll' | 'transfer' | 'other';
+  linked_document_id?: string;
+  counterparty?: string; // Vendor / Customer / Employee
+  payment_method?: PaymentMethod;
+  category?: string;
+  tax_handling?: string;
+  attachment_url?: string;
+  notes?: string;
   amount: number;
-  type: string;
-  reference?: string;
-  status: string;
+  type: 'deposit' | 'withdrawal';
+  status: string; // 'draft' | 'posted'
+  posting_status?: PostingStatus;
   bank_account?: BankAccount;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface BankTransfer {
+  id: string;
+  source_account_id: string;
+  target_account_id: string;
+  amount: number;
+  date: string;
+  reference_no?: string;
+  notes?: string;
+  transaction_id: string; // Links both sides
+  created_at: string;
+}
+
+export interface BankReconciliation {
+  id: string;
+  bank_account_id: string;
+  statement_date: string;
+  statement_balance: number;
+  book_balance: number;
+  outstanding_cheques: number;
+  deposits_in_transit: number;
+  difference: number;
+  status: 'draft' | 'reconciled';
+  created_at: string;
+  updated_at?: string;
+  items?: ReconciliationItem[];
+}
+
+export interface ReconciliationItem {
+  id: string;
+  reconciliation_id: string;
+  transaction_id: string;
+  is_matched: boolean;
+  match_type: 'auto' | 'manual';
+  amount: number;
+  date: string;
+}
+
+export interface JournalEntry {
+  id: string;
+  date: string;
+  reference: string;
+  document_type: string;
+  document_id?: string;
+  total_debit: number;
+  total_credit: number;
+  status: 'draft' | 'posted';
+  lines: JournalEntryLine[];
+  created_at: string;
+}
+
+export interface JournalEntryLine {
+  id: string;
+  journal_entry_id: string;
+  account_id: string;
+  debit: number;
+  credit: number;
+  description?: string;
+}
+
+export interface AuditLog {
+  id: string;
+  entity_type: string; // e.g., 'BankTransaction', 'BankAccount'
+  entity_id: string;
+  action: 'create' | 'update' | 'delete' | 'approve' | 'post';
+  user_id: string;
+  user_name: string; // Denormalized for quick access
+  user_role: string;
+  changes?: Record<string, any>;
+  created_at: string;
 }
 
 export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'lost' | 'converted';

@@ -5,30 +5,14 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/context';
 import { getUsers, getProjects, createInvoice } from '@/lib/api';
 import { DashboardShell } from '@/components/shared/layout/dashboard-shell';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { 
-    Loader2, 
-    ChevronLeft, 
-    Plus, 
-    Trash2, 
-    ShieldCheck, 
-    Eye, 
-    Settings, 
-    Hash,
-    RefreshCcw,
-    User,
-    Calendar,
-    Briefcase
-} from 'lucide-react';
+import { RefreshCcw, FileDown, CheckCircle2 } from 'lucide-react';
 import { useTenant } from '@/lib/tenant-context';
 import { BrandedDocumentPreview } from '@/components/shared/common/branded-document-preview';
-import { cn } from '@/lib/utils';
+import { InvoiceHeader } from '@/app/(admin)/admin/finance/invoices/_components/invoice-header';
+import { InvoiceForm } from '@/app/(admin)/admin/finance/invoices/_components/invoice-form';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import type { User as UserType, Project, InvoiceStatus } from '@/lib/db/types';
 
 export default function NewInvoicePage() {
@@ -38,19 +22,58 @@ export default function NewInvoicePage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [viewMode, setViewMode] = useState<'edit' | 'preview'>('edit');
-    
+    const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+    const [createdInvoiceId, setCreatedInvoiceId] = useState<string | null>(null);
+
     const [users, setUsers] = useState<UserType[]>([]);
     const [projects, setProjects] = useState<Project[]>([]);
-    
+
     const [formData, setFormData] = useState({
+        // Basic Info
         client_id: '',
         project_id: '',
         invoice_number: `INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
-        amount: 0,
+        issue_date: new Date().toISOString().split('T')[0],
         due_date: '',
         status: 'pending' as InvoiceStatus,
+
+        // Line Items
+        line_items: [
+            { description: '', quantity: 1, unit_price: 0, tax_rate: 5, total: 0 }
+        ],
+
+        // Financial
+        currency: companyProfile?.baseCurrency || 'AED',
+        subtotal: 0,
+        discount_type: 'percentage' as 'percentage' | 'fixed',
+        discount_value: 0,
+        tax_rate: 5,
+        additional_charges: 0,
+        additional_charges_description: '',
+
+        // Payment
+        payment_terms: 'net_30',
+        payment_method: 'bank_transfer',
+
+        // Client Details (Manual Entry Option)
+        use_manual_client: false,
+        manual_client_name: '',
+        manual_client_email: '',
+        manual_client_address: '',
+        manual_client_tax_id: '',
+
+        // Company Details (Manual Override)
+        use_manual_company: false,
+        manual_company_name: '',
+        manual_company_address: '',
+        manual_company_tax_id: '',
+        manual_company_phone: '',
+        manual_company_email: '',
+
+        // Notes
         description: '',
         notes: '',
+        terms_conditions: '',
     });
 
     useEffect(() => {
@@ -74,37 +97,72 @@ export default function NewInvoicePage() {
     };
 
     const totals = useMemo(() => {
-        const subtotal = Number(formData.amount);
-        const taxRate = 5; // Standard UAE VAT
-        const tax = subtotal * (taxRate / 100);
-        return {
-            subtotal,
-            tax,
-            total: subtotal + tax
-        };
-    }, [formData.amount]);
+        const subtotal = formData.line_items.reduce((acc, item) => acc + (item.quantity * item.unit_price), 0);
+        const discount = formData.discount_type === 'percentage'
+            ? subtotal * (formData.discount_value / 100)
+            : formData.discount_value;
+        const afterDiscount = subtotal - discount;
+        const tax = formData.line_items.reduce((acc, item) => acc + (item.quantity * item.unit_price * item.tax_rate / 100), 0);
+        const total = afterDiscount + tax + (formData.additional_charges || 0);
+
+        return { subtotal, discount, afterDiscount, tax, total };
+    }, [formData.line_items, formData.discount_type, formData.discount_value, formData.additional_charges]);
 
     const selectedClient = useMemo(() => users.find(u => u.id === formData.client_id), [formData.client_id, users]);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!formData.client_id || !formData.project_id || !formData.amount || !formData.due_date || !formData.invoice_number) {
-            return toast.error('Required billing data missing');
+    const handleSubmit = async (e?: React.FormEvent) => {
+        if (e && e.preventDefault) e.preventDefault();
+
+        // Validation
+        if (!formData.use_manual_client && (!formData.client_id || !formData.project_id)) {
+            return toast.error('Please select client and project or use manual entry');
+        }
+        if (formData.use_manual_client && !formData.manual_client_name) {
+            return toast.error('Please enter client name');
+        }
+        if (!formData.invoice_number || !formData.due_date) {
+            return toast.error('Invoice number and due date are required');
+        }
+        if (formData.line_items.length === 0 || formData.line_items.every(item => !item.description)) {
+            return toast.error('Please add at least one line item');
         }
 
         setSaving(true);
         try {
-            await createInvoice({
+            const result = await createInvoice({
                 ...formData,
-                amount: Number(formData.amount),
+                amount: totals.total,
             });
-            toast.success('Tax Invoice Dispatched');
-            router.push('/admin/finance/invoices');
+
+            if (result && result.id) {
+                setCreatedInvoiceId(result.id);
+                setShowSuccessDialog(true);
+            } else {
+                toast.success('Tax Invoice Dispatched');
+                router.push('/admin/finance/invoices');
+            }
         } catch (error: any) {
             toast.error(error.message || 'Dispatch failed');
         } finally {
             setSaving(false);
         }
+    };
+
+    const handleDownloadPDF = async () => {
+        // Generate PDF from current form data
+        const { generateInvoicePDF } = await import('@/lib/pdf-generator');
+        const selectedClient = users.find(u => u.id === formData.client_id);
+        const selectedProject = projects.find(p => p.id === formData.project_id);
+
+        const invoiceData = {
+            ...formData,
+            id: createdInvoiceId || 'new',
+            amount: totals.total,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+        };
+
+        await generateInvoicePDF(invoiceData as any, selectedClient || null, selectedProject || null);
     };
 
     const filteredProjects = projects.filter(p => p.client_id === formData.client_id);
@@ -119,147 +177,127 @@ export default function NewInvoicePage() {
     return (
         <DashboardShell requireAdmin>
             <div className="space-y-6 pb-12">
-                {/* Header */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6 bg-card -mx-4 px-4 sticky top-0 z-20">
-                    <div className="flex items-center gap-4">
-                        <Button variant="ghost" size="icon" className="h-10 w-10 border" onClick={() => router.back()}>
-                            <ChevronLeft className="h-5 w-5" />
-                        </Button>
-                        <div className="space-y-0.5">
-                            <h1 className="text-xl font-bold tracking-tight text-foreground uppercase leading-none">Issue Tax Invoice</h1>
-                            <div className="flex items-center gap-4">
-                                <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Finance Hub</span>
-                                <div className="flex p-0.5 bg-muted rounded-md">
-                                    <button onClick={() => setViewMode('edit')} className={cn("px-3 py-1 rounded text-[9px] font-black uppercase tracking-widest", viewMode === 'edit' ? "bg-card text-foreground shadow-sm" : "text-muted-foreground")}>Edit</button>
-                                    <button onClick={() => setViewMode('preview')} className={cn("px-3 py-1 rounded text-[9px] font-black uppercase tracking-widest", viewMode === 'preview' ? "bg-card text-primary shadow-sm" : "text-muted-foreground")}>Preview</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <Button variant="outline" className="h-10 px-6 font-bold uppercase text-[10px] tracking-widest" onClick={() => router.back()}>Cancel</Button>
-                        <Button onClick={handleSubmit} disabled={saving} className="h-10 px-8 gap-2 bg-primary font-bold uppercase text-[10px] tracking-widest shadow-lg shadow-primary/20">
-                            {saving ? <RefreshCcw className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
-                            Dispatch Invoice
-                        </Button>
-                    </div>
-                </div>
+                <InvoiceHeader
+                    title="Issue Tax Invoice"
+                    subtitle="Finance Hub"
+                    viewMode={viewMode}
+                    onViewModeChange={setViewMode}
+                    onSave={() => handleSubmit()}
+                    onCancel={() => router.back()}
+                    saving={saving}
+                    variant="modern"
+                />
 
                 {viewMode === 'edit' ? (
-                    <div className="grid gap-6 md:grid-cols-3 animate-in fade-in duration-300">
-                        <div className="md:col-span-1 space-y-6">
-                            {/* Meta */}
-                            <Card className="border border-border shadow-sm rounded-md bg-card">
-                                <CardHeader className="border-b bg-muted/50 py-3">
-                                    <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                                        <Hash size={14} className="text-primary" /> Identification
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="p-5 space-y-4">
-                                    <div className="space-y-1.5">
-                                        <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Invoice Number</Label>
-                                        <Input value={formData.invoice_number} onChange={e => setFormData({...formData, invoice_number: e.target.value})} className="h-9 border-border font-mono font-bold uppercase text-xs" />
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Due Date</Label>
-                                        <Input type="date" value={formData.due_date} onChange={e => setFormData({...formData, due_date: e.target.value})} className="h-9 border-border text-xs font-bold" />
-                                    </div>
-                                </CardContent>
-                            </Card>
-
-                            {/* Entity Linkage */}
-                            <Card className="border border-border shadow-sm rounded-md bg-card">
-                                <CardHeader className="border-b bg-muted/50 py-3">
-                                    <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                                        <User size={14} className="text-primary" /> Account Mapping
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="p-5 space-y-4">
-                                    <div className="space-y-1.5">
-                                        <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Target Client</Label>
-                                        <Select value={formData.client_id} onValueChange={v => setFormData({...formData, client_id: v, project_id: ''})}>
-                                            <SelectTrigger className="h-9 border-border text-xs font-bold uppercase"><SelectValue placeholder="Select Client..." /></SelectTrigger>
-                                            <SelectContent>
-                                                {users.map(u => <SelectItem key={u.id} value={u.id} className="text-xs uppercase font-bold">{u.full_name}</SelectItem>)}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Related Project</Label>
-                                        <Select value={formData.project_id} onValueChange={v => setFormData({...formData, project_id: v})} disabled={!formData.client_id}>
-                                            <SelectTrigger className="h-9 border-border text-xs font-bold uppercase"><SelectValue placeholder="Select Job..." /></SelectTrigger>
-                                            <SelectContent>
-                                                {filteredProjects.map(p => <SelectItem key={p.id} value={p.id} className="text-xs uppercase font-bold">{p.title}</SelectItem>)}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </div>
-
-                        {/* Financial Area */}
-                        <div className="md:col-span-2 space-y-6">
-                            <Card className="border border-border shadow-sm rounded-md bg-card overflow-hidden">
-                                <CardHeader className="border-b bg-muted/50 py-4">
-                                    <CardTitle className="text-xs font-black uppercase tracking-widest text-foreground">Billing Specifications</CardTitle>
-                                </CardHeader>
-                                <CardContent className="p-6 space-y-6">
-                                    <div className="grid md:grid-cols-2 gap-6">
-                                        <div className="space-y-1.5">
-                                            <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Base Amount ({companyProfile?.baseCurrency || 'AED'})</Label>
-                                            <Input type="number" value={formData.amount} onChange={e => setFormData({...formData, amount: Number(e.target.value)})} className="h-12 border-border font-black text-xl" />
-                                        </div>
-                                        <div className="space-y-1.5">
-                                            <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Current Status</Label>
-                                            <Select value={formData.status} onValueChange={(v: any) => setFormData({...formData, status: v})}>
-                                                <SelectTrigger className="h-12 border-border font-bold uppercase text-xs"><SelectValue /></SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="pending">Pending Receipt</SelectItem>
-                                                    <SelectItem value="paid">Settled / Paid</SelectItem>
-                                                    <SelectItem value="overdue">Overdue Payment</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-3">
-                                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Service Breakdown</Label>
-                                        <Textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="min-h-[100px] border-border text-xs uppercase" placeholder="List materials or services delivered..." />
-                                    </div>
-
-                                    <div className="pt-6 border-t border-border flex justify-end">
-                                        <div className="w-80 space-y-4">
-                                            <div className="flex justify-between border-b pb-4">
-                                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Subtotal Position</span>
-                                                <span className="text-sm font-black text-foreground">{companyProfile?.baseCurrency || 'AED'} {totals.subtotal.toLocaleString()}</span>
-                                            </div>
-                                            <div className="flex justify-between items-center bg-foreground text-card-foreground p-6 rounded-md">
-                                                <div className="space-y-0.5">
-                                                    <p className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground">Net Receivable</p>
-                                                    <p className="text-2xl font-black tracking-tighter">{companyProfile?.baseCurrency || 'AED'} {totals.total.toLocaleString()}</p>
-                                                </div>
-                                                <ShieldCheck className="h-8 w-8 text-primary opacity-50" />
-                                            </div>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </div>
-                    </div>
+                    <InvoiceForm
+                        formData={formData}
+                        users={users}
+                        projects={projects}
+                        onFormDataChange={setFormData}
+                        variant="modern"
+                        saving={saving}
+                        companyProfile={companyProfile}
+                    />
                 ) : (
                     <div className="animate-in zoom-in-95 duration-300 py-10 bg-muted rounded-md border-2 border-dashed border-border">
-                        <BrandedDocumentPreview 
+                        <BrandedDocumentPreview
                             type="invoice"
                             number={formData.invoice_number}
-                            entityName={selectedClient?.full_name}
-                            date={new Date().toISOString()}
-                            lines={[{ description: formData.description || 'General Service', quantity: 1, unit_price: formData.amount }]}
-                            totals={totals}
+                            issueDate={formData.issue_date}
+                            dueDate={formData.due_date}
+                            entityName={formData.use_manual_client ? formData.manual_client_name : selectedClient?.full_name}
+                            entityAddress={formData.use_manual_client ? formData.manual_client_address : undefined}
+                            entityEmail={formData.use_manual_client ? formData.manual_client_email : selectedClient?.email}
+                            entityTaxId={formData.use_manual_client ? formData.manual_client_tax_id : undefined}
+                            companyName={formData.use_manual_company ? formData.manual_company_name : undefined}
+                            companyAddress={formData.use_manual_company ? formData.manual_company_address : undefined}
+                            companyTaxId={formData.use_manual_company ? formData.manual_company_tax_id : undefined}
+                            companyPhone={formData.use_manual_company ? formData.manual_company_phone : undefined}
+                            companyEmail={formData.use_manual_company ? formData.manual_company_email : undefined}
+                            lines={formData.line_items}
+                            totals={{
+                                subtotal: totals.subtotal,
+                                discount: totals.discount,
+                                tax: totals.tax,
+                                additionalCharges: formData.additional_charges,
+                                total: totals.total
+                            }}
+                            currency={formData.currency}
+                            paymentTerms={formData.payment_terms}
+                            paymentMethod={formData.payment_method}
                             notes={formData.notes}
+                            termsConditions={formData.terms_conditions}
+                            additionalChargesDescription={formData.additional_charges_description}
                         />
                     </div>
                 )}
             </div>
+
+            {/* Success Dialog with Download Option */}
+            <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <div className="flex items-center gap-3 mb-2">
+                            <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
+                                <CheckCircle2 className="h-6 w-6 text-green-600" />
+                            </div>
+                            <div>
+                                <DialogTitle className="text-xl">Invoice Created Successfully!</DialogTitle>
+                                <DialogDescription className="text-sm mt-1">
+                                    Invoice {formData.invoice_number} has been dispatched
+                                </DialogDescription>
+                            </div>
+                        </div>
+                    </DialogHeader>
+
+                    <div className="py-4 space-y-3">
+                        <p className="text-sm text-muted-foreground">
+                            Your invoice has been created and saved. You can now download it as a PDF or view it in the invoices list.
+                        </p>
+
+                        <div className="bg-muted/50 p-4 rounded-lg space-y-2">
+                            <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">Invoice Number:</span>
+                                <span className="font-bold">{formData.invoice_number}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">Total Amount:</span>
+                                <span className="font-bold">{formData.currency} {totals.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">Due Date:</span>
+                                <span className="font-bold">{new Date(formData.due_date).toLocaleDateString()}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <DialogFooter className="flex-col sm:flex-row gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                setShowSuccessDialog(false);
+                                router.push('/admin/finance/invoices');
+                            }}
+                            className="w-full sm:w-auto"
+                        >
+                            View All Invoices
+                        </Button>
+                        <Button
+                            onClick={async () => {
+                                await handleDownloadPDF();
+                                toast.success('PDF Downloaded');
+                                setTimeout(() => {
+                                    router.push('/admin/finance/invoices');
+                                }, 1000);
+                            }}
+                            className="w-full sm:w-auto gap-2"
+                        >
+                            <FileDown className="h-4 w-4" />
+                            Download PDF
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </DashboardShell>
     );
 }

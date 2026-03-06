@@ -214,8 +214,13 @@ export default function TaxCenterPage() {
             <Link href="/admin/finance"><Button variant="ghost" size="icon" className="h-8 w-8"><ChevronLeft className="h-4 w-4" /></Button></Link>
             <div className="h-9 w-9 rounded-lg bg-red-50 text-red-600 flex items-center justify-center"><Scale className="h-5 w-5" /></div>
             <div>
-              <h1 className="text-xl font-bold tracking-tight">Tax Center</h1>
-              <p className="text-[11px] text-muted-foreground">Jurisdictions · Tax Codes · Filing · VAT Recon · Audit Controls</p>
+              <h1 className="text-xl font-bold tracking-tight uppercase leading-none">Tax Center</h1>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-[10px] font-black text-red-600 uppercase tracking-[0.2em]">Compliance & Audit Controls</span>
+                <Badge variant="secondary" className="hidden sm:inline-flex font-bold uppercase text-[9px] tracking-widest bg-slate-100 text-slate-600">
+                  IFRS / GAAP
+                </Badge>
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-2">

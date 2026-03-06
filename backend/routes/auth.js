@@ -81,9 +81,18 @@ router.post('/login', async (req, res) => {
     }
 });
 
-// GET /api/auth/me
 router.get('/me', auth, async (req, res) => {
     res.json({ user: req.user.toJSON() });
+});
+
+// GET /api/auth/users
+router.get('/users', auth, async (req, res) => {
+    try {
+        const users = await User.find().select('-password').sort({ full_name: 1 });
+        res.json({ users });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch users' });
+    }
 });
 
 module.exports = router;

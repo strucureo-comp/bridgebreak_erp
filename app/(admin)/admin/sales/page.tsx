@@ -118,8 +118,13 @@ export default function SalesDashboardPage() {
                     {/* Header: Simple & Clear */}
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
                         <div>
-                            <h1 className="text-3xl font-black tracking-tight text-foreground">{getModuleLabel('sales')}</h1>
-                            <p className="text-muted-foreground mt-1">Manage leads, opportunities, quotes, and sales transactions.</p>
+                            <h1 className="text-xl font-bold tracking-tight text-foreground uppercase">{getModuleLabel('sales')}</h1>
+                            <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Commercial Pipeline</span>
+                                <Badge variant="secondary" className="hidden sm:inline-flex font-bold uppercase text-[9px] tracking-widest bg-slate-100 text-slate-600">
+                                    Revenue Stream
+                                </Badge>
+                            </div>
                         </div>
 
                         {/* Quick Actions */}

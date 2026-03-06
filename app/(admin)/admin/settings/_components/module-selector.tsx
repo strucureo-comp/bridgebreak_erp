@@ -33,26 +33,29 @@ export function ModuleSelector({ businessType, activeModules, onChange }: Module
     return (
         <div className="space-y-4">
             {modules.map((m) => (
-                <div key={m.id} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
-                    <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded bg-muted flex items-center justify-center text-muted-foreground">
-                            <m.icon size={16} />
+                <div key={m.id} className="flex items-center justify-between p-4 rounded-xl border border-slate-50 hover:bg-slate-50 transition-all group">
+                    <div className="flex items-center gap-5">
+                        <div className={cn(
+                            "h-10 w-10 rounded-xl flex items-center justify-center transition-all shadow-sm border border-slate-100",
+                            activeModules?.[m.id] ? "bg-red-600 text-white border-red-600" : "bg-white text-slate-400"
+                        )}>
+                            <m.icon size={18} />
                         </div>
-                        <div className="space-y-0.5">
-                            <Label className="text-sm font-medium flex items-center gap-2">
+                        <div className="space-y-1">
+                            <Label className="text-[11px] font-black uppercase tracking-tight text-slate-700 flex items-center gap-3">
                                 {m.label}
                                 {m.core && (
-                                    <Badge variant="secondary" className="text-[10px] py-0 h-4 border-emerald-100 text-emerald-600 bg-emerald-50">
-                                        Core
+                                    <Badge variant="secondary" className="text-[8px] font-black uppercase tracking-widest h-4 px-2 bg-emerald-50 text-emerald-600 border-none">
+                                        Core Asset
                                     </Badge>
                                 )}
                             </Label>
+                            <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest opacity-50">Operational Node</p>
                         </div>
                     </div>
                     <Switch
                         checked={activeModules ? !!activeModules[m.id] : m.core}
                         onCheckedChange={(checked) => {
-                            // Build a complete map with all modules
                             const allModules: Record<string, boolean> = {};
                             modules.forEach(mod => {
                                 allModules[mod.id] = activeModules ? !!activeModules[mod.id] : mod.core;

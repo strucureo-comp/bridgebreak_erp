@@ -11,6 +11,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue
+} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import {
     Settings, Building2, Shield, Database,
@@ -36,7 +43,12 @@ import { BusinessModelSelector, BusinessType, CompanySize } from '@/app/(admin)/
 import { ModuleSelector } from '@/app/(admin)/admin/settings/_components/module-selector';
 import { DocumentBranding } from '@/app/(admin)/admin/settings/_components/document-branding';
 import { TaxSystemConfig } from '@/app/(admin)/admin/settings/_components/tax-system-config';
-import { RolePermissionConfig } from '@/app/(admin)/admin/settings/_components/role-permission-config';
+import { RolePermissionConfig, RolesConfigData } from '@/app/(admin)/admin/settings/_components/role-permission-config';
+import { AccountsReceivableConfig, ARConfigData } from '@/app/(admin)/admin/settings/_components/ar-config';
+import { AccountsPayableConfig, APConfigData } from '@/app/(admin)/admin/settings/_components/ap-config';
+import { FinanceEngineSettings, FinanceEngineConfig } from '@/app/(admin)/admin/settings/_components/finance-engine-settings';
+import { InventoryConfig, InventoryConfigData } from '@/app/(admin)/admin/settings/_components/inventory-config';
+import { ConsolidationConfig, ConsolidationConfigData } from '@/app/(admin)/admin/settings/_components/consolidation-config';
 
 interface CompanyProfile {
     tradingName: string;
@@ -120,39 +132,155 @@ const DEFAULT_TAX_CONFIG = {
     adjustmentOnlyMode: true,
 };
 
+const DEFAULT_AR_CONFIG: ARConfigData = {
+    defaultCreditTerms: 'Net 30',
+    creditLimitEnforcement: 'hard',
+    agingBuckets: [
+        { label: 'Current', days: 0 },
+        { label: '1-30 Days', days: 30 },
+        { label: '31-60 Days', days: 60 },
+        { label: '61-90 Days', days: 90 },
+        { label: '90+ Days', days: 91 },
+    ],
+    riskThresholds: { low: 5, medium: 15, high: 30 },
+    automations: { autoDunning: true, autoECLProvisioning: true, autoChargeLateFees: false },
+    glMapping: { receivableAccount: '1200', revenueAccount: '4000', badDebtAccount: '6500', taxAccount: '2200' }
+};
+
+const DEFAULT_AP_CONFIG: APConfigData = {
+    defaultPaymentTerms: 'Net 30',
+    procurementMatching: '3-way',
+    agingBuckets: [
+        { label: 'Current', days: 0 },
+        { label: '1-30 Days', days: 30 },
+        { label: '31-60 Days', days: 60 },
+        { label: '61-90 Days', days: 90 },
+        { label: '90+ Days', days: 91 },
+    ],
+    autoPostBills: false,
+    paymentThresholds: { requireApprovalAbove: 10000, highPriorityDays: 5 },
+    automations: { autoSchedulePayments: true, documentCapture: true, vatReconciliation: true },
+    glMapping: { payableAccount: '2100', expenseAccount: '6000', taxAccount: '1400', discountAccount: '4100' }
+};
+
+const DEFAULT_FINANCE_ENGINE: FinanceEngineConfig = {
+    accountingBasis: 'accrual',
+    fiscalYearStart: '1',
+    reportingCurrency: 'AED',
+    multiCurrencyEnabled: true,
+    autoJournalPosting: false,
+    toleranceLevel: 0.5,
+    backdatingRestricted: true,
+    periodLocking: {
+        currentPeriod: '1',
+        isLocked: false
+    },
+    integrationState: {
+        inventoryCOGS: true,
+        taxAutoProvision: true,
+        amortizationAuto: false
+    }
+};
+
+const DEFAULT_INVENTORY_CONFIG: InventoryConfigData = {
+    valuationMethod: 'FIFO',
+    negativeStockAllowed: false,
+    backdatedTxnsLocked: true,
+    periodEndLock: true,
+    cogsTrigger: 'SalesInvoice',
+    multiWarehouseCogs: true,
+    projectBasedAccounting: false,
+    autoRecalculateWac: true,
+    glMapping: {
+        inventoryAsset: '1300',
+        cogsAccount: '5000',
+        inventoryAdjustment: '5100',
+        revaluationSurplus: '3100'
+    },
+    standardCosts: {}
+};
+
+const DEFAULT_CONSOLIDATION_CONFIG: ConsolidationConfigData = {
+    entities: [
+        { id: '1', code: 'SSE-UAE', name: 'SYSTEM STEEL UAE (HQ)', currency: 'AED', functionalCurrency: 'AED', country: 'UAE', taxJurisdiction: 'DUBAI', ownershipPercentage: 100, method: 'full' },
+        { id: '2', code: 'SSE-UK', name: 'SYSTEM STEEL UK LTD', currency: 'GBP', functionalCurrency: 'GBP', country: 'United Kingdom', taxJurisdiction: 'HMRC', ownershipPercentage: 100, method: 'full' },
+        { id: '3', code: 'SSE-US', name: 'SYSTEM STEEL INC', currency: 'USD', functionalCurrency: 'USD', country: 'USA', taxJurisdiction: 'Delaware', ownershipPercentage: 100, method: 'full' },
+    ],
+    eliminationRules: {
+        autoEliminateIC: true,
+        profitElimination: true,
+        threshold: 50
+    },
+    glMapping: {
+        icClearingAccount: '2900',
+        fxTranslationGain: '7100',
+        fxTranslationLoss: '8100',
+        minorityInterest: '3200'
+    },
+    consolidationFrequency: 'monthly'
+};
+
 const DEFAULT_ROLES_CONFIG = {
     roles: [
-        { id: 1, name: 'Administrator', users: 2, level: 'Full' },
-        { id: 2, name: 'Finance Manager', users: 3, level: 'Audit & Approve' },
-        { id: 3, name: 'Operations Lead', users: 5, level: 'Execution' },
-        { id: 4, name: 'Sales Representative', users: 8, level: 'CRM Access' },
+        { id: 1, name: 'Strategic Lead (CFO)', users: 1, level: 'Full (Superuser)' },
+        { id: 2, name: 'Group Controller', users: 2, level: 'Advanced Control' },
+        { id: 3, name: 'Module Administrator', users: 4, level: 'Module Governance' },
+        { id: 4, name: 'Execution Handler', users: 12, level: 'Process & Entry' },
     ],
     users: [
-        { id: 1, name: 'Ahmed Khalid', email: 'ahmed@systemsteel.ae', role: 'Administrator', status: 'Active' as const },
-        { id: 2, name: 'Sarah Connor', email: 'sarah@systemsteel.ae', role: 'Finance Manager', status: 'Active' as const },
-        { id: 3, name: 'John Doe', email: 'john@systemsteel.ae', role: 'Operations Lead', status: 'On Leave' as const },
-        { id: 4, name: 'Maria Garcia', email: 'maria@systemsteel.ae', role: 'Sales Representative', status: 'Active' as const },
+        { id: 1, name: 'Ahmed Khalid', email: 'cfo@systemsteel.ae', role: 'Strategic Lead (CFO)', status: 'Active' as const },
+        { id: 2, name: 'Sarah Connor', email: 'controller@systemsteel.ae', role: 'Group Controller', status: 'Active' as const },
+        { id: 3, name: 'John Doe', email: 'inventory.lead@systemsteel.ae', role: 'Module Administrator', status: 'Active' as const },
+        { id: 4, name: 'Maria Garcia', email: 'clerk@systemsteel.ae', role: 'Execution Handler', status: 'Active' as const },
     ],
     workflows: [
         {
-            id: 1, title: 'Payroll & Salary Increases', status: 'Active', stages: 3, threshold: 'All',
+            id: 1,
+            title: 'GL Journal Approval (High Value)',
+            status: 'Active',
+            stages: 2,
+            threshold: '> AED 50,000',
             flow: [
-                { role: 'HR Manager', action: 'Initiate Request' },
-                { role: 'MD / Admin', action: 'Strategic Approval' },
-                { role: 'Finance Team', action: 'Disbursement & Post' }
+                { role: 'Group Controller', action: 'VERIFY' },
+                { role: 'Strategic Lead (CFO)', action: 'AUTHORIZE' }
             ]
         },
         {
-            id: 2, title: 'Purchase Orders', status: 'Active', stages: 3, threshold: 'AED 10,000',
+            id: 2,
+            title: 'Inventory Revaluation Workflow',
+            status: 'Active',
+            stages: 2,
+            threshold: 'Materiality > 5%',
             flow: [
-                { role: 'Dept Head', action: 'Review' },
-                { role: 'Procurement', action: 'Verify' },
-                { role: 'MD / Admin', action: 'Authorize' }
+                { role: 'Module Administrator', action: 'REVIEW' },
+                { role: 'Group Controller', action: 'APPROVE' }
+            ]
+        },
+        {
+            id: 3,
+            title: 'Consolidation Run Stage-Gate',
+            status: 'Active',
+            stages: 3,
+            threshold: 'Global Period Close',
+            flow: [
+                { role: 'Execution Handler', action: 'SYNC' },
+                { role: 'Group Controller', action: 'POST-ELIMINATION' },
+                { role: 'Strategic Lead (CFO)', action: 'FINAL-LOCK' }
             ]
         }
     ],
-    globalSettings: { autoEscalation: false, parallelApprovals: true, mobileSignoff: true }
-};
+    globalSettings: {
+        autoEscalation: true,
+        parallelApprovals: true,
+        mobileSignoff: true
+    },
+    intelligence: {
+        credentialScanActive: true,
+        geoFencingEnabled: true,
+        policyEnforcementActive: true,
+        sessionRotationMinutes: 15
+    }
+} as RolesConfigData;
 
 const DEFAULT_BRANDING = {
     primaryColor: '#0F172A',
@@ -170,26 +298,41 @@ export default function AdminSettingsPage() {
     const [company, setCompany] = useState<CompanyProfile>(DEFAULT_COMPANY);
     const [notifications, setNotifications] = useState(DEFAULT_NOTIFICATIONS);
     const [taxConfig, setTaxConfig] = useState(DEFAULT_TAX_CONFIG);
-    const [rolesConfig, setRolesConfig] = useState(DEFAULT_ROLES_CONFIG);
+    const [arConfig, setArConfig] = useState<ARConfigData>(DEFAULT_AR_CONFIG);
+    const [apConfig, setApConfig] = useState<APConfigData>(DEFAULT_AP_CONFIG);
+    const [financeEngine, setFinanceEngine] = useState<FinanceEngineConfig>(DEFAULT_FINANCE_ENGINE);
+    const [inventoryConfig, setInventoryConfig] = useState<InventoryConfigData>(DEFAULT_INVENTORY_CONFIG);
+    const [consolidationConfig, setConsolidationConfig] = useState<ConsolidationConfigData>(DEFAULT_CONSOLIDATION_CONFIG);
+    const [rolesConfig, setRolesConfig] = useState<RolesConfigData>(DEFAULT_ROLES_CONFIG);
     const [brandingConfig, setBrandingConfig] = useState(DEFAULT_BRANDING);
 
     // Load ALL settings from backend/localStorage
     const fetchAllSettings = useCallback(async () => {
         try {
             setLoading(true);
-            const [companyData, notifyData, taxData, rolesData, brandingData] = await Promise.all([
+            const [companyData, notifyData, taxData, arData, apData, financeData, inventoryData, consolidationData, rolesData, brandingData] = await Promise.all([
                 getSettings<CompanyProfile>('company_profile'),
                 getSettings<any>('notification_prefs'),
                 getSettings<any>('tax_config'),
+                getSettings<ARConfigData>('ar_config'),
+                getSettings<APConfigData>('ap_config'),
+                getSettings<FinanceEngineConfig>('finance_engine'),
+                getSettings<InventoryConfigData>('inventory_config'),
+                getSettings<ConsolidationConfigData>('consolidation_config'),
                 getSettings<any>('roles_config'),
                 getSettings<any>('branding_config'),
             ]);
 
-            if (companyData) setCompany(prev => ({ ...prev, ...companyData }));
-            if (notifyData) setNotifications(prev => ({ ...prev, ...notifyData }));
-            if (taxData) setTaxConfig(prev => ({ ...prev, ...taxData }));
-            if (rolesData) setRolesConfig(prev => ({ ...prev, ...rolesData }));
-            if (brandingData) setBrandingConfig(prev => ({ ...prev, ...brandingData }));
+            if (companyData) setCompany((prev: CompanyProfile) => ({ ...prev, ...companyData }));
+            if (notifyData) setNotifications((prev: any) => ({ ...prev, ...notifyData }));
+            if (taxData) setTaxConfig((prev: any) => ({ ...prev, ...taxData }));
+            if (arData) setArConfig((prev: ARConfigData) => ({ ...prev, ...arData }));
+            if (apData) setApConfig((prev: APConfigData) => ({ ...prev, ...apData }));
+            if (financeData) setFinanceEngine((prev: FinanceEngineConfig) => ({ ...prev, ...financeData }));
+            if (inventoryData) setInventoryConfig((prev: InventoryConfigData) => ({ ...prev, ...inventoryData }));
+            if (consolidationData) setConsolidationConfig((prev: ConsolidationConfigData) => ({ ...prev, ...consolidationData }));
+            if (rolesData) setRolesConfig((prev: any) => ({ ...prev, ...rolesData }));
+            if (brandingData) setBrandingConfig((prev: any) => ({ ...prev, ...brandingData }));
         } catch (error) {
             console.error('Settings Sync Error:', error);
         } finally {
@@ -209,6 +352,11 @@ export default function AdminSettingsPage() {
                 saveSettings('company_profile', company),
                 saveSettings('notification_prefs', notifications),
                 saveSettings('tax_config', taxConfig),
+                saveSettings('ar_config', arConfig),
+                saveSettings('ap_config', apConfig),
+                saveSettings('finance_engine', financeEngine),
+                saveSettings('inventory_config', inventoryConfig),
+                saveSettings('consolidation_config', consolidationConfig),
                 saveSettings('roles_config', rolesConfig),
                 saveSettings('branding_config', brandingConfig),
             ]);
@@ -237,30 +385,45 @@ export default function AdminSettingsPage() {
             <ModuleGuard module="settings">
                 <div className="space-y-6 pb-20">
                     {/* Header */}
-                    <div className="flex items-center justify-between mb-8">
-                        <div>
-                            <h1 className="text-2xl font-bold tracking-tight">System Settings</h1>
-                            <p className="text-sm text-muted-foreground">Manage your company profile and system preferences</p>
+                    <div className="flex items-center justify-between border-b border-border pb-6 mb-8">
+                        <div className="flex items-center gap-4">
+                            <div className="h-11 w-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center shadow-sm">
+                                <Settings className="h-6 w-6" />
+                            </div>
+                            <div>
+                                <h1 className="text-xl font-bold tracking-tight text-foreground uppercase leading-none">System Architecture</h1>
+                                <div className="flex items-center gap-2 mt-1">
+                                    <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Enterprise OS Configuration</span>
+                                    <Badge variant="secondary" className="hidden sm:inline-flex font-bold uppercase text-[9px] tracking-widest bg-slate-100 text-slate-600">
+                                        V 2.0.4
+                                    </Badge>
+                                </div>
+                            </div>
                         </div>
                         <Button
                             disabled={saving}
                             onClick={handleSaveAll}
-                            className="gap-2"
+                            className="h-10 px-6 gap-2 bg-primary hover:bg-primary/90 font-bold uppercase text-[10px] tracking-widest shadow-lg shadow-primary/20"
                         >
                             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                            Save Changes
+                            Commit Changes
                         </Button>
                     </div>
 
-                    <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-                        <TabsList className="bg-muted/50 border">
-                            <TabsTrigger value="company">Business Profile</TabsTrigger>
-                            <TabsTrigger value="fiscal">Tax & Fiscal</TabsTrigger>
-                            <TabsTrigger value="identity">Roles & Access</TabsTrigger>
-                            <TabsTrigger value="branding">Branding</TabsTrigger>
-                            <TabsTrigger value="alerts" disabled className="gap-1.5 opacity-50 cursor-not-allowed">Notifications <Badge variant="outline" className="text-[8px] h-3.5 px-1 py-0 font-black border-border">SOON</Badge></TabsTrigger>
-                            <TabsTrigger value="maintenance" disabled className="gap-1.5 opacity-50 cursor-not-allowed">System <Badge variant="outline" className="text-[8px] h-3.5 px-1 py-0 font-black border-border">SOON</Badge></TabsTrigger>
-                        </TabsList>
+                    <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6 max-w-full">
+                        <div className="w-full overflow-x-auto pb-2 no-scrollbar">
+                            <TabsList className="bg-muted/50 border w-max inline-flex justify-start">
+                                <TabsTrigger value="company">Business Profile</TabsTrigger>
+                                <TabsTrigger value="architecture">Finance Architecture</TabsTrigger>
+                                <TabsTrigger value="inventory">Inventory Accounting</TabsTrigger>
+                                <TabsTrigger value="consolidation">Consolidation Hub</TabsTrigger>
+                                <TabsTrigger value="fiscal">Tax & Compliance</TabsTrigger>
+                                <TabsTrigger value="ar">Receivables & Credit</TabsTrigger>
+                                <TabsTrigger value="ap">Payables & Procurement</TabsTrigger>
+                                <TabsTrigger value="identity">Roles & Access</TabsTrigger>
+                                <TabsTrigger value="branding">Branding</TabsTrigger>
+                            </TabsList>
+                        </div>
 
                         {/* TAB 1: PROFILE / SECTOR */}
                         <TabsContent value="company" className="mt-0 space-y-8 animate-in fade-in duration-500">
@@ -292,30 +455,132 @@ export default function AdminSettingsPage() {
                                 </CardContent>
                             </Card>
 
-                            <Card className="border-border shadow-sm rounded-xl bg-card">
-                                <CardHeader className="p-8 pb-4">
-                                    <CardTitle className="text-[15px] font-bold text-foreground uppercase tracking-widest">Legal Identity</CardTitle>
-                                    <CardDescription className="text-[12px] font-medium text-muted-foreground">Official business details used for tax-compliant documentation.</CardDescription>
-                                </CardHeader>
-                                <CardContent className="p-8 pt-4 space-y-8">
-                                    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-                                        <DetailInput label="Legal Entity Name" value={company.legalName} onChange={v => setCompany({ ...company, legalName: v })} />
-                                        <DetailInput label="Tax ID / TRN" value={company.taxId} onChange={v => setCompany({ ...company, taxId: v })} />
-                                        <DetailInput label="Corporate Email" value={company.email} onChange={v => setCompany({ ...company, email: v })} />
-                                        <DetailInput label="Primary Contact" value={company.phone} onChange={v => setCompany({ ...company, phone: v })} />
-                                    </div>
-                                    <div className="grid md:grid-cols-2 gap-6 pt-4">
-                                        <div className="space-y-2">
-                                            <Label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Business Address</Label>
-                                            <Input value={company.address} onChange={e => setCompany({ ...company, address: e.target.value })} className="h-11 rounded-lg border-border font-medium text-[13px] bg-muted/50" />
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <Card className="border-border shadow-md rounded-xl bg-card overflow-hidden">
+                                    <CardHeader className="bg-muted/10 border-b py-6 px-8">
+                                        <div className="flex items-center gap-3">
+                                            <div className="h-8 w-8 rounded bg-red-600 flex items-center justify-center text-white shadow-sm">
+                                                <Shield className="h-4 w-4" />
+                                            </div>
+                                            <div>
+                                                <CardTitle className="text-xs font-black text-foreground uppercase tracking-[0.2em]">Legal Identity Hub</CardTitle>
+                                                <CardDescription className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mt-0.5">Corporate credentials & jurisdictional mapping</CardDescription>
+                                            </div>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="p-8 space-y-8">
+                                        <div className="grid md:grid-cols-2 gap-6">
+                                            <DetailInput label="Legal Entity Name" value={company.legalName} onChange={v => setCompany({ ...company, legalName: v })} />
+                                            <DetailInput label="Tax ID / TRN" value={company.taxId} onChange={v => setCompany({ ...company, taxId: v })} />
+                                        </div>
+                                        <div className="grid md:grid-cols-2 gap-6">
+                                            <DetailInput label="Corporate Email" value={company.email} onChange={v => setCompany({ ...company, email: v })} />
+                                            <DetailInput label="Primary Contact" value={company.phone} onChange={v => setCompany({ ...company, phone: v })} />
                                         </div>
                                         <div className="space-y-2">
-                                            <Label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Official Website</Label>
-                                            <Input value={company.website} onChange={e => setCompany({ ...company, website: e.target.value })} className="h-11 rounded-lg border-border font-medium text-[13px] bg-muted/50" />
+                                            <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500">Business HQ Address</Label>
+                                            <Input value={company.address} onChange={e => setCompany({ ...company, address: e.target.value })} className="h-11 rounded-lg border-slate-100 font-bold text-xs uppercase tracking-tight bg-slate-50/50 focus:bg-white transition-colors" />
                                         </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
+                                    </CardContent>
+                                </Card>
+
+                                <Card className="border-border shadow-md rounded-xl bg-card overflow-hidden">
+                                    <CardHeader className="bg-muted/10 border-b py-6 px-8">
+                                        <div className="flex items-center gap-3">
+                                            <div className="h-8 w-8 rounded bg-slate-900 flex items-center justify-center text-white shadow-sm">
+                                                <Globe className="h-4 w-4" />
+                                            </div>
+                                            <div>
+                                                <CardTitle className="text-xs font-black text-foreground uppercase tracking-[0.2em]">Regional & Currency Core</CardTitle>
+                                                <CardDescription className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mt-0.5">Global operational parameters</CardDescription>
+                                            </div>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="p-8 space-y-8">
+                                        <div className="grid md:grid-cols-2 gap-6">
+                                            <div className="space-y-2">
+                                                <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500">Base reporting Currency</Label>
+                                                <Select
+                                                    value={company.baseCurrency}
+                                                    onValueChange={v => {
+                                                        setCompany({ ...company, baseCurrency: v });
+                                                        setFinanceEngine({ ...financeEngine, reportingCurrency: v });
+                                                    }}
+                                                >
+                                                    <SelectTrigger className="h-11 font-bold text-xs">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="AED">AED - UAE Dirham</SelectItem>
+                                                        <SelectItem value="USD">USD - US Dollar</SelectItem>
+                                                        <SelectItem value="EUR">EUR - Euro</SelectItem>
+                                                        <SelectItem value="GBP">GBP - British Pound</SelectItem>
+                                                        <SelectItem value="INR">INR - Indian Rupee</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500">Fiscal Start Month</Label>
+                                                <Select
+                                                    value={company.fiscalYearStart}
+                                                    onValueChange={v => {
+                                                        setCompany({ ...company, fiscalYearStart: v });
+                                                        setFinanceEngine({ ...financeEngine, fiscalYearStart: v });
+                                                    }}
+                                                >
+                                                    <SelectTrigger className="h-11 font-bold text-xs">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="1">January</SelectItem>
+                                                        <SelectItem value="4">April</SelectItem>
+                                                        <SelectItem value="7">July</SelectItem>
+                                                        <SelectItem value="10">October</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500">Corporate Digital Identity (URL)</Label>
+                                            <Input value={company.website} onChange={e => setCompany({ ...company, website: e.target.value })} className="h-11 rounded-lg border-slate-100 font-bold text-xs lowercase bg-slate-50/50 focus:bg-white transition-colors" />
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </div>
+                        </TabsContent>
+
+                        {/* TAB 1.5: FINANCE ENGINE */}
+                        <TabsContent value="architecture" className="mt-0 animate-in fade-in duration-500">
+                            <FinanceEngineSettings
+                                value={financeEngine}
+                                onChange={(fe: FinanceEngineConfig) => {
+                                    setFinanceEngine(fe);
+                                    // Sync back to company profile if important bits change
+                                    if (fe.reportingCurrency !== company.baseCurrency || fe.fiscalYearStart !== company.fiscalYearStart) {
+                                        setCompany({
+                                            ...company,
+                                            baseCurrency: fe.reportingCurrency,
+                                            fiscalYearStart: fe.fiscalYearStart
+                                        });
+                                    }
+                                }}
+                            />
+                        </TabsContent>
+
+                        {/* TAB 1.8: CONSOLIDATION HUB */}
+                        <TabsContent value="consolidation" className="mt-0 animate-in fade-in duration-500">
+                            <ConsolidationConfig
+                                value={consolidationConfig}
+                                onChange={(cc: ConsolidationConfigData) => setConsolidationConfig(cc)}
+                            />
+                        </TabsContent>
+
+                        {/* TAB 1.7: INVENTORY ACCOUNTING */}
+                        <TabsContent value="inventory" className="mt-0 animate-in fade-in duration-500">
+                            <InventoryConfig
+                                value={inventoryConfig}
+                                onChange={(ic: InventoryConfigData) => setInventoryConfig(ic)}
+                            />
                         </TabsContent>
 
                         {/* TAB 2: FISCAL — receives saved data, reports changes */}
@@ -326,11 +591,27 @@ export default function AdminSettingsPage() {
                             />
                         </TabsContent>
 
+                        {/* TAB AR: RECEIVABLES */}
+                        <TabsContent value="ar" className="mt-0 animate-in fade-in duration-500">
+                            <AccountsReceivableConfig
+                                value={arConfig}
+                                onChange={(ac: ARConfigData) => setArConfig(ac)}
+                            />
+                        </TabsContent>
+
+                        {/* TAB AP: PAYABLES */}
+                        <TabsContent value="ap" className="mt-0 animate-in fade-in duration-500">
+                            <AccountsPayableConfig
+                                value={apConfig}
+                                onChange={(apc: APConfigData) => setApConfig(apc)}
+                            />
+                        </TabsContent>
+
                         {/* TAB 3: ACCESS — receives saved data, reports changes */}
                         <TabsContent value="identity" className="mt-0 animate-in fade-in duration-500">
                             <RolePermissionConfig
                                 value={rolesConfig}
-                                onChange={(rc: any) => setRolesConfig(rc)}
+                                onChange={(rc: RolesConfigData) => setRolesConfig(rc)}
                             />
                         </TabsContent>
 
@@ -340,49 +621,6 @@ export default function AdminSettingsPage() {
                                 value={brandingConfig}
                                 onChange={(b: any) => setBrandingConfig(b)}
                             />
-                        </TabsContent>
-
-                        {/* TAB 5: ALERTS */}
-                        <TabsContent value="alerts" className="space-y-6">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Notifications</CardTitle>
-                                    <CardDescription>Configure how you receive system alerts</CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-1">
-                                    <SettingsToggle label="Invoice Reminders" desc="Send reminders for overdue invoices" active={notifications.invoiceReminders} onToggle={v => setNotifications({ ...notifications, invoiceReminders: v })} />
-                                    <SettingsToggle label="Low Stock Alerts" desc="Notifications when inventory falls below thresholds" active={notifications.lowStockAlerts} onToggle={v => setNotifications({ ...notifications, lowStockAlerts: v })} />
-                                    <SettingsToggle label="Approval Triggers" desc="Notify when an item is pending your approval" active={notifications.approvalTriggers} onToggle={v => setNotifications({ ...notifications, approvalTriggers: v })} />
-                                    <SettingsToggle label="Email Summaries" desc="Periodic emails with business highlights" active={notifications.emailDigest} onToggle={v => setNotifications({ ...notifications, emailDigest: v })} />
-                                    <SettingsToggle label="SMS Alerts" desc="Critical notifications via SMS" active={notifications.smsAlerts} onToggle={v => setNotifications({ ...notifications, smsAlerts: v })} />
-                                    <SettingsToggle label="High Value Lead Alert" desc="Instant ping for high-value opportunity changes" active={notifications.highValueLeadAlert} onToggle={v => setNotifications({ ...notifications, highValueLeadAlert: v })} />
-                                    <SettingsToggle label="Daily Cash Position" desc="End-of-day financial summary" active={notifications.dailyCashPosition} onToggle={v => setNotifications({ ...notifications, dailyCashPosition: v })} />
-                                </CardContent>
-                            </Card>
-                        </TabsContent>
-
-                        {/* TAB 6: MAINTENANCE */}
-                        <TabsContent value="maintenance" className="space-y-6">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>System Maintenance</CardTitle>
-                                    <CardDescription>Administrative tools for system operations</CardDescription>
-                                </CardHeader>
-                                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <MaintenanceAction
-                                        icon={RefreshCcw}
-                                        label="Re-index Database"
-                                        desc="Rebuild search indexes and optimize queries"
-                                        successMsg="Database re-indexed successfully"
-                                    />
-                                    <MaintenanceAction
-                                        icon={Database}
-                                        label="Full Backup"
-                                        desc="Create a complete system snapshot"
-                                        successMsg="Backup created successfully"
-                                    />
-                                </CardContent>
-                            </Card>
                         </TabsContent>
                     </Tabs>
                 </div>
@@ -394,8 +632,8 @@ export default function AdminSettingsPage() {
 function DetailInput({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
     return (
         <div className="space-y-2">
-            <Label className="text-sm font-medium">{label}</Label>
-            <Input value={value} onChange={e => onChange(e.target.value)} />
+            <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500">{label}</Label>
+            <Input value={value} onChange={e => onChange(e.target.value)} className="h-11 rounded-lg border-slate-100 font-bold text-xs uppercase tracking-tight bg-slate-50/50 focus:bg-white transition-colors" />
         </div>
     );
 }

@@ -37,7 +37,7 @@ export default function LoginPage() {
             setError(error.message);
             setLoading(false);
         } else {
-            router.push('/admin/settings');
+            router.push('/admin/dashboard');
         }
     };
 
@@ -62,7 +62,7 @@ export default function LoginPage() {
             setError(error.message);
             setLoading(false);
         } else {
-            router.push('/admin/settings');
+            router.push('/admin/dashboard');
         }
     };
 

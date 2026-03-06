@@ -1,21 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import {
-    INITIAL_SETTINGS, INITIAL_SKUS, INITIAL_WASTE_LOGS, INITIAL_MOVEMENTS,
-    PERMISSIONS, SITES, Sku, Movement, WasteLog, Allocation
+    INITIAL_SETTINGS, PERMISSIONS, SITES, Sku, WasteLog, Allocation
 } from "../_lib/data";
+import {
+    getInventoryItems, getWarehouses, getInventorySummary,
+    recordStockMovement, createInventoryItem
+} from "@/lib/api";
 
 export function useInventory(currentRole: string) {
     const role = PERMISSIONS[currentRole as keyof typeof PERMISSIONS];
 
     // State
     const [settings, setSettings] = useState(INITIAL_SETTINGS);
-    const [skus, setSkus] = useState<Sku[]>(INITIAL_SKUS);
-    const [wasteLogs, setWasteLogs] = useState<WasteLog[]>(INITIAL_WASTE_LOGS);
-    const [movements, setMovements] = useState<Movement[]>(INITIAL_MOVEMENTS);
+    const [skus, setSkus] = useState<any[]>([]);
+    const [warehouses, setWarehouses] = useState<any[]>([]);
+    const [wasteLogs, setWasteLogs] = useState<WasteLog[]>([]);
+    const [movements, setMovements] = useState<any[]>([]);
     const [allocations, setAllocations] = useState<Allocation[]>([]);
+    const [loading, setLoading] = useState(true);
 
     const [searchQuery, setSearchQuery] = useState("");
 
@@ -33,68 +38,100 @@ export function useInventory(currentRole: string) {
     const [allocateForm, setAllocateForm] = useState({ skuId: "", site: SITES[0], quantity: 0 });
     const [settingsForm, setSettingsForm] = useState(INITIAL_SETTINGS);
 
+    const loadData = async () => {
+        setLoading(true);
+        try {
+            const [items, whs, summary] = await Promise.all([
+                getInventoryItems(),
+                getWarehouses(),
+                getInventorySummary()
+            ]);
+
+            const mappedSkus = items.map((i: any) => ({
+                id: i.sku,
+                _id: i._id,
+                name: i.name,
+                category: i.category,
+                unit: i.uom_base,
+                stock: 0,
+                minThreshold: i.reorder_level || 10,
+                costPerUnit: i.last_purchase_price || i.standard_cost,
+                siteAllocated: 0,
+                wastePercent: 0
+            }));
+
+            setSkus(mappedSkus);
+            setWarehouses(whs);
+            setMovements(summary.recent_transactions);
+        } catch (err) {
+            console.error("Failed to load inventory:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadData();
+    }, []);
+
     // --- Actions ---
-    const handleRegisterSku = () => {
+    const handleRegisterSku = async () => {
         if (!skuForm.id || !skuForm.name) {
             toast.error("Please fill in SKU ID and Name.");
             return;
         }
-        if (skus.find(s => s.id === skuForm.id)) {
-            toast.error("SKU ID already exists.");
-            return;
+
+        const payload = {
+            sku: skuForm.id,
+            name: skuForm.name,
+            category: skuForm.category,
+            uom_base: skuForm.unit,
+            reorder_level: skuForm.minThreshold,
+            standard_cost: skuForm.costPerUnit
+        };
+
+        try {
+            await createInventoryItem(payload);
+            toast.success(`SKU ${skuForm.id} registered successfully.`);
+            setIsRegisterOpen(false);
+            setSkuForm({ id: "", name: "", category: "Raw Materials", unit: "Units", minThreshold: 10, costPerUnit: 0 });
+            loadData();
+        } catch (err) {
+            toast.error("Failed to register SKU.");
         }
-
-        setSkus([...skus, {
-            ...skuForm,
-            stock: 0,
-            wastePercent: 0,
-            siteAllocated: 0,
-        }]);
-
-        toast.success(`SKU ${skuForm.id} registered successfully.`);
-        setIsRegisterOpen(false);
-        setSkuForm({ id: "", name: "", category: "Raw Materials", unit: "Units", minThreshold: 10, costPerUnit: 0 });
     };
 
-    const handleAdjustStock = () => {
+    const handleAdjustStock = async () => {
         if (!adjustForm.skuId || !adjustForm.quantity || adjustForm.quantity <= 0) {
             toast.error("Invalid adjustment data.");
             return;
         }
 
-        const skuIndex = skus.findIndex(s => s.id === adjustForm.skuId);
-        if (skuIndex === -1) return;
+        const sku = skus.find(s => s.id === adjustForm.skuId);
+        if (!sku) return;
 
-        const sku = skus[skuIndex];
-        if (adjustForm.type === "Deduct" && sku.stock < adjustForm.quantity) {
-            toast.error(`Cannot deduct ${adjustForm.quantity}. Only ${sku.stock} in stock.`);
-            return;
+        const payload = {
+            type: 'adjustment',
+            item_id: sku._id,
+            dest_warehouse_id: warehouses[0]?._id, // Default to first warehouse for now
+            quantity: adjustForm.quantity * (adjustForm.type === 'Deduct' ? -1 : 1),
+            unit_cost: sku.costPerUnit,
+            reason: adjustForm.reason,
+            user: currentRole
+        };
+
+        try {
+            await recordStockMovement(payload);
+            toast.success(`Stock adjusted for ${sku.id}.`);
+            setIsAdjustOpen(false);
+            setAdjustForm({ skuId: "", type: "Increase", quantity: 0, reason: "" });
+            loadData();
+        } catch (err) {
+            toast.error("Failed to adjust stock.");
         }
-
-        const newStock = adjustForm.type === "Increase"
-            ? sku.stock + adjustForm.quantity
-            : sku.stock - adjustForm.quantity;
-
-        const updatedSkus = [...skus];
-        updatedSkus[skuIndex] = { ...sku, stock: newStock };
-        setSkus(updatedSkus);
-
-        setMovements([{
-            id: `M-${Math.floor(Math.random() * 10000)}`,
-            timestamp: new Date().toISOString(),
-            type: adjustForm.type,
-            skuId: sku.id,
-            quantity: adjustForm.quantity,
-            user: currentRole,
-            notes: adjustForm.reason
-        }, ...movements]);
-
-        toast.success(`Stock adjusted for ${sku.id}.`);
-        setIsAdjustOpen(false);
-        setAdjustForm({ skuId: "", type: "Increase", quantity: 0, reason: "" });
     };
 
-    const handleReportWaste = () => {
+    const handleReportWaste = async () => {
         if (!wasteForm.skuId || !wasteForm.quantity || wasteForm.quantity <= 0) {
             toast.error("Invalid waste report.");
             return;
@@ -103,75 +140,55 @@ export function useInventory(currentRole: string) {
         const sku = skus.find(s => s.id === wasteForm.skuId);
         if (!sku) return;
 
-        if (sku.stock < wasteForm.quantity) {
-            toast.error("Waste quantity cannot exceed current stock.");
-            return;
-        }
-
-        const costImpact = wasteForm.quantity * sku.costPerUnit;
-        const isApprovalNeeded = costImpact > settings.writeOffApprovalThreshold;
-        const initialStatus = isApprovalNeeded ? "Pending Finance" : "Pending";
-
-        const newWaste = {
-            id: `W-${Math.floor(Math.random() * 10000)}`,
-            skuId: sku.id,
-            quantity: wasteForm.quantity,
+        const payload = {
+            type: 'waste',
+            item_id: sku._id,
+            source_warehouse_id: warehouses[0]?._id,
+            quantity: -wasteForm.quantity,
+            unit_cost: sku.costPerUnit,
             reason: wasteForm.reason,
-            reportedBy: currentRole,
-            status: initialStatus,
-            date: new Date().toISOString()
+            user: currentRole
         };
 
-        setWasteLogs([newWaste, ...wasteLogs]);
-        toast.success(`Waste reported. Status: ${initialStatus}.`);
-        setIsWasteOpen(false);
-        setWasteForm({ skuId: "", quantity: 0, reason: "" });
+        try {
+            await recordStockMovement(payload);
+            toast.success(`Waste reported and stock deducted.`);
+            setIsWasteOpen(false);
+            setWasteForm({ skuId: "", quantity: 0, reason: "" });
+            loadData();
+        } catch (err) {
+            toast.error("Failed to report waste.");
+        }
     };
 
-    const handleAllocate = () => {
+    const handleAllocate = async () => {
         if (!allocateForm.skuId || !allocateForm.quantity || allocateForm.quantity <= 0) {
             toast.error("Invalid allocation data.");
             return;
         }
 
-        const skuIndex = skus.findIndex(s => s.id === allocateForm.skuId);
-        if (skuIndex === -1) return;
+        const sku = skus.find(s => s.id === allocateForm.skuId);
+        if (!sku) return;
 
-        const sku = skus[skuIndex];
-        if (sku.stock < allocateForm.quantity) {
-            toast.error(`Insufficient central stock for allocation. Required: ${allocateForm.quantity}, Available: ${sku.stock}`);
-            return;
-        }
-
-        const updatedSkus = [...skus];
-        updatedSkus[skuIndex] = {
-            ...sku,
-            stock: sku.stock - allocateForm.quantity,
-            siteAllocated: sku.siteAllocated + allocateForm.quantity
+        const payload = {
+            type: 'issue_to_site',
+            item_id: sku._id,
+            source_warehouse_id: warehouses[0]?._id,
+            dest_warehouse_id: warehouses.find(w => w.name.includes(allocateForm.site))?._id,
+            quantity: -allocateForm.quantity,
+            unit_cost: sku.costPerUnit,
+            user: currentRole
         };
-        setSkus(updatedSkus);
 
-        setAllocations([{
-            id: `A-${Math.floor(Math.random() * 10000)}`,
-            site: allocateForm.site,
-            skuId: sku.id,
-            quantity: allocateForm.quantity,
-            date: new Date().toISOString()
-        }, ...allocations]);
-
-        setMovements([{
-            id: `M-${Math.floor(Math.random() * 10000)}`,
-            timestamp: new Date().toISOString(),
-            type: "Allocation",
-            skuId: sku.id,
-            quantity: allocateForm.quantity,
-            user: currentRole,
-            notes: `Allocated to ${allocateForm.site}`
-        }, ...movements]);
-
-        toast.success(`Successfully allocated ${allocateForm.quantity} to ${allocateForm.site}.`);
-        setIsAllocateOpen(false);
-        setAllocateForm({ skuId: "", site: SITES[0], quantity: 0 });
+        try {
+            await recordStockMovement(payload);
+            toast.success(`Successfully allocated ${allocateForm.quantity} to ${allocateForm.site}.`);
+            setIsAllocateOpen(false);
+            setAllocateForm({ skuId: "", site: SITES[0], quantity: 0 });
+            loadData();
+        } catch (err) {
+            toast.error("Failed to allocate stock.");
+        }
     };
 
     const handleSaveSettings = () => {
@@ -181,57 +198,14 @@ export function useInventory(currentRole: string) {
     };
 
     const handleApproveWaste = (logId: string, approve: boolean) => {
-        const logIndex = wasteLogs.findIndex(w => w.id === logId);
-        if (logIndex === -1) return;
-
-        const log = wasteLogs[logIndex];
-        if (log.status === "Approved" || log.status === "Rejected") {
-            toast.error("Already processed.");
-            return;
-        }
-
-        if (log.status === "Pending Finance" && !role.canApproveFinance && !role.canOverride) {
-            toast.error("You lack permission to approve finance write-offs.");
-            return;
-        }
-        if (log.status === "Pending" && !role.canApproveWaste && !role.canOverride) {
-            toast.error("You lack permission to approve general waste logs.");
-            return;
-        }
-
-        const updatedLogs = [...wasteLogs];
-        updatedLogs[logIndex] = { ...log, status: approve ? "Approved" : "Rejected" };
-        setWasteLogs(updatedLogs);
-
-        if (approve) {
-            const skuIndex = skus.findIndex(s => s.id === log.skuId);
-            if (skuIndex !== -1) {
-                const updatedSkus = [...skus];
-                const newStock = Math.max(0, updatedSkus[skuIndex].stock - log.quantity);
-                updatedSkus[skuIndex] = { ...updatedSkus[skuIndex], stock: newStock };
-                updatedSkus[skuIndex].wastePercent = Number(((updatedSkus[skuIndex].wastePercent + 0.5)).toFixed(2));
-                setSkus(updatedSkus);
-            }
-
-            setMovements([{
-                id: `M-${Math.floor(Math.random() * 10000)}`,
-                timestamp: new Date().toISOString(),
-                type: "Waste",
-                skuId: log.skuId,
-                quantity: log.quantity,
-                user: currentRole,
-                notes: "Approved Waste Write-off"
-            }, ...movements]);
-
-            toast.success("Waste log approved and stock deducted.");
-        } else {
-            toast.info("Waste log rejected.");
-        }
+        // Logic for approving waste logs (workflow)
+        toast.info("Waste approval logic to be integrated with workflow engine.");
     };
 
     return {
         settings, setSettings,
         skus, setSkus,
+        warehouses, setWarehouses,
         wasteLogs, setWasteLogs,
         movements, setMovements,
         allocations, setAllocations,
@@ -252,6 +226,7 @@ export function useInventory(currentRole: string) {
         handleAllocate,
         handleSaveSettings,
         handleApproveWaste,
-        role
+        role,
+        loading
     };
 }

@@ -5,28 +5,28 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/context';
 import { useTenant } from '@/lib/tenant-context';
 import { getProjects, updateProject, getUsers, createProject } from '@/lib/api';
-import { ProjectsContent } from '@/components/projects/projects-content';
+import { ProjectsContent } from './_components/projects-content';
 import { DashboardShell } from '@/components/shared/layout/dashboard-shell';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { 
-    Plus, 
-    Search, 
-    Activity, 
-    ChevronRight, 
-    Box, 
-    Clock, 
-    CheckCircle2, 
-    RefreshCcw, 
-    LayoutGrid, 
-    FolderKanban,
-    Calendar,
-    Target,
-    Layers,
-    ArrowUpRight,
-    MapPin,
-    Briefcase
+import {
+  Plus,
+  Search,
+  Activity,
+  ChevronRight,
+  Box,
+  Clock,
+  CheckCircle2,
+  RefreshCcw,
+  LayoutGrid,
+  FolderKanban,
+  Calendar,
+  Target,
+  Layers,
+  ArrowUpRight,
+  MapPin,
+  Briefcase
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Project, User } from '@/lib/db/types';
@@ -80,14 +80,14 @@ export default function AdminProjectsPage() {
 
   const filteredProjects = useMemo(() => {
     return projects.filter(p => {
-        const matchesSearch = p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                             p.description?.toLowerCase().includes(searchQuery.toLowerCase());
-        
-        if (!matchesSearch) return false;
-        
-        if (activeMode === 'live') return ['accepted', 'in_progress', 'testing'].includes(p.status);
-        if (activeMode === 'archived') return p.status === 'completed' || p.status === 'cancelled';
-        return true;
+      const matchesSearch = p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.description?.toLowerCase().includes(searchQuery.toLowerCase());
+
+      if (!matchesSearch) return false;
+
+      if (activeMode === 'live') return ['accepted', 'in_progress', 'testing'].includes(p.status);
+      if (activeMode === 'archived') return p.status === 'completed' || p.status === 'cancelled';
+      return true;
     });
   }, [projects, searchQuery, activeMode]);
 
@@ -136,88 +136,88 @@ export default function AdminProjectsPage() {
               <div className="space-y-0.5">
                 <h1 className="text-xl font-bold tracking-tight text-foreground uppercase leading-none">{getModuleLabel('projects')}</h1>
                 <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Deployment Control</span>
-                    <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Deployment Control</span>
+                  <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 </div>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
-                <div className="flex flex-col items-end mr-4 hidden lg:flex text-right">
-                    <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest leading-none">Management Mode</span>
-                    <span className="text-xs font-black text-foreground uppercase mt-1">{activeMode === 'registry' ? 'Master Registry' : activeMode}</span>
-                </div>
-                
-                <Select value={activeMode} onValueChange={(v) => setActiveMode(v as ProjectMode)}>
-                    <SelectTrigger className="w-full md:w-56 h-10 border-primary bg-card shadow-lg shadow-primary/5 rounded-md text-xs font-black uppercase tracking-widest">
-                        <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-md border-border">
-                        <SelectItem value="registry" className="text-xs font-bold uppercase tracking-wide">
-                            <div className="flex items-center gap-2">
-                                <LayoutGrid size={14} className="text-primary" /> Master Registry
-                            </div>
-                        </SelectItem>
-                        <SelectItem value="live" className="text-xs font-bold uppercase tracking-wide">
-                            <div className="flex items-center gap-2">
-                                <Activity size={14} className="text-primary" /> Live Deployments
-                            </div>
-                        </SelectItem>
-                        <SelectItem value="operations" className="text-xs font-bold uppercase tracking-wide">
-                            <div className="flex items-center gap-2">
-                                <Target size={14} className="text-primary" /> Ops Planning
-                            </div>
-                        </SelectItem>
-                        <SelectItem value="archived" className="text-xs font-bold uppercase tracking-wide">
-                            <div className="flex items-center gap-2">
-                                <CheckCircle2 size={14} className="text-primary" /> Archived Sites
-                            </div>
-                        </SelectItem>
-                    </SelectContent>
-                </Select>
+              <div className="flex flex-col items-end mr-4 hidden lg:flex text-right">
+                <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest leading-none">Management Mode</span>
+                <span className="text-xs font-black text-foreground uppercase mt-1">{activeMode === 'registry' ? 'Master Registry' : activeMode}</span>
+              </div>
 
-                <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-                    <DialogTrigger asChild>
-                        <Button onClick={handleOpenCreate} className="h-10 px-6 gap-2 bg-primary hover:bg-primary/90 font-bold uppercase text-[10px] tracking-widest shadow-lg shadow-primary/20">
-                            <Plus className="h-4 w-4" /> Launch Project
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-xl p-0 overflow-hidden border-none shadow-2xl rounded-md">
-                        <div className="p-6 bg-foreground text-card-foreground">
-                            <div className="h-10 w-10 rounded-lg bg-white/10 flex items-center justify-center border border-white/10 mb-6">
-                                <Plus className="h-5 w-5 text-primary" />
-                            </div>
-                            <h3 className="text-2xl font-bold tracking-tight uppercase">Initialize Deployment</h3>
-                            <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest mt-1">Configure Site Metadata & Client Linkage</p>
-                        </div>
-                        <div className="p-6 space-y-6">
-                            <div className="space-y-4">
-                                <div className="space-y-1.5">
-                                    <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Target Client Account</Label>
-                                    <Select value={newProject.client_id} onValueChange={(val) => setNewProject({ ...newProject, client_id: val })}>
-                                        <SelectTrigger className="h-10 border-border font-bold text-xs uppercase"><SelectValue placeholder="Select Client Profile..." /></SelectTrigger>
-                                        <SelectContent>
-                                            {clients.map(c => <SelectItem key={c.id} value={c.id} className="text-xs font-bold uppercase">{c.full_name}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="space-y-1.5">
-                                    <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Project Title / Site Name</Label>
-                                    <Input placeholder="e.g. Structure Bridge A-10" className="h-10 border-border font-bold text-xs uppercase" value={newProject.title} onChange={e => setNewProject({ ...newProject, title: e.target.value })} />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Deployment Specifications</Label>
-                                    <Textarea placeholder="Scope of works..." className="min-h-[100px] border-border text-xs resize-none" value={newProject.description} onChange={e => setNewProject({ ...newProject, description: e.target.value })} />
-                                </div>
-                            </div>
-                        </div>
-                        <div className="p-6 bg-muted border-t border-border">
-                            <Button onClick={handleCreateProject} disabled={creating} className="w-full h-12 bg-primary font-black uppercase text-xs tracking-widest shadow-lg shadow-primary/20">
-                                {creating ? "Initializing..." : "Commit Site Record"}
-                            </Button>
-                        </div>
-                    </DialogContent>
-                </Dialog>
+              <Select value={activeMode} onValueChange={(v) => setActiveMode(v as ProjectMode)}>
+                <SelectTrigger className="w-full md:w-56 h-10 border-primary bg-card shadow-lg shadow-primary/5 rounded-md text-xs font-black uppercase tracking-widest">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="rounded-md border-border">
+                  <SelectItem value="registry" className="text-xs font-bold uppercase tracking-wide">
+                    <div className="flex items-center gap-2">
+                      <LayoutGrid size={14} className="text-primary" /> Master Registry
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="live" className="text-xs font-bold uppercase tracking-wide">
+                    <div className="flex items-center gap-2">
+                      <Activity size={14} className="text-primary" /> Live Deployments
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="operations" className="text-xs font-bold uppercase tracking-wide">
+                    <div className="flex items-center gap-2">
+                      <Target size={14} className="text-primary" /> Ops Planning
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="archived" className="text-xs font-bold uppercase tracking-wide">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 size={14} className="text-primary" /> Archived Sites
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+                <DialogTrigger asChild>
+                  <Button onClick={handleOpenCreate} className="h-10 px-6 gap-2 bg-primary hover:bg-primary/90 font-bold uppercase text-[10px] tracking-widest shadow-lg shadow-primary/20">
+                    <Plus className="h-4 w-4" /> Launch Project
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-xl p-0 overflow-hidden border-none shadow-2xl rounded-md">
+                  <div className="p-6 bg-foreground text-card-foreground">
+                    <div className="h-10 w-10 rounded-lg bg-white/10 flex items-center justify-center border border-white/10 mb-6">
+                      <Plus className="h-5 w-5 text-primary" />
+                    </div>
+                    <h3 className="text-2xl font-bold tracking-tight uppercase">Initialize Deployment</h3>
+                    <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest mt-1">Configure Site Metadata & Client Linkage</p>
+                  </div>
+                  <div className="p-6 space-y-6">
+                    <div className="space-y-4">
+                      <div className="space-y-1.5">
+                        <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Target Client Account</Label>
+                        <Select value={newProject.client_id} onValueChange={(val) => setNewProject({ ...newProject, client_id: val })}>
+                          <SelectTrigger className="h-10 border-border font-bold text-xs uppercase"><SelectValue placeholder="Select Client Profile..." /></SelectTrigger>
+                          <SelectContent>
+                            {clients.map(c => <SelectItem key={c.id} value={c.id} className="text-xs font-bold uppercase">{c.full_name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Project Title / Site Name</Label>
+                        <Input placeholder="e.g. Structure Bridge A-10" className="h-10 border-border font-bold text-xs uppercase" value={newProject.title} onChange={e => setNewProject({ ...newProject, title: e.target.value })} />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Deployment Specifications</Label>
+                        <Textarea placeholder="Scope of works..." className="min-h-[100px] border-border text-xs resize-none" value={newProject.description} onChange={e => setNewProject({ ...newProject, description: e.target.value })} />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="p-6 bg-muted border-t border-border">
+                    <Button onClick={handleCreateProject} disabled={creating} className="w-full h-12 bg-primary font-black uppercase text-xs tracking-widest shadow-lg shadow-primary/20">
+                      {creating ? "Initializing..." : "Commit Site Record"}
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
 
@@ -232,47 +232,47 @@ export default function AdminProjectsPage() {
           {/* Main Content Area */}
           <div className="space-y-6">
             <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                    <h2 className="text-sm font-black uppercase tracking-widest text-foreground">
-                        {activeMode === 'registry' ? 'Master Site Registry' : 
-                         activeMode === 'live' ? 'Live Deployment Monitor' : 
-                         activeMode === 'operations' ? 'Project Operations Hub' : 'Archived Project Data'}
-                    </h2>
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-tighter">
-                        {filteredProjects.length} Records synchronized in this view
-                    </p>
-                </div>
-                <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                    <Input
-                        placeholder="SEARCH SITE RECORDS..."
-                        className="pl-9 h-9 border-border text-[10px] font-bold uppercase w-64 rounded-md"
-                        value={searchQuery}
-                        onChange={e => setSearchQuery(e.target.value)}
-                    />
-                </div>
+              <div className="space-y-0.5">
+                <h2 className="text-sm font-black uppercase tracking-widest text-foreground">
+                  {activeMode === 'registry' ? 'Master Site Registry' :
+                    activeMode === 'live' ? 'Live Deployment Monitor' :
+                      activeMode === 'operations' ? 'Project Operations Hub' : 'Archived Project Data'}
+                </h2>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-tighter">
+                  {filteredProjects.length} Records synchronized in this view
+                </p>
+              </div>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  placeholder="SEARCH SITE RECORDS..."
+                  className="pl-9 h-9 border-border text-[10px] font-bold uppercase w-64 rounded-md"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                />
+              </div>
             </div>
 
             {activeMode === 'operations' ? (
-                <div className="animate-in fade-in duration-500">
-                    <ProjectsContent />
-                </div>
+              <div className="animate-in fade-in duration-500">
+                <ProjectsContent />
+              </div>
             ) : (
-                <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 animate-in fade-in duration-500">
-                    {filteredProjects.map(p => (
-                        <ProjectVisualCard 
-                            key={p.id} 
-                            project={p} 
-                            onClick={() => router.push(`/admin/projects/${p.id}`)} 
-                        />
-                    ))}
-                    {filteredProjects.length === 0 && (
-                        <div className="col-span-full py-20 text-center border-2 border-dashed border-border rounded-md bg-muted">
-                            <Box className="h-10 w-10 text-zinc-200 mx-auto mb-2" />
-                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">No Projects found in this mode</p>
-                        </div>
-                    )}
-                </div>
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 animate-in fade-in duration-500">
+                {filteredProjects.map(p => (
+                  <ProjectVisualCard
+                    key={p.id}
+                    project={p}
+                    onClick={() => router.push(`/admin/projects/${p.id}`)}
+                  />
+                ))}
+                {filteredProjects.length === 0 && (
+                  <div className="col-span-full py-20 text-center border-2 border-dashed border-border rounded-md bg-muted">
+                    <Box className="h-10 w-10 text-zinc-200 mx-auto mb-2" />
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">No Projects found in this mode</p>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -293,13 +293,13 @@ function ProjectVisualCard({ project, onClick }: { project: Project; onClick: ()
           </div>
           <Badge variant="outline" className={cn(
             "text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border-none",
-            project.status === 'completed' ? "bg-emerald-50 text-emerald-700" : 
-            project.status === 'pending' ? "bg-amber-50 text-amber-700" : "bg-primary/5 text-primary"
+            project.status === 'completed' ? "bg-emerald-50 text-emerald-700" :
+              project.status === 'pending' ? "bg-amber-50 text-amber-700" : "bg-primary/5 text-primary"
           )}>
             {project.status.replace('_', ' ')}
           </Badge>
         </div>
-        
+
         <div className="space-y-1 mb-6">
           <h3 className="text-sm font-black text-foreground uppercase tracking-tight line-clamp-1">{project.title}</h3>
           <div className="flex items-center gap-1.5 text-muted-foreground">
@@ -325,7 +325,7 @@ function ProjectVisualCard({ project, onClick }: { project: Project; onClick: ()
           <div className="flex items-center gap-2">
             <Calendar size={12} className="text-muted-foreground/60" />
             <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">
-                {new Date(project.created_at).toLocaleDateString('en-AE', { day: '2-digit', month: 'short' })}
+              {new Date(project.created_at).toLocaleDateString('en-AE', { day: '2-digit', month: 'short' })}
             </span>
           </div>
           <div className="h-7 w-7 rounded border border-border flex items-center justify-center text-muted-foreground/60 group-hover:bg-zinc-50 group-hover:text-primary transition-all">
@@ -338,24 +338,24 @@ function ProjectVisualCard({ project, onClick }: { project: Project; onClick: ()
 }
 
 function StatsTile({ title, value, icon: Icon, label, highlight }: { title: string; value: any; icon: any; label: string; highlight?: boolean }) {
-    return (
-      <Card className={cn(
-        "border border-border shadow-sm rounded-md bg-card p-5 relative overflow-hidden",
-        highlight && "border-primary/20 bg-primary/5"
-      )}>
-        <div className="flex justify-between items-start mb-4">
-          <div className={cn(
-            "h-8 w-8 rounded-md flex items-center justify-center border transition-colors",
-            highlight ? "bg-primary text-card-foreground border-primary" : "bg-muted border-border text-muted-foreground"
-          )}>
-            <Icon size={16} />
-          </div>
+  return (
+    <Card className={cn(
+      "border border-border shadow-sm rounded-md bg-card p-5 relative overflow-hidden",
+      highlight && "border-primary/20 bg-primary/5"
+    )}>
+      <div className="flex justify-between items-start mb-4">
+        <div className={cn(
+          "h-8 w-8 rounded-md flex items-center justify-center border transition-colors",
+          highlight ? "bg-primary text-card-foreground border-primary" : "bg-muted border-border text-muted-foreground"
+        )}>
+          <Icon size={16} />
         </div>
-        <div className="space-y-0.5">
-          <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{title}</p>
-          <h3 className="text-xl font-black text-foreground tracking-tight">{value}</h3>
-          <p className={cn("text-[8px] font-black uppercase tracking-tighter", highlight ? "text-primary" : "text-muted-foreground")}>{label}</p>
-        </div>
-      </Card>
-    );
+      </div>
+      <div className="space-y-0.5">
+        <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{title}</p>
+        <h3 className="text-xl font-black text-foreground tracking-tight">{value}</h3>
+        <p className={cn("text-[8px] font-black uppercase tracking-tighter", highlight ? "text-primary" : "text-muted-foreground")}>{label}</p>
+      </div>
+    </Card>
+  );
 }

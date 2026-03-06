@@ -68,15 +68,18 @@ export function DocumentBranding({ value, onChange }: DocumentBrandingProps) {
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                        <ImageIcon className="h-4 w-4" /> Visual Assets
+            <Card className="border-border shadow-md rounded-xl overflow-hidden bg-white">
+                <CardHeader className="bg-muted/10 border-b py-5">
+                    <CardTitle className="text-xs font-black uppercase tracking-[0.2em] flex items-center gap-3">
+                        <div className="h-7 w-7 rounded bg-red-600 flex items-center justify-center text-white">
+                            <ImageIcon className="h-3.5 w-3.5" />
+                        </div>
+                        Visual Assets
                     </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                        <Label>Company Logo</Label>
+                <CardContent className="p-6 space-y-6">
+                    <div className="space-y-4">
+                        <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500">Corporate Seal / Logo</Label>
                         <div className="flex items-center gap-4">
                             <div
                                 className="h-20 w-20 rounded border-2 border-dashed flex flex-col items-center justify-center bg-muted/50 hover:bg-muted cursor-pointer transition-colors overflow-hidden relative group"
@@ -123,62 +126,75 @@ export function DocumentBranding({ value, onChange }: DocumentBrandingProps) {
                 </CardContent>
             </Card>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                        <Palette className="h-4 w-4" /> Brand Colors
+            <Card className="border-border shadow-md rounded-xl overflow-hidden bg-white">
+                <CardHeader className="bg-muted/10 border-b py-5">
+                    <CardTitle className="text-xs font-black uppercase tracking-[0.2em] flex items-center gap-3">
+                        <div className="h-7 w-7 rounded bg-emerald-600 flex items-center justify-center text-white">
+                            <Palette className="h-3.5 w-3.5" />
+                        </div>
+                        Color Intelligence Matrix
                     </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label>Primary Color</Label>
-                            <div className="flex items-center gap-2">
-                                <input
-                                    type="color"
-                                    value={primaryColor}
-                                    onChange={(e) => handleColorChange('primary', e.target.value)}
-                                    className="h-9 w-9 rounded border cursor-pointer p-0.5"
-                                />
+                <CardContent className="p-8 space-y-10">
+                    <div className="grid grid-cols-2 gap-8">
+                        <div className="space-y-3">
+                            <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500 pl-1">Primary Signature (Global)</Label>
+                            <div className="flex items-center gap-3">
+                                <div className="relative">
+                                    <input
+                                        type="color"
+                                        value={primaryColor}
+                                        onChange={(e) => handleColorChange('primary', e.target.value)}
+                                        className="h-12 w-12 rounded-xl border-none cursor-pointer p-0 bg-transparent absolute inset-0 opacity-0 z-10"
+                                    />
+                                    <div className="h-12 w-12 rounded-xl border border-slate-100 shadow-sm p-1.5 bg-white transition-all transform hover:scale-105 active:scale-95 cursor-pointer">
+                                        <div className="h-full w-full rounded-lg shadow-inner" style={{ backgroundColor: primaryColor }} />
+                                    </div>
+                                </div>
                                 <Input
                                     value={primaryColor}
                                     onChange={(e) => handleColorChange('primary', e.target.value)}
-                                    className="h-9 text-xs font-mono"
+                                    className="h-12 flex-1 font-mono text-xs font-black text-center rounded-xl bg-slate-50/50 border-slate-100 focus:bg-white transition-all shadow-inner uppercase tracking-widest"
                                     maxLength={7}
                                 />
                             </div>
                         </div>
-                        <div className="space-y-2">
-                            <Label>Accent Color</Label>
-                            <div className="flex items-center gap-2">
-                                <input
-                                    type="color"
-                                    value={accentColor}
-                                    onChange={(e) => handleColorChange('accent', e.target.value)}
-                                    className="h-9 w-9 rounded border cursor-pointer p-0.5"
-                                />
+                        <div className="space-y-3">
+                            <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500 pl-1">Accent Interaction Node</Label>
+                            <div className="flex items-center gap-3">
+                                <div className="relative">
+                                    <input
+                                        type="color"
+                                        value={accentColor}
+                                        onChange={(e) => handleColorChange('accent', e.target.value)}
+                                        className="h-12 w-12 rounded-xl border-none cursor-pointer p-0 bg-transparent absolute inset-0 opacity-0 z-10"
+                                    />
+                                    <div className="h-12 w-12 rounded-xl border border-slate-100 shadow-sm p-1.5 bg-white transition-all transform hover:scale-105 active:scale-95 cursor-pointer">
+                                        <div className="h-full w-full rounded-lg shadow-inner" style={{ backgroundColor: accentColor }} />
+                                    </div>
+                                </div>
                                 <Input
                                     value={accentColor}
                                     onChange={(e) => handleColorChange('accent', e.target.value)}
-                                    className="h-9 text-xs font-mono"
+                                    className="h-12 flex-1 font-mono text-xs font-black text-center rounded-xl bg-slate-50/50 border-slate-100 focus:bg-white transition-all shadow-inner uppercase tracking-widest"
                                     maxLength={7}
                                 />
                             </div>
                         </div>
                     </div>
 
-                    {/* Live preview */}
-                    <div className="pt-4 border-t">
-                        <Label className="text-xs text-muted-foreground mb-2 block">Preview</Label>
-                        <div className="rounded-lg border p-4 space-y-2">
-                            <div className="h-3 rounded-full w-full" style={{ backgroundColor: primaryColor }} />
-                            <div className="flex gap-2">
-                                <div className="h-8 rounded flex-1" style={{ backgroundColor: primaryColor, opacity: 0.15 }} />
-                                <div className="h-8 rounded w-20" style={{ backgroundColor: accentColor }} />
+                    <div className="pt-8 border-t border-slate-50">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-6 pl-1">Dynamic Contrast Preview</p>
+                        <div className="rounded-2xl border border-slate-100 p-8 space-y-4 bg-slate-50/20 shadow-inner">
+                            <div className="h-4 rounded-full w-full shadow-sm" style={{ backgroundColor: primaryColor }} />
+                            <div className="flex gap-4">
+                                <div className="h-12 rounded-xl flex-1 border border-slate-100 shadow-sm" style={{ backgroundColor: primaryColor, opacity: 0.08 }} />
+                                <div className="h-12 rounded-xl w-32 shadow-lg" style={{ backgroundColor: accentColor }} />
                             </div>
-                            <div className="flex gap-2">
-                                <div className="h-2 rounded-full w-1/3 bg-muted" />
-                                <div className="h-2 rounded-full w-1/4" style={{ backgroundColor: accentColor, opacity: 0.4 }} />
+                            <div className="flex gap-4 pt-2">
+                                <div className="h-2 rounded-full w-1/3 bg-slate-200" />
+                                <div className="h-2 rounded-full w-1/4" style={{ backgroundColor: accentColor, opacity: 0.5 }} />
+                                <div className="h-2 rounded-full flex-1 bg-slate-100" />
                             </div>
                         </div>
                     </div>

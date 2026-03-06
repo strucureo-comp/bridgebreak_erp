@@ -37,22 +37,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  // Fallback mock admin for development when backend is unavailable
-  const MOCK_ADMIN: User = {
-    id: 'dev-admin-001',
-    email: 'admin@bridgebreak.ae',
-    full_name: 'Admin User',
-    role: 'admin',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  };
+
 
   const fetchUser = useCallback(async () => {
     try {
       const storedToken = localStorage.getItem('bb_token');
       if (!storedToken) {
-        // No token — use mock admin for development
-        setUser(MOCK_ADMIN);
+        setUser(null);
         setLoading(false);
         return;
       }
@@ -66,14 +57,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(mapBackendUser(data.user));
         setToken(storedToken);
       } else {
-        // Token invalid — fall back to mock admin
         localStorage.removeItem('bb_token');
-        setUser(MOCK_ADMIN);
+        setUser(null);
         setToken(null);
       }
     } catch (error) {
-      console.warn('[Auth] Backend unavailable, using mock admin:', error);
-      setUser(MOCK_ADMIN);
+      console.warn('[Auth] Backend unavailable:', error);
+      setUser(null);
       setToken(null);
     } finally {
       setLoading(false);
@@ -101,6 +91,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem('bb_token', data.token);
       setToken(data.token);
       setUser(mapBackendUser(data.user));
+      
+      // Wait a bit for state to update before returning
+      await new Promise(resolve => setTimeout(resolve, 100));
       return { error: null };
     } catch (error: any) {
       return { error: new Error(error.message || 'Network error') };
@@ -124,6 +117,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem('bb_token', data.token);
       setToken(data.token);
       setUser(mapBackendUser(data.user));
+      
+      // Wait a bit for state to update before returning
+      await new Promise(resolve => setTimeout(resolve, 100));
       return { error: null };
     } catch (error: any) {
       return { error: new Error(error.message || 'Network error') };

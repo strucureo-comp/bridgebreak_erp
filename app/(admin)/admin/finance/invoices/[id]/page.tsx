@@ -5,17 +5,13 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/context';
 import { getInvoice, updateInvoice, getUsers, getProjects } from '@/lib/api';
 import { DashboardShell } from '@/components/shared/layout/dashboard-shell';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import Link from 'next/link';
 import type { Invoice, User, Project } from '@/lib/db/types';
 import { generateInvoicePDF } from '@/lib/pdf-generator';
-import { FileDown, Loader2, ArrowLeft } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+import { InvoiceHeader } from '@/app/(admin)/admin/finance/invoices/_components/invoice-header';
+import { InvoiceForm } from '@/app/(admin)/admin/finance/invoices/_components/invoice-form';
 
 export default function EditInvoicePage({ params }: { params: { id: string } }) {
     const router = useRouter();
@@ -26,14 +22,51 @@ export default function EditInvoicePage({ params }: { params: { id: string } }) 
     const [users, setUsers] = useState<User[]>([]);
     const [projects, setProjects] = useState<Project[]>([]);
     const [formData, setFormData] = useState({
+        // Basic Info
         client_id: '',
         project_id: '',
         invoice_number: '',
-        amount: '',
+        issue_date: '',
         due_date: '',
         status: 'pending' as 'pending' | 'paid' | 'overdue' | 'cancelled',
+        
+        // Line Items
+        line_items: [
+            { description: '', quantity: 1, unit_price: 0, tax_rate: 5, total: 0 }
+        ],
+        
+        // Financial
+        currency: 'AED',
+        subtotal: 0,
+        discount_type: 'percentage' as 'percentage' | 'fixed',
+        discount_value: 0,
+        tax_rate: 5,
+        additional_charges: 0,
+        additional_charges_description: '',
+        
+        // Payment
+        payment_terms: 'net_30',
+        payment_method: 'bank_transfer',
+        
+        // Client Details (Manual Entry Option)
+        use_manual_client: false,
+        manual_client_name: '',
+        manual_client_email: '',
+        manual_client_address: '',
+        manual_client_tax_id: '',
+        
+        // Company Details (Manual Override)
+        use_manual_company: false,
+        manual_company_name: '',
+        manual_company_address: '',
+        manual_company_tax_id: '',
+        manual_company_phone: '',
+        manual_company_email: '',
+        
+        // Notes
         description: '',
         notes: '',
+        terms_conditions: '',
     });
 
     useEffect(() => {
@@ -56,11 +89,33 @@ export default function EditInvoicePage({ params }: { params: { id: string } }) 
                     client_id: invoiceData.client_id || '',
                     project_id: invoiceData.project_id || '',
                     invoice_number: invoiceData.invoice_number,
-                    amount: invoiceData.amount.toString(),
+                    issue_date: invoiceData.issue_date || new Date().toISOString().split('T')[0],
                     due_date: invoiceData.due_date,
                     status: invoiceData.status,
+                    line_items: invoiceData.line_items || [{ description: invoiceData.description || '', quantity: 1, unit_price: invoiceData.amount || 0, tax_rate: 5, total: invoiceData.amount || 0 }],
+                    currency: invoiceData.currency || 'AED',
+                    subtotal: 0,
+                    discount_type: invoiceData.discount_type || 'percentage',
+                    discount_value: invoiceData.discount_value || 0,
+                    tax_rate: 5,
+                    additional_charges: invoiceData.additional_charges || 0,
+                    additional_charges_description: invoiceData.additional_charges_description || '',
+                    payment_terms: invoiceData.payment_terms || 'net_30',
+                    payment_method: invoiceData.payment_method || 'bank_transfer',
+                    use_manual_client: invoiceData.use_manual_client || false,
+                    manual_client_name: invoiceData.manual_client_name || '',
+                    manual_client_email: invoiceData.manual_client_email || '',
+                    manual_client_address: invoiceData.manual_client_address || '',
+                    manual_client_tax_id: invoiceData.manual_client_tax_id || '',
+                    use_manual_company: invoiceData.use_manual_company || false,
+                    manual_company_name: invoiceData.manual_company_name || '',
+                    manual_company_address: invoiceData.manual_company_address || '',
+                    manual_company_tax_id: invoiceData.manual_company_tax_id || '',
+                    manual_company_phone: invoiceData.manual_company_phone || '',
+                    manual_company_email: invoiceData.manual_company_email || '',
                     description: invoiceData.description || '',
                     notes: invoiceData.notes || '',
+                    terms_conditions: invoiceData.terms_conditions || '',
                 });
             } else {
                 toast.error('Invoice not found');
@@ -81,15 +136,25 @@ export default function EditInvoicePage({ params }: { params: { id: string } }) 
         setSaving(true);
 
         try {
+            const totals = formData.line_items.reduce((acc, item) => {
+                const subtotal = item.quantity * item.unit_price;
+                const tax = subtotal * (item.tax_rate / 100);
+                return {
+                    subtotal: acc.subtotal + subtotal,
+                    tax: acc.tax + tax,
+                    total: acc.total + subtotal + tax
+                };
+            }, { subtotal: 0, tax: 0, total: 0 });
+
+            const discount = formData.discount_type === 'percentage' 
+                ? totals.subtotal * (formData.discount_value / 100)
+                : formData.discount_value;
+            
+            const finalTotal = totals.total - discount + (formData.additional_charges || 0);
+
             const success = await updateInvoice(params.id, {
-                client_id: formData.client_id,
-                project_id: formData.project_id,
-                invoice_number: formData.invoice_number,
-                amount: parseFloat(formData.amount),
-                due_date: formData.due_date,
-                status: formData.status,
-                description: formData.description || undefined,
-                notes: formData.notes || undefined,
+                ...formData,
+                amount: finalTotal,
             });
 
             if (success) {
@@ -115,35 +180,26 @@ export default function EditInvoicePage({ params }: { params: { id: string } }) 
         );
     }
 
+    const handleDownloadPDF = () => {
+        const project = projects.find(p => p.id === formData.project_id);
+        const client = users.find(u => u.id === formData.client_id);
+        if (originalInvoice) {
+            generateInvoicePDF(originalInvoice, client || null, project || null);
+        }
+    };
+
     return (
         <DashboardShell requireAdmin>
             <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <Button variant="ghost" size="icon" asChild>
-                            <Link href="/admin/finance/invoices">
-                                <ArrowLeft className="h-4 w-4" />
-                            </Link>
-                        </Button>
-                        <div>
-                            <h1 className="text-3xl font-bold tracking-tight">Edit Invoice</h1>
-                            <p className="text-muted-foreground">Update invoice details</p>
-                        </div>
-                    </div>
-                    <Button
-                        variant="outline"
-                        onClick={() => {
-                            const project = projects.find(p => p.id === formData.project_id);
-                            const client = users.find(u => u.id === formData.client_id);
-                            if (originalInvoice) {
-                                generateInvoicePDF(originalInvoice, client || null, project || null);
-                            }
-                        }}
-                    >
-                        <FileDown className="mr-2 h-4 w-4" />
-                        Download PDF
-                    </Button>
-                </div>
+                <InvoiceHeader
+                    title="Edit Invoice"
+                    subtitle="Update invoice details"
+                    onSave={() => handleSubmit({} as React.FormEvent)}
+                    onCancel={() => router.push('/admin/finance/invoices')}
+                    onDownloadPDF={handleDownloadPDF}
+                    saving={saving}
+                    variant="traditional"
+                />
 
                 <Card>
                     <CardHeader>
@@ -151,150 +207,25 @@ export default function EditInvoicePage({ params }: { params: { id: string } }) 
                         <CardDescription>Update the information for this invoice</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <form onSubmit={handleSubmit} className="space-y-6">
-                            <div className="grid gap-4 md:grid-cols-2">
-                                <div className="space-y-2">
-                                    <Label htmlFor="client">Client *</Label>
-                                    <Select
-                                        value={formData.client_id}
-                                        onValueChange={(value) => setFormData({ ...formData, client_id: value, project_id: '' })}
-                                        disabled={saving}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select a client" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {users.map((u) => (
-                                                <SelectItem key={u.id} value={u.id}>
-                                                    {u.full_name} ({u.email})
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="project">Project *</Label>
-                                    <Select
-                                        value={formData.project_id}
-                                        onValueChange={(value) => setFormData({ ...formData, project_id: value })}
-                                        disabled={saving || !formData.client_id}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder={formData.client_id ? "Select a project" : "Select a client first"} />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {projects.filter(p => p.client_id === formData.client_id).map((p) => (
-                                                <SelectItem key={p.id} value={p.id}>
-                                                    {p.title}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            </div>
-
-                            <div className="grid gap-4 md:grid-cols-2">
-                                <div className="space-y-2">
-                                    <Label htmlFor="invoice_number">Invoice Number *</Label>
-                                    <Input
-                                        id="invoice_number"
-                                        value={formData.invoice_number}
-                                        onChange={(e) => setFormData({ ...formData, invoice_number: e.target.value })}
-                                        required
-                                        disabled={saving}
-                                    />
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="status">Status *</Label>
-                                    <Select
-                                        value={formData.status}
-                                        onValueChange={(value: any) => setFormData({ ...formData, status: value })}
-                                        disabled={saving}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="pending">Pending</SelectItem>
-                                            <SelectItem value="paid">Paid</SelectItem>
-                                            <SelectItem value="overdue">Overdue</SelectItem>
-                                            <SelectItem value="cancelled">Cancelled</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            </div>
-
-                            <div className="grid gap-4 md:grid-cols-2">
-                                <div className="space-y-2">
-                                    <Label htmlFor="amount">Amount ($) *</Label>
-                                    <Input
-                                        id="amount"
-                                        type="number"
-                                        step="0.01"
-                                        value={formData.amount}
-                                        onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                                        required
-                                        disabled={saving}
-                                    />
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="due_date">Due Date *</Label>
-                                    <Input
-                                        id="due_date"
-                                        type="date"
-                                        value={formData.due_date}
-                                        onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
-                                        required
-                                        disabled={saving}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="description">Invoice Items Description</Label>
-                                <Textarea
-                                    id="description"
-                                    placeholder="List the items or services included in this invoice..."
-                                    value={formData.description}
-                                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                    rows={3}
-                                    disabled={saving}
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="notes">Additional Notes</Label>
-                                <Textarea
-                                    id="notes"
-                                    placeholder="Enter any additional notes, payment terms, or messages..."
-                                    value={formData.notes}
-                                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                                    rows={3}
-                                    disabled={saving}
-                                />
-                            </div>
-
-                            <div className="flex gap-4">
-                                <Button type="submit" disabled={saving}>
-                                    {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    Save Changes
-                                </Button>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={() => router.push('/admin/finance/invoices')}
-                                    disabled={saving}
-                                >
-                                    Cancel
-                                </Button>
-                            </div>
-                        </form>
+                        <InvoiceForm
+                            formData={formData}
+                            users={users}
+                            projects={projects}
+                            onFormDataChange={setFormData}
+                            variant="traditional"
+                            saving={saving}
+                        />
+                        <div className="flex gap-4 mt-6">
+                            <button type="button" onClick={(e: any) => handleSubmit(e)} disabled={saving} className="px-4 py-2 bg-primary text-primary-foreground rounded-md font-medium hover:bg-primary/90 disabled:opacity-50">
+                                {saving ? 'Saving...' : 'Save Changes'}
+                            </button>
+                            <button type="button" onClick={() => router.push('/admin/finance/invoices')} disabled={saving} className="px-4 py-2 border border-input rounded-md font-medium hover:bg-accent disabled:opacity-50">
+                                Cancel
+                            </button>
+                        </div>
                     </CardContent>
                 </Card>
             </div>
-        </DashboardShell >
+        </DashboardShell>
     );
 }

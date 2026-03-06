@@ -63,81 +63,82 @@ export function DashboardNav({ isCollapsed, onNavClick }: { isCollapsed?: boolea
         const label = item.moduleKey ? getModuleLabel(item.moduleKey) : item.title;
         const isActive = item.href ? (pathname === item.href || pathname.startsWith(item.href + '/')) : false;
 
-        if (isCollapsed) {
-            return (
-                <TooltipProvider key={item.title} delayDuration={0}>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Link
-                                href={item.comingSoon ? '#' : (item.href || '#')}
-                                onClick={onNavClick}
-                                className={cn(
-                                    'flex h-11 w-11 items-center justify-center rounded-lg transition-all duration-200 mb-1',
-                                    isActive
-                                        ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20 scale-105'
-                                        : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-                                    item.comingSoon && "opacity-40 cursor-not-allowed grayscale"
-                                )}
-                            >
-                                <Icon className="h-5 w-5" />
-                            </Link>
-                        </TooltipTrigger>
-                        <TooltipContent side="right" className="bg-foreground border-none text-[12px] font-bold text-background px-3 py-1.5 flex items-center gap-2">
-                            {label}
-                            {item.comingSoon && <Badge className="bg-primary/20 text-primary border-none text-[8px] h-4">SOON</Badge>}
-                        </TooltipContent>
-                    </Tooltip>
-                </TooltipProvider>
-            );
-        }
-
         return (
-            <Link
-                key={item.title}
-                href={item.comingSoon ? '#' : (item.href || '#')}
-                onClick={onNavClick}
-                className={cn(
-                    'flex items-center gap-3 px-4 py-2.5 rounded-lg text-[13px] font-medium transition-all duration-200 group mb-0.5',
-                    isActive
-                        ? 'bg-primary/10 text-primary border border-primary/20'
-                        : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground border border-transparent',
-                    item.comingSoon && "opacity-50 cursor-not-allowed grayscale hover:bg-transparent"
-                )}
-            >
-                <div className={cn(
-                    "flex items-center justify-center transition-transform duration-300 group-hover:scale-110",
-                    isActive ? "text-primary" : "text-muted-foreground group-hover:text-primary",
-                    item.comingSoon && "group-hover:scale-100 group-hover:text-muted-foreground"
-                )}>
-                    <Icon className="h-4.5 w-4.5" />
-                </div>
-                <span className="flex-1 truncate">{label}</span>
-                {item.comingSoon ? (
-                    <Badge variant="outline" className="text-[8px] font-black border-border text-muted-foreground uppercase tracking-widest px-1.5 h-4">SOON</Badge>
-                ) : isActive && (
-                    <div className="h-4 w-1 rounded-full bg-primary animate-in fade-in zoom-in duration-300" />
-                )}
-            </Link>
+            <TooltipProvider key={item.title} delayDuration={0}>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Link
+                            href={item.comingSoon ? '#' : (item.href || '#')}
+                            onClick={onNavClick}
+                            className={cn(
+                                'flex items-center rounded-xl transition-all duration-300 ease-in-out group mb-1.5 overflow-hidden',
+                                isCollapsed
+                                    ? 'justify-center w-11 h-11 mx-auto'
+                                    : 'gap-3 px-3 h-11 w-full',
+                                isActive
+                                    ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
+                                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+                                item.comingSoon && "opacity-40 cursor-not-allowed grayscale hover:bg-transparent"
+                            )}
+                        >
+                            <div className={cn(
+                                "flex items-center justify-center transition-transform duration-300 shrink-0",
+                                isCollapsed ? "" : "group-hover:scale-110"
+                            )}>
+                                <Icon className="h-5 w-5" />
+                            </div>
+
+                            <div className={cn(
+                                "flex items-center justify-between transition-all duration-300 ease-in-out whitespace-nowrap",
+                                isCollapsed ? "max-w-0 opacity-0 px-0 invisible" : "flex-1 opacity-100 max-w-full visible"
+                            )}>
+                                <span className="text-[13px] font-medium truncate">
+                                    {label}
+                                </span>
+                                {item.comingSoon ? (
+                                    <Badge variant="outline" className={cn(
+                                        "text-[8px] font-black uppercase tracking-widest px-1.5 h-4 ml-2 border-transparent",
+                                        isActive ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground"
+                                    )}>SOON</Badge>
+                                ) : isActive && (
+                                    <div className="h-4 w-1 rounded-full bg-primary-foreground ml-2" />
+                                )}
+                            </div>
+                        </Link>
+                    </TooltipTrigger>
+                    {isCollapsed && (
+                        <TooltipContent side="right" sideOffset={12} className="bg-black text-white border-none rounded-md text-[12px] font-bold px-3 py-2 flex items-center gap-2 shadow-xl">
+                            {label}
+                            {item.comingSoon && <Badge className="bg-red-500/10 text-red-500 border-none text-[8px] h-4 ml-1 px-1.5 font-black uppercase tracking-widest">SOON</Badge>}
+                        </TooltipContent>
+                    )}
+                </Tooltip>
+            </TooltipProvider>
         );
     };
 
     let lastSection = '';
 
     return (
-        <nav className="flex flex-col px-3">
+        <nav className="flex flex-col px-3 gap-0">
             {adminNavItems.filter((item) => {
                 if (!item.moduleKey) return true;
                 return checkAccess(item.moduleKey as any).accessible;
             }).map((item) => {
-                const showHeader = !isCollapsed && item.section && item.section !== lastSection;
+                const isHeader = item.section && item.section !== lastSection;
                 if (item.section) lastSection = item.section;
 
                 return (
                     <div key={item.title}>
-                        {showHeader && (
-                            <h4 className="mt-6 mb-2 px-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
-                                {item.section}
-                            </h4>
+                        {isHeader && (
+                            <div className={cn(
+                                "transition-all duration-300 ease-in-out overflow-hidden flex items-end whitespace-nowrap",
+                                isCollapsed ? "h-0 opacity-0" : "h-10 opacity-100"
+                            )}>
+                                <h4 className="mb-2 px-3 text-[10px] font-black text-muted-foreground uppercase tracking-widest">
+                                    {item.section}
+                                </h4>
+                            </div>
                         )}
                         {renderItem(item)}
                     </div>

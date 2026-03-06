@@ -119,8 +119,13 @@ export default function HRPage() {
           <div className="flex items-center gap-4">
             <Users className="h-8 w-8 text-primary" />
             <div>
-              <h1 className="text-3xl font-semibold text-foreground">{getModuleLabel('hr')}</h1>
-              <p className="text-muted-foreground mt-1">Manage personnel, payroll, attendance, and internal operations.</p>
+              <h1 className="text-xl font-bold tracking-tight text-foreground uppercase">{getModuleLabel('hr')}</h1>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Personnel Management Hub</span>
+                <Badge variant="secondary" className="hidden sm:inline-flex font-bold uppercase text-[9px] tracking-widest bg-slate-100 text-slate-600">
+                  Worker Context
+                </Badge>
+              </div>
             </div>
           </div>
         </div>

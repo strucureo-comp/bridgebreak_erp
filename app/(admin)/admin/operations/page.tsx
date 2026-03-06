@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import {
-    Cog, FolderKanban, ClipboardList, Clock, 
+    Cog, FolderKanban, ClipboardList, Clock,
     Package, Truck, Search, Plus,
     ChevronRight, AlertCircle, CheckCircle2,
     Timer, FileText, ShoppingCart, Warehouse, BarChart3,
@@ -71,10 +71,13 @@ export default function OperationsPage() {
                                 <Cog className="h-5 w-5" />
                             </div>
                             <div>
-                                <h1 className="text-2xl font-bold tracking-tight text-foreground">{getModuleLabel('operations')}</h1>
-                                <p className="text-sm text-muted-foreground">
-                                    Project lifecycle, procurement and manufacturing
-                                </p>
+                                <h1 className="text-xl font-bold tracking-tight text-foreground uppercase leading-none">{getModuleLabel('operations')}</h1>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                    <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Resource & Process Control</span>
+                                    <Badge variant="secondary" className="hidden sm:inline-flex font-bold uppercase text-[9px] tracking-widest bg-slate-100 text-slate-600">
+                                        Lifecycle HUB
+                                    </Badge>
+                                </div>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -134,8 +137,8 @@ export default function OperationsPage() {
                                                         <Badge variant="outline" className={cn(
                                                             "text-[8px] font-black uppercase tracking-widest",
                                                             p.status === 'completed' ? "border-emerald-100 text-emerald-700 bg-emerald-50" :
-                                                            p.status === 'in_progress' ? "border-blue-100 text-blue-700 bg-blue-50" :
-                                                            "text-muted-foreground"
+                                                                p.status === 'in_progress' ? "border-blue-100 text-blue-700 bg-blue-50" :
+                                                                    "text-muted-foreground"
                                                         )}>{p.status}</Badge>
                                                     </TableCell>
                                                     <TableCell className="px-6 py-4 font-black text-xs text-foreground">{fmt(Number(p.estimated_cost || 0))}</TableCell>

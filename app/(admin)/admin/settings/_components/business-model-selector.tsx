@@ -34,56 +34,58 @@ export function BusinessModelSelector({ value, onChange }: BusinessModelSelector
 
     return (
         <div className="space-y-6">
-            <div className="space-y-3">
-                <Label className="text-sm font-medium">Industry Sector</Label>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="space-y-4">
+                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 pl-1">Sector Vertical</Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {types.map((t) => (
                         <div
                             key={t.id}
                             onClick={() => onChange({ ...value, type: t.id as BusinessType })}
                             className={cn(
-                                "cursor-pointer p-4 rounded-lg border transition-all flex items-start gap-3",
+                                "cursor-pointer p-5 rounded-2xl border transition-all flex items-start gap-4 hover:shadow-md active:scale-[0.98]",
                                 value.type === t.id
-                                    ? "border-primary bg-primary/5 shadow-sm"
-                                    : "border-border hover:bg-muted/50"
+                                    ? "border-red-600 bg-red-50/10 shadow-sm"
+                                    : "border-slate-100 bg-white"
                             )}
                         >
-                            <t.icon className={cn(
-                                "h-5 w-5 mt-0.5",
-                                value.type === t.id ? "text-primary" : "text-muted-foreground"
-                            )} />
+                            <div className={cn(
+                                "h-10 w-10 rounded-xl flex items-center justify-center transition-all shadow-sm",
+                                value.type === t.id ? "bg-red-600 text-white" : "bg-slate-50 text-slate-400"
+                            )}>
+                                <t.icon className="h-4 w-4" />
+                            </div>
                             <div className="space-y-1">
-                                <p className="text-sm font-semibold">{t.label}</p>
-                                <p className="text-xs text-muted-foreground">{t.desc}</p>
+                                <p className="text-[11px] font-black uppercase tracking-tight text-slate-800">{t.label}</p>
+                                <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest leading-none opacity-60">{t.desc}</p>
                             </div>
                         </div>
                     ))}
                 </div>
             </div>
 
-            <div className="space-y-3">
-                <Label className="text-sm font-medium">Company Size</Label>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="space-y-4">
+                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Corporate Scale</Label>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {sizes.map((s) => (
                         <div
                             key={s.id}
                             onClick={() => onChange({ ...value, size: s.id as CompanySize })}
                             className={cn(
-                                "cursor-pointer p-4 rounded-lg border transition-all flex items-center gap-4",
+                                "cursor-pointer p-5 rounded-xl border transition-all flex items-center gap-5 hover:shadow-md",
                                 value.size === s.id
-                                    ? "border-primary bg-primary/5 shadow-sm"
-                                    : "border-border hover:bg-muted/50"
+                                    ? "border-emerald-600 bg-emerald-50/10 shadow-sm"
+                                    : "border-slate-100 bg-white"
                             )}
                         >
                             <div className={cn(
-                                "h-10 w-10 rounded-md flex items-center justify-center",
-                                value.size === s.id ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
+                                "h-11 w-11 rounded-lg flex items-center justify-center transition-colors shadow-sm",
+                                value.size === s.id ? "bg-emerald-600 text-white" : "bg-slate-50 text-slate-400"
                             )}>
                                 <s.icon className="h-5 w-5" />
                             </div>
                             <div>
-                                <p className="text-sm font-semibold">{s.label}</p>
-                                <p className="text-xs text-muted-foreground">{s.desc}</p>
+                                <p className="text-[11px] font-black uppercase tracking-tight text-slate-800">{s.label}</p>
+                                <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest opacity-60">{s.desc}</p>
                             </div>
                         </div>
                     ))}

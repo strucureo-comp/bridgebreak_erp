@@ -1,6 +1,78 @@
 const express = require('express');
 const router = express.Router();
-const { ApprovalWorkflowV2, SodRule } = require('../models/ApprovalEngine');
+const { ApprovalWorkflowV2, SodRule, ApprovalRequest } = require('../models/ApprovalEngine');
+const { auth } = require('../middleware/auth');
+
+router.use(auth);
+
+// ======================================================
+// APPROVAL REQUESTS (INBOX)
+// ======================================================
+
+// GET pending requests for inbox
+router.get('/requests/pending', async (req, res) => {
+    try {
+        const items = await ApprovalRequest.find({ status: 'pending' }).sort({ createdAt: -1 }).lean();
+
+        // Add a 'date' field representing time ago since we don't have real dates
+        const formatted = items.map(item => ({
+            ...item,
+            date: 'Just now' // simplistic format for UI
+        }));
+
+        res.json(formatted);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch pending requests' });
+    }
+});
+
+// GET single request
+router.get('/requests/:reqId', async (req, res) => {
+    try {
+        const item = await ApprovalRequest.findOne({ reqId: req.params.reqId }).lean();
+        if (!item) return res.status(404).json({ error: 'Request not found' });
+
+        item.date = 'Just now';
+        res.json(item);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch request' });
+    }
+});
+
+// POST action (approve/reject)
+router.post('/requests/:reqId/action', async (req, res) => {
+    try {
+        const { action, notes } = req.body;
+        if (!['approve', 'reject'].includes(action)) {
+            return res.status(400).json({ error: 'Action must be approve or reject' });
+        }
+
+        const statusStr = action === 'approve' ? 'approved' : 'rejected';
+        const actionStr = action === 'approve' ? 'Authorized & Posted' : 'Rejected';
+
+        const item = await ApprovalRequest.findOneAndUpdate(
+            { reqId: req.params.reqId },
+            {
+                status: statusStr,
+                $push: {
+                    history: {
+                        action: actionStr,
+                        user: req.user ? req.user.full_name : 'Exec Auth',
+                        time: new Date().toLocaleTimeString(),
+                        notes: notes || ''
+                    }
+                }
+            },
+            { new: true }
+        );
+
+        if (!item) return res.status(404).json({ error: 'Request not found' });
+        res.json(item);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to process action' });
+    }
+});
+
 
 // ======================================================
 // APPROVAL WORKFLOWS (ENTERPRISE V2)

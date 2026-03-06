@@ -45,10 +45,10 @@ export function FinancePageHeader({
                 </div>
                 <div>
                     <div className="flex items-center gap-2">
-                        <h1 className="text-xl font-bold tracking-tight">{title}</h1>
+                        <h1 className="text-xl font-bold tracking-tight uppercase leading-none">{title}</h1>
                         {badges}
                     </div>
-                    <p className="text-[11px] text-muted-foreground">{subtitle}</p>
+                    <p className="text-[10px] font-black text-red-600 uppercase tracking-[0.2em] mt-1">{subtitle}</p>
                 </div>
             </div>
             {actions && <div className="flex items-center gap-2">{actions}</div>}
@@ -60,9 +60,12 @@ export function FinancePageHeader({
  * Standard table header row for all Finance list tables.
  * Children = `<span>` column labels.
  */
-export function FinanceTableHeader({ children }: { children: React.ReactNode }) {
+export function FinanceTableHeader({ children, className }: { children: React.ReactNode; className?: string }) {
     return (
-        <div className="grid px-6 py-2.5 bg-muted/50 text-[10px] font-bold text-muted-foreground uppercase tracking-wider border-t">
+        <div className={cn(
+            "grid grid-cols-12 px-6 py-2.5 bg-muted/50 text-[10px] font-bold text-muted-foreground uppercase tracking-wider border-t",
+            className
+        )}>
             {children}
         </div>
     );

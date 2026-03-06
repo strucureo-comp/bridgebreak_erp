@@ -15,6 +15,7 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
 import { DashboardNav } from './dashboard-nav';
+import { ApprovalsInbox } from './approvals-inbox';
 import {
   Menu,
   LogOut,
@@ -31,9 +32,22 @@ import { cn } from '@/lib/utils';
 
 export function Header() {
   const { user, signOut } = useAuth();
-  const { tenantStatus, brandingConfig, companyProfile } = useTenant();
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+
+  // Safely get tenant data with fallbacks
+  let tenantStatus = null;
+  let brandingConfig = null;
+  let companyProfile = null;
+
+  try {
+    const tenant = useTenant();
+    tenantStatus = tenant.tenantStatus;
+    brandingConfig = tenant.brandingConfig;
+    companyProfile = tenant.companyProfile;
+  } catch (error) {
+    console.warn('Tenant context not available in Header');
+  }
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10);
@@ -89,9 +103,7 @@ export function Header() {
       <div className="flex items-center gap-4">
         {/* Hub Tools */}
         <div className="flex items-center gap-1.5 mr-2">
-          <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg">
-            <Sparkles size={18} />
-          </Button>
+          <ApprovalsInbox />
           <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg relative">
             <Bell size={18} />
             <div className="absolute top-2.5 right-2.5 h-2 w-2 rounded-full bg-primary ring-2 ring-white" />
