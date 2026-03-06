@@ -24,7 +24,7 @@ import {
   LayoutTemplate
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { createEmployee } from '@/lib/api';
+import { createEmployee, updateEmployee } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import type { Employee, HRDepartment, HRRole } from '@/lib/db/types';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
@@ -43,6 +43,8 @@ export function EmployeeDirectory({ employees, departments, roles, onRefresh }: 
   const [deptFilter, setDeptFilter] = useState('all');
   const [open, setOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [adjustSalaryOpen, setAdjustSalaryOpen] = useState(false);
+  const [newSalary, setNewSalary] = useState('');
 
   const filtered = employees.filter(e => {
     if (search && !e.name.toLowerCase().includes(search.toLowerCase()) && !e.employee_id.toLowerCase().includes(search.toLowerCase())) return false;
@@ -83,6 +85,28 @@ export function EmployeeDirectory({ employees, departments, roles, onRefresh }: 
     } catch (err) {
       console.error('Employee creation error:', err);
       toast.error('Onboarding failed. Check if roles/departments exist.');
+    }
+  };
+
+  const handleAdjustSalary = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!selectedEmployee) return;
+    
+    const salary = parseFloat(newSalary);
+    if (isNaN(salary) || salary < 0) {
+      toast.error('Please enter a valid salary amount');
+      return;
+    }
+
+    try {
+      await updateEmployee(selectedEmployee.id, { basic_salary: salary });
+      toast.success('Salary adjusted successfully');
+      setAdjustSalaryOpen(false);
+      setNewSalary('');
+      setTimeout(() => onRefresh(), 500);
+    } catch (err) {
+      console.error('Salary update error:', err);
+      toast.error('Failed to adjust salary');
     }
   };
 
@@ -218,7 +242,8 @@ export function EmployeeDirectory({ employees, departments, roles, onRefresh }: 
 
               <div className="space-y-0.5 mb-4">
                 <h3 className="text-sm font-medium text-foreground truncate">{emp.name}</h3>
-                <p className="text-xs font-medium text-muted-foreground">{emp.role}</p>
+                <p className="text-xs font-medium text-muted-foreground">{emp.role || '—'}</p>
+                <p className="text-xs font-medium text-muted-foreground">{emp.dept?.name || emp.department || '—'}</p>
               </div>
 
               <div className="grid grid-cols-2 gap-2 pt-3 border-t">
@@ -264,10 +289,12 @@ export function EmployeeDirectory({ employees, departments, roles, onRefresh }: 
 
                   <TabsContent value="profile" className="space-y-6 animate-in fade-in duration-300">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <DetailBox icon={Briefcase} label="Designation" value={selectedEmployee.role || '—'} />
+                      <DetailBox icon={Users} label="Department" value={selectedEmployee.dept?.name || selectedEmployee.department || '—'} />
                       <DetailBox icon={Mail} label="Email" value={selectedEmployee.email || '—'} />
                       <DetailBox icon={Phone} label="Phone" value={selectedEmployee.phone || '—'} />
                       <DetailBox icon={Calendar} label="Joined" value={new Date(selectedEmployee.joining_date).toLocaleDateString('en-AE')} />
-                      <DetailBox icon={Briefcase} label="Type" value={selectedEmployee.employment_type} />
+                      <DetailBox icon={Briefcase} label="Employment Type" value={selectedEmployee.employment_type} />
                     </div>
                   </TabsContent>
 
@@ -284,7 +311,7 @@ export function EmployeeDirectory({ employees, departments, roles, onRefresh }: 
                               <p className="text-xl font-semibold text-foreground">{currency} {Number(selectedEmployee.basic_salary || 0).toLocaleString()}</p>
                             </div>
                           </div>
-                          <Button size="sm" className="bg-primary hover:bg-primary/90 h-8 text-xs font-medium">Adjust</Button>
+                          <Button size="sm" className="bg-primary hover:bg-primary/90 h-8 text-xs font-medium" onClick={() => setAdjustSalaryOpen(true)}>Adjust</Button>
                         </div>
                       </CardContent>
                     </Card>
@@ -295,6 +322,38 @@ export function EmployeeDirectory({ employees, departments, roles, onRefresh }: 
           )}
         </SheetContent>
       </Sheet>
+
+      <Dialog open={adjustSalaryOpen} onOpenChange={setAdjustSalaryOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Adjust Salary</DialogTitle>
+            <DialogDescription className="text-xs font-medium text-muted-foreground">
+              Update {selectedEmployee?.name}'s base salary
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleAdjustSalary} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">Current Salary ({currency})</Label>
+              <p className="text-sm font-semibold text-foreground bg-muted/50 rounded-md p-3">
+                {currency} {Number(selectedEmployee?.basic_salary || 0).toLocaleString()}
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">New Salary ({currency})</Label>
+              <Input 
+                type="number" 
+                value={newSalary}
+                onChange={(e) => setNewSalary(e.target.value)}
+                placeholder="Enter new salary amount"
+                required
+              />
+            </div>
+            <Button type="submit" className="w-full bg-primary h-10 font-medium text-xs">
+              Confirm Adjustment
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

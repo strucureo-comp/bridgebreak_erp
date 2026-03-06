@@ -74,7 +74,7 @@ attendanceSchema.index({ employee_id: 1, date: 1 }, { unique: true });
 // ── LEAVE ────────────────────────────────────────────────────────────────────
 const leaveSchema = new mongoose.Schema({
     employee_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee', required: true },
-    leave_type: { type: String, required: true },
+    leave_type: { type: mongoose.Schema.Types.ObjectId, ref: 'LeaveType', required: true },
     from_date: { type: Date, required: true },
     to_date: { type: Date, required: true },
     days: { type: Number, required: true },

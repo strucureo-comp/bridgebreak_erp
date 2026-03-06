@@ -123,6 +123,7 @@ router.get('/leaves', auth, async (req, res) => {
     try {
         const leaves = await Leave.find()
             .populate('employee_id', 'name employee_id')
+            .populate('leave_type', 'name code')
             .sort({ createdAt: -1 });
         res.json(transformArray(leaves));
     } catch (err) {
@@ -133,9 +134,27 @@ router.get('/leaves', auth, async (req, res) => {
 
 router.post('/leaves', auth, async (req, res) => {
     try {
-        console.log('[POST /leaves] body:', JSON.stringify(req.body));
+        const { from_date, to_date } = req.body;
+        
+        // Validate date range
+        if (from_date && to_date) {
+            const fromDate = new Date(from_date);
+            const toDate = new Date(to_date);
+            if (toDate < fromDate) {
+                return res.status(400).json({ 
+                    error: 'Invalid date range',
+                    detail: 'End date cannot be before start date'
+                });
+            }
+        }
+        
         const leave = new Leave(req.body);
         await leave.save();
+        
+        // Re-populate employee_id and leave_type for response
+        await leave.populate('employee_id', 'name employee_id');
+        await leave.populate('leave_type', 'name code');
+        
         res.status(201).json(transformDoc(leave));
     } catch (err) {
         console.error('[POST /leaves] error:', err.message);
@@ -314,6 +333,28 @@ router.post('/payrolls/:id/post', auth, async (req, res) => {
         res.json({ message: 'Payroll posted to finance successfully', data: transformDoc(payroll) });
     } catch (err) {
         res.status(500).json({ error: 'Failed to post payroll', detail: err.message });
+    }
+});
+
+router.patch('/payrolls/:id/status', auth, async (req, res) => {
+    try {
+        const { status } = req.body;
+        const validStatuses = ['draft', 'pending', 'approved', 'processed', 'posted', 'paid'];
+        
+        if (!validStatuses.includes(status)) {
+            return res.status(400).json({ error: 'Invalid payroll status', detail: `Status must be one of: ${validStatuses.join(', ')}` });
+        }
+
+        const payroll = await Payroll.findById(req.params.id);
+        if (!payroll) return res.status(404).json({ error: 'Payroll not found' });
+
+        payroll.status = status;
+        await payroll.save();
+
+        res.json({ message: `Payroll status updated to ${status}`, data: transformDoc(payroll) });
+    } catch (err) {
+        console.error('[PATCH /payrolls/:id/status] error:', err.message);
+        res.status(500).json({ error: 'Failed to update payroll status', detail: err.message });
     }
 });
 

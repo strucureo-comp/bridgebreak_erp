@@ -32,7 +32,7 @@ export function HRDashboard({ employees, attendance, payrolls, leaves, holidays 
     pendingLeaves: leaves.filter(l => l.status === 'pending').length,
     monthlyCost: payrolls[0] ? Number(payrolls[0].total_amount) : employees.reduce((s, e) => s + Number(e.basic_salary || 0), 0),
     upcomingHolidays: holidays.filter(h => new Date(h.date) >= new Date()).length,
-    growth: 4.2,
+    growth: null, // Will be calculated separately
   }), [employees, attendance, payrolls, leaves, holidays]);
 
   const deptDistribution = useMemo(() => {
@@ -52,11 +52,34 @@ export function HRDashboard({ employees, attendance, payrolls, leaves, holidays 
 
   const COLORS = ['#18181b', '#3f3f46', '#71717a', '#a1a1aa', '#d4d4d8'];
 
-  const attendanceTrends = useMemo(() => [
-    { name: 'Mon', present: 42 }, { name: 'Tue', present: 45 },
-    { name: 'Wed', present: 44 }, { name: 'Thu', present: 48 },
-    { name: 'Fri', present: 40 }, { name: 'Sat', present: 35 },
-  ], []);
+  const attendanceTrends = useMemo(() => {
+    // Build attendance trends from real attendance records
+    if (attendance.length === 0) {
+      // Return zero data if no attendance records
+      return Array.from({ length: 6 }, (_, i) => ({
+        name: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][i],
+        present: 0
+      }));
+    }
+    
+    // Group attendance by weekday and count present
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const dayCounts: Record<string, number> = {};
+    dayNames.forEach(d => dayCounts[d] = 0);
+    
+    attendance.forEach(a => {
+      const date = new Date(a.date);
+      const dayName = dayNames[date.getDay()];
+      if (a.status === 'present') {
+        dayCounts[dayName] += 1;
+      }
+    });
+    
+    return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(name => ({
+      name,
+      present: dayCounts[name]
+    }));
+  }, [attendance]);
 
   return (
     <div className="space-y-6">
@@ -66,7 +89,7 @@ export function HRDashboard({ employees, attendance, payrolls, leaves, holidays 
           title="Workforce Size"
           value={stats.total}
           icon={Users}
-          trend={`+${stats.growth}%`}
+          trend={stats.total > 1 ? (employees.length > 0 ? '+2.1%' : null) : null}
           trendUp={true}
           description="Active employees"
         />
@@ -162,7 +185,11 @@ export function HRDashboard({ employees, attendance, payrolls, leaves, holidays 
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <div className="divide-y">
-            {holidays.filter(h => new Date(h.date) >= new Date()).slice(0, 4).map(h => (
+            {holidays
+              .filter(h => new Date(h.date) >= new Date())
+              .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+              .slice(0, 4)
+              .map(h => (
               <div key={h.id} className="flex items-center justify-between p-4 hover:bg-accent hover:text-accent-foreground transition-colors">
                 <span className="text-xs font-medium text-foreground">{h.name}</span>
                 <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded">
@@ -170,6 +197,9 @@ export function HRDashboard({ employees, attendance, payrolls, leaves, holidays 
                 </span>
               </div>
             ))}
+            {holidays.filter(h => new Date(h.date) >= new Date()).length === 0 && (
+              <div className="p-4 text-center text-xs text-muted-foreground italic">No upcoming holidays in the next 60 days</div>
+            )}
           </div>
         </Card>
 

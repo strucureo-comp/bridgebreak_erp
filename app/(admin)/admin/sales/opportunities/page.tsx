@@ -2,12 +2,13 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/lib/auth/context';
-import { getOpportunities, createOpportunity, updateOpportunity, deleteOpportunity, getCustomers } from '@/lib/api';
+import { getOpportunities, createOpportunity, updateOpportunity, deleteOpportunity, getCustomers, getLeads } from '@/lib/api';
 import { DashboardShell } from '@/components/shared/layout/dashboard-shell';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
-    Briefcase, Search, Plus, DollarSign, Calendar, Target, ChevronRight, Edit2, Trash2, AlertCircle, Clock
+    Briefcase, Search, Plus, DollarSign, Calendar, Target, ChevronRight, Edit2, Trash2, AlertCircle, Clock, UserPlus
 } from 'lucide-react';
+import { LeadForm } from '../_components/lead-form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -50,6 +51,7 @@ export default function SalesOpportunitiesPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
+    const [isLeadCreateOpen, setIsLeadCreateOpen] = useState(false);
 
     const isRetail = companyProfile?.businessType === 'b2c_retail';
 
@@ -239,6 +241,18 @@ export default function SalesOpportunitiesPage() {
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                 <Input placeholder="Search deals..." className="pl-9 h-10 w-64 border-border bg-background" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
                             </div>
+
+                            {/* Create Lead Button */}
+                            <Dialog open={isLeadCreateOpen} onOpenChange={setIsLeadCreateOpen}>
+                                <DialogTrigger asChild>
+                                    <Button size="sm" variant="outline" className="h-10 gap-2 font-bold shadow-sm">
+                                        <UserPlus className="h-4 w-4" /> Create Lead
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent className="max-w-xl p-0 overflow-hidden border-none shadow-2xl rounded-md">
+                                    <LeadForm onSuccess={() => { setIsLeadCreateOpen(false); fetchData(); }} />
+                                </DialogContent>
+                            </Dialog>
 
                             <Dialog open={isCreateOpen} onOpenChange={handleOpenChange}>
                                 <DialogTrigger asChild>

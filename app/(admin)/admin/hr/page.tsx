@@ -171,17 +171,27 @@ export default function HRPage() {
                       <SelectValue placeholder="Select Batch" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none" disabled>No Cycles Found</SelectItem>
-                      {payrolls.filter(p => p.status === 'posted').map(p => (
-                        <SelectItem key={p.id} value={p.id}>{p.month} Batch</SelectItem>
-                      ))}
+                      {payrolls.filter(p => p.status === 'processed' || p.status === 'posted' || p.status === 'approved').length === 0 ? (
+                        <SelectItem value="none" disabled>No Cycles Available</SelectItem>
+                      ) : (
+                        <>
+                          <SelectItem value="none" disabled>Select a Cycle</SelectItem>
+                          {payrolls.filter(p => p.status === 'processed' || p.status === 'posted' || p.status === 'approved').map(p => (
+                            <SelectItem key={p.id} value={p.id}>{p.month} Cycle ({p.status})</SelectItem>
+                          ))}
+                        </>
+                      )}
                     </SelectContent>
                   </Select>
                 </CardContent>
               </Card>
               {activePayroll ? <PayslipBrowser payroll={activePayroll} /> : (
                 <div className="py-20 text-center border-2 border-dashed rounded-md border-border bg-muted/20">
-                  <p className="text-sm font-medium text-muted-foreground">Select a verified cycle to access digital payslips</p>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    {payrolls.filter(p => p.status === 'processed' || p.status === 'posted' || p.status === 'approved').length === 0
+                      ? 'No payroll cycles available. Go to Payroll tab to run your first cycle.'
+                      : 'Select a cycle above to view payslips'}
+                  </p>
                 </div>
               )}
             </TabsContent>

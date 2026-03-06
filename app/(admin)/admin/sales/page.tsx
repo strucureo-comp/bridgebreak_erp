@@ -19,9 +19,6 @@ import { cn } from '@/lib/utils';
 import type { Opportunity, Lead, Activity as ActivityType, Invoice } from '@/lib/db/types';
 import { ModuleGuard } from '@/components/shared/layout/module-guard';
 import { useTenant } from '@/lib/tenant-context';
-import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
-import { LeadForm } from './_components/lead-form';
-import { QuoteForm } from './_components/quote-form';
 
 export function isOverdue(dateStr: string) {
     if (!dateStr) return false;
@@ -127,21 +124,8 @@ export default function SalesDashboardPage() {
                             </div>
                         </div>
 
-                        {/* Quick Actions */}
+                        {/* Quick Actions — Lead button removed, only Quotation & Invoice */}
                         <div className="flex flex-wrap items-center gap-3">
-                            {!isRetail && (
-                                <Dialog>
-                                    <DialogTrigger asChild>
-                                        <Button size="sm" className="h-10 gap-2 font-bold shadow-sm">
-                                            <Plus className="h-4 w-4" /> New Lead
-                                        </Button>
-                                    </DialogTrigger>
-                                    <DialogContent className="max-w-xl p-0 overflow-hidden border-none shadow-2xl rounded-md">
-                                        <LeadForm onSuccess={() => fetchData()} />
-                                    </DialogContent>
-                                </Dialog>
-                            )}
-
                             <Button onClick={() => router.push('/admin/finance/quotations/new')} size="sm" variant="secondary" className="h-10 gap-2 font-bold shadow-sm">
                                 <Plus className="h-4 w-4" /> New Quotation
                             </Button>
@@ -207,33 +191,32 @@ export default function SalesDashboardPage() {
                                 </Card>
                             )}
 
-                            {isRetail && (
-                                <Card className="border-border shadow-sm">
-                                    <CardHeader className="flex flex-row items-center justify-between border-b border-border py-4">
-                                        <CardTitle className="text-base font-bold">Recent Leads</CardTitle>
-                                        <Button variant="ghost" size="sm" className="h-8 text-xs font-medium" asChild>
-                                            <Link href="/admin/sales/leads">View All</Link>
-                                        </Button>
-                                    </CardHeader>
-                                    <CardContent className="p-0">
-                                        {leads.length === 0 ? (
-                                            <div className="p-8 text-center text-sm text-muted-foreground">No recent leads.</div>
-                                        ) : (
-                                            <div className="divide-y divide-border">
-                                                {leads.slice(0, 4).map(lead => (
-                                                    <div key={lead.id} className="p-4 flex items-center justify-between hover:bg-muted/30 transition-colors">
-                                                        <div>
-                                                            <p className="font-bold text-sm">{lead.first_name} {lead.last_name}</p>
-                                                            <p className="text-xs text-muted-foreground mt-0.5">{lead.company}</p>
-                                                        </div>
-                                                        <Badge className="bg-primary/10 text-primary border-none text-[10px]">{lead.status.replace('_', ' ')}</Badge>
+                            {/* Recent Leads — always visible */}
+                            <Card className="border-border shadow-sm">
+                                <CardHeader className="flex flex-row items-center justify-between border-b border-border py-4">
+                                    <CardTitle className="text-base font-bold">Recent Leads</CardTitle>
+                                    <Button variant="ghost" size="sm" className="h-8 text-xs font-medium" asChild>
+                                        <Link href="/admin/sales/leads">View All</Link>
+                                    </Button>
+                                </CardHeader>
+                                <CardContent className="p-0">
+                                    {leads.length === 0 ? (
+                                        <div className="p-8 text-center text-sm text-muted-foreground">No recent leads.</div>
+                                    ) : (
+                                        <div className="divide-y divide-border">
+                                            {leads.slice(0, 4).map(lead => (
+                                                <div key={lead.id} className="p-4 flex items-center justify-between hover:bg-muted/30 transition-colors">
+                                                    <div>
+                                                        <p className="font-bold text-sm">{lead.first_name} {lead.last_name}</p>
+                                                        <p className="text-xs text-muted-foreground mt-0.5">{lead.company}</p>
                                                     </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </CardContent>
-                                </Card>
-                            )}
+                                                    <Badge className="bg-primary/10 text-primary border-none text-[10px]">{lead.status.replace('_', ' ')}</Badge>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
                         </div>
 
                         {/* RIGHT COLUMN */}
@@ -270,13 +253,20 @@ export default function SalesDashboardPage() {
 
                             <Card className="border-border shadow-sm">
                                 <CardHeader className="flex flex-row items-center justify-between border-b border-border py-4">
-                                    <CardTitle className="text-base font-bold">Navigation Defaults</CardTitle>
+                                    <CardTitle className="text-base font-bold">Quick Navigation</CardTitle>
                                 </CardHeader>
                                 <CardContent className="p-0 divide-y divide-border">
+                                    <Link href="/admin/sales/opportunities" className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 border border-border rounded-md bg-background shadow-sm"><Target className="h-4 w-4" /></div>
+                                            <span className="font-bold text-sm">Opportunities & Leads</span>
+                                        </div>
+                                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                    </Link>
                                     <Link href="/admin/sales/customers" className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
                                         <div className="flex items-center gap-3">
                                             <div className="p-2 border border-border rounded-md bg-background shadow-sm"><Users className="h-4 w-4" /></div>
-                                            <span className="font-bold text-sm">Customers Directory</span>
+                                            <span className="font-bold text-sm">Customer Details</span>
                                         </div>
                                         <ChevronRight className="h-4 w-4 text-muted-foreground" />
                                     </Link>

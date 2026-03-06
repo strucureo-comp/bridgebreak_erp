@@ -336,27 +336,121 @@ export function HRMSSettings({ roles = [], departments = [], onRefresh = () => {
         )}
 
         {mode === 'templates' && (
-          <Card className="border shadow-sm rounded-md bg-card">
-            <CardHeader className="border-b bg-muted/50 py-4 flex flex-row items-center justify-between text-foreground">
-              <CardTitle className="text-sm font-semibold">Template Architect</CardTitle>
-              <Button variant="outline" size="sm" className="h-7 text-xs font-medium text-primary border-primary/20">+ New</Button>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="space-y-6">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-muted-foreground">Edit Template</Label>
-                  <Select defaultValue="eng">
-                    <SelectTrigger className="h-9 border-border">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="eng" className="text-xs font-medium">Senior Engineer - UAE</SelectItem>
-                    </SelectContent>
-                  </Select>
+          <div className="space-y-6">
+            <Card className="border shadow-sm rounded-md bg-card">
+              <CardHeader className="border-b bg-muted/50 py-4 flex flex-row items-center justify-between text-foreground">
+                <CardTitle className="text-sm font-semibold">Salary Templates</CardTitle>
+                <Button variant="outline" size="sm" className="h-7 text-xs font-medium text-primary border-primary/20 gap-1.5">
+                  <Plus size={14} /> New Template
+                </Button>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="divide-y">
+                  {[
+                    { name: 'Senior Engineer', role: 'Engineering', base: 10000, hra: 4000, ta: 2000 },
+                    { name: 'Junior Developer', role: 'IT', base: 6000, hra: 2400, ta: 1200 },
+                    { name: 'Operations Manager', role: 'Operations', base: 8500, hra: 3400, ta: 1700 },
+                  ].map((template) => (
+                    <div key={template.name} className="flex items-center justify-between p-4 hover:bg-accent hover:text-accent-foreground transition-colors group">
+                      <div className="flex items-center gap-4">
+                        <div className="h-10 w-10 rounded-md bg-primary/10 text-primary flex items-center justify-center">
+                          <Briefcase size={18} />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-foreground">{template.name}</p>
+                          <Badge variant="secondary" className="text-xs font-semibold mt-1">{template.role}</Badge>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-6">
+                        <div className="text-right">
+                          <p className="text-xs font-medium text-muted-foreground">Base Salary</p>
+                          <p className="text-sm font-semibold text-foreground">AED {template.base.toLocaleString()}</p>
+                        </div>
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button variant="ghost" size="icon" className="h-8 w-8" title="Edit template">
+                            <Pencil size={14} />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-500/60 hover:text-rose-600" title="Delete template">
+                            <Trash2 size={14} />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+
+            <Card className="border shadow-sm rounded-md bg-card">
+              <CardHeader className="border-b bg-muted/50 py-4">
+                <CardTitle className="text-sm font-semibold text-foreground">Define Structure: Senior Engineer</CardTitle>
+              </CardHeader>
+              <CardContent className="p-6 space-y-6">
+                <div className="space-y-4">
+                  <Label className="text-xs font-semibold text-primary">Earnings Components</Label>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-3 bg-muted/50 rounded-md border border-border group hover:border-primary/30">
+                      <div>
+                        <p className="text-xs font-medium text-foreground">Base Salary</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">Fixed monthly amount</p>
+                      </div>
+                      <input type="number" placeholder="10000" defaultValue="10000" className="w-24 h-8 rounded-md border border-border px-2 text-xs font-medium" />
+                      <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100"><X size={14} /></Button>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-muted/50 rounded-md border border-border group hover:border-primary/30">
+                      <div>
+                        <p className="text-xs font-medium text-foreground">Housing Allowance</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">40% of base salary</p>
+                      </div>
+                      <input type="number" placeholder="4000" defaultValue="4000" className="w-24 h-8 rounded-md border border-border px-2 text-xs font-medium" />
+                      <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100"><X size={14} /></Button>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-muted/50 rounded-md border border-border group hover:border-primary/30">
+                      <div>
+                        <p className="text-xs font-medium text-foreground">Transport Allowance</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">Flat 2000 AED</p>
+                      </div>
+                      <input type="number" placeholder="2000" defaultValue="2000" className="w-24 h-8 rounded-md border border-border px-2 text-xs font-medium" />
+                      <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100"><X size={14} /></Button>
+                    </div>
+                  </div>
+                  <Button variant="outline" size="sm" className="w-full h-8 text-xs font-medium gap-1.5"><Plus size={14} /> Add Component</Button>
+                </div>
+
+                <div className="border-t pt-4">
+                  <Label className="text-xs font-semibold text-rose-600">Deductions</Label>
+                  <div className="space-y-3 mt-3">
+                    <div className="flex items-center justify-between p-3 bg-rose-50/30 dark:bg-rose-950/10 rounded-md border border-rose-200/50 group hover:border-rose-300/50">
+                      <div>
+                        <p className="text-xs font-medium text-foreground">PF Employee</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">Provident Fund</p>
+                      </div>
+                      <input type="number" placeholder="0" className="w-24 h-8 rounded-md border border-border px-2 text-xs font-medium" />
+                      <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100"><X size={14} /></Button>
+                    </div>
+                  </div>
+                  <Button variant="outline" size="sm" className="w-full h-8 text-xs font-medium gap-1.5 mt-3"><Plus size={14} /> Add Deduction</Button>
+                </div>
+
+                <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground font-medium">Gross Salary:</span>
+                    <span className="font-semibold text-foreground">AED 16,000</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground font-medium">Total Deductions:</span>
+                    <span className="font-semibold text-red-600">- AED 0</span>
+                  </div>
+                  <div className="border-t border-primary/20 pt-2 flex justify-between">
+                    <span className="text-foreground font-semibold">Net Salary:</span>
+                    <span className="text-lg font-bold text-primary">AED 16,000</span>
+                  </div>
+                </div>
+
+                <Button className="w-full bg-primary hover:bg-primary/90 font-medium text-xs h-10">Save Template Structure</Button>
+              </CardContent>
+            </Card>
+          </div>
         )}
       </div>
 

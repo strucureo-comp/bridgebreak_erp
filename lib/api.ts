@@ -462,6 +462,18 @@ export async function postPayrollToFinance(id: string) {
     throw new Error('Failed to post payroll to finance');
 }
 
+export async function updatePayrollStatus(id: string, status: string) {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/payrolls/${id}/status`, {
+            method: 'PATCH',
+            headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status })
+        });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] updatePayrollStatus error:', e); }
+    throw new Error('Failed to update payroll status');
+}
+
 export async function getSalaryStructures(empId?: string) {
     try {
         const url = empId ? `${API_BASE}/hrms/salary-structures?employee_id=${empId}` : `${API_BASE}/hrms/salary-structures`;

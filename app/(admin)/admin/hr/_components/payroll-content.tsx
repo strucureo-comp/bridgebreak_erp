@@ -23,10 +23,13 @@ import {
   Info,
   AlertCircle,
   Eye,
-  Calculator
+  Calculator,
+  ThumbsUp,
+  Clock,
+  CheckCircle2
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { createSalaryStructure, generatePayroll, postPayrollToFinance, previewPayroll } from '@/lib/api';
+import { createSalaryStructure, generatePayroll, postPayrollToFinance, previewPayroll, updatePayrollStatus } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import type { Employee, SalaryStructure, Payroll } from '@/lib/db/types';
 
@@ -41,6 +44,7 @@ export function PayrollContent({ employees, salaryStructures, payrolls, onRefres
   const [salaryOpen, setSalaryOpen] = useState(false);
   const [generateOpen, setGenerateOpen] = useState(false);
   const [posting, setPosting] = useState<string | null>(null);
+  const [approving, setApproving] = useState<string | null>(null);
   const [filterText, setFilterText] = useState('');
   const [selectedEmployee, setSelectedEmployee] = useState<SalaryStructure | null>(null);
   const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
@@ -143,6 +147,18 @@ export function PayrollContent({ employees, salaryStructures, payrolls, onRefres
       onRefresh();
     } catch { toast.error('Failed to post to finance'); }
     finally { setPosting(null); }
+  };
+
+  const handleStatusChange = async (payrollId: string, newStatus: string) => {
+    setApproving(payrollId);
+    try {
+      await updatePayrollStatus(payrollId, newStatus);
+      toast.success(`Payroll transitioned to ${newStatus}`);
+      onRefresh();
+    } catch (err) { 
+      toast.error(`Failed to update payroll status`); 
+    }
+    finally { setApproving(null); }
   };
   
   const filteredStructures = salaryStructures.filter(s => 
@@ -636,12 +652,12 @@ export function PayrollContent({ employees, salaryStructures, payrolls, onRefres
                     </div>
                   </div>
 
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
                     {p.status === 'processed' || p.status === 'posted' || p.status === 'paid' ? (
                       <Dialog>
                         <DialogTrigger asChild>
-                          <Button variant="outline" size="sm" className="flex-1 h-8 text-xs font-medium gap-1.5 rounded-md">
-                            <FileText className="h-3 w-3 text-primary" /> View Payslips
+                          <Button variant="outline" size="sm" className="h-8 text-xs font-medium gap-1.5 rounded-md">
+                            <FileText className="h-3 w-3 text-primary" /> Payslips
                           </Button>
                         </DialogTrigger>
                         <DialogContent className="max-w-4xl p-0">
@@ -650,14 +666,61 @@ export function PayrollContent({ employees, salaryStructures, payrolls, onRefres
                       </Dialog>
                     ) : null}
                     
+                    {p.status === 'draft' && (
+                      <Button 
+                        size="sm" 
+                        className="h-8 text-xs font-medium bg-yellow-600 hover:bg-yellow-700"
+                        onClick={() => handleStatusChange(p.id, 'pending')}
+                        disabled={approving === p.id}
+                      >
+                        <Clock className="h-3 w-3 mr-1" />
+                        {approving === p.id ? 'Sending...' : 'Submit'}
+                      </Button>
+                    )}
+
+                    {p.status === 'pending' && (
+                      <>
+                        <Button 
+                          size="sm" 
+                          className="h-8 text-xs font-medium bg-emerald-600 hover:bg-emerald-700"
+                          onClick={() => handleStatusChange(p.id, 'approved')}
+                          disabled={approving === p.id}
+                        >
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                          {approving === p.id ? 'Approving...' : 'Approve'}
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          className="h-8 text-xs font-medium"
+                          onClick={() => handleStatusChange(p.id, 'draft')}
+                          disabled={approving === p.id}
+                        >
+                          Reject
+                        </Button>
+                      </>
+                    )}
+
+                    {p.status === 'approved' && (
+                      <Button 
+                        size="sm" 
+                        className="h-8 text-xs font-medium bg-primary hover:bg-primary/90"
+                        onClick={() => handleStatusChange(p.id, 'processed')}
+                        disabled={approving === p.id}
+                      >
+                        <ThumbsUp className="h-3 w-3 mr-1" />
+                        {approving === p.id ? 'Processing...' : 'Process'}
+                      </Button>
+                    )}
+                    
                     {p.status === 'processed' && !p.posted_to_finance ? (
                       <Button 
                         size="sm" 
-                        className="flex-1 h-8 text-xs font-medium bg-primary hover:bg-primary/90"
+                        className="h-8 text-xs font-medium bg-primary hover:bg-primary/90"
                         onClick={() => handlePost(p.id)}
                         disabled={posting === p.id}
                       >
-                        {posting === p.id ? 'Processing...' : 'Post to Ledger'}
+                        {posting === p.id ? 'Posting...' : 'Post to Ledger'}
                       </Button>
                     ) : null}
                     
