@@ -13,17 +13,21 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ApprovalDialog } from '@/components/shared/approval-dialog';
+import { canApproveDocument, getApprovalStatusBadge } from '@/lib/approval-workflow';
 import { toast } from 'sonner';
-import { Loader2, ArrowLeft, Plus, Trash2, FileDown } from 'lucide-react';
+import { Loader2, ArrowLeft, Plus, Trash2, FileDown, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
-import type { User, Project, Quotation, QuotationItem, QuotationStatus } from '@/lib/db/types';
+import type { User, Project, Quotation, QuotationItem, QuotationStatus, ApprovalRecord } from '@/lib/db/types';
 
 export default function EditQuotationPage({ params }: { params: { id: string } }) {
     const router = useRouter();
     const { user: adminUser } = useAuth();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
 
     const [originalQuotation, setOriginalQuotation] = useState<Quotation | null>(null);
     const [users, setUsers] = useState<User[]>([]);
@@ -49,6 +53,14 @@ export default function EditQuotationPage({ params }: { params: { id: string } }
     const [items, setItems] = useState<QuotationItem[]>([
         { description: '', quantity: 1, unit_price: 0, total: 0 }
     ]);
+
+    const approvalBadge = getApprovalStatusBadge(formData.status);
+    const canCurrentUserApprove = canApproveDocument(
+        adminUser?.role || '',
+        originalQuotation?.approval_role || '',
+        false,
+        false
+    ) && formData.status === 'pending_approval';
 
     const calculateTotal = () => {
         return items.reduce((sum, item) => sum + item.total, 0);
@@ -279,6 +291,88 @@ export default function EditQuotationPage({ params }: { params: { id: string } }
         }
     };
 
+    const handleApprove = async (comment: string) => {
+        if (!originalQuotation) return;
+
+        const now = new Date().toISOString();
+        const approvalRecord: ApprovalRecord = {
+            user_id: adminUser?.id || 'admin',
+            user_name: adminUser?.full_name || adminUser?.email || 'Administrator',
+            user_role: adminUser?.role || 'admin',
+            action: 'approved',
+            comment: comment || undefined,
+            timestamp: now,
+        };
+
+        const updatedRecords = [...(originalQuotation.approval_records || []), approvalRecord];
+
+        const success = await updateQuotation(params.id, {
+            status: 'approved',
+            approved_by: approvalRecord.user_id,
+            approved_at: now,
+            approval_records: updatedRecords,
+        });
+
+        if (success) {
+            setFormData((prev) => ({ ...prev, status: 'approved' }));
+            setOriginalQuotation((prev) => prev ? {
+                ...prev,
+                status: 'approved',
+                approved_by: approvalRecord.user_id,
+                approved_at: now,
+                approval_records: updatedRecords,
+            } : prev);
+            toast.success('Quotation approved successfully');
+        } else {
+            toast.error('Failed to approve quotation');
+        }
+    };
+
+    const handleReject = async (reason: string) => {
+        if (!originalQuotation) return;
+
+        const trimmedReason = reason.trim();
+        if (!trimmedReason) {
+            toast.error('Rejection reason is required');
+            return;
+        }
+
+        const now = new Date().toISOString();
+        const approvalRecord: ApprovalRecord = {
+            user_id: adminUser?.id || 'admin',
+            user_name: adminUser?.full_name || adminUser?.email || 'Administrator',
+            user_role: adminUser?.role || 'admin',
+            action: 'rejected',
+            comment: trimmedReason,
+            timestamp: now,
+        };
+
+        const updatedRecords = [...(originalQuotation.approval_records || []), approvalRecord];
+
+        const success = await updateQuotation(params.id, {
+            status: 'rejected',
+            rejected_by: approvalRecord.user_id,
+            rejected_at: now,
+            rejection_reason: trimmedReason,
+            approval_records: updatedRecords,
+        });
+
+        if (success) {
+            setFormData((prev) => ({ ...prev, status: 'rejected' }));
+            setOriginalQuotation((prev) => prev ? {
+                ...prev,
+                status: 'rejected',
+                rejected_by: approvalRecord.user_id,
+                rejected_at: now,
+                rejection_reason: trimmedReason,
+                approval_records: updatedRecords,
+            } : prev);
+            toast.success('Quotation rejected');
+        } else {
+            toast.error('Failed to reject quotation');
+        }
+    };
+
     if (loading) {
         return (
             <DashboardShell requireAdmin>
@@ -303,8 +397,20 @@ export default function EditQuotationPage({ params }: { params: { id: string } }
                             <h1 className="text-3xl font-bold tracking-tight">Edit Quotation</h1>
                             <p className="text-muted-foreground">Manage quotation details</p>
                         </div>
+                        <Badge variant={approvalBadge.variant} className="uppercase tracking-wide">
+                            {approvalBadge.label}
+                        </Badge>
                     </div>
                     <div className="flex gap-2">
+                        {originalQuotation?.requires_approval && (
+                            <Button
+                                variant={formData.status === 'pending_approval' ? 'default' : 'outline'}
+                                onClick={() => setApprovalDialogOpen(true)}
+                            >
+                                <ShieldCheck className="mr-2 h-4 w-4" />
+                                {canCurrentUserApprove ? 'Review Approval' : 'Approval Details'}
+                            </Button>
+                        )}
                         <Button variant="outline" onClick={() => { (window as any).previewMode = true; handleDownloadPDF(); }}>
                             <FileDown className="mr-2 h-4 w-4" />
                             Preview PDF
@@ -315,6 +421,23 @@ export default function EditQuotationPage({ params }: { params: { id: string } }
                         </Button>
                     </div>
                 </div>
+
+                {originalQuotation?.requires_approval && (
+                    <Card className="border-yellow-200 bg-yellow-50/40">
+                        <CardContent className="py-4 flex items-center justify-between gap-4">
+                            <div className="space-y-1">
+                                <p className="text-xs font-semibold">Approval Workflow Enabled</p>
+                                <p className="text-xs text-muted-foreground">
+                                    Required approver role: <span className="font-medium">{originalQuotation.approval_role || 'Not set'}</span>
+                                </p>
+                            </div>
+                            <Button variant="outline" size="sm" onClick={() => setApprovalDialogOpen(true)}>
+                                <ShieldCheck className="mr-2 h-4 w-4" />
+                                View Workflow
+                            </Button>
+                        </CardContent>
+                    </Card>
+                )}
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="space-y-6">
@@ -490,6 +613,8 @@ export default function EditQuotationPage({ params }: { params: { id: string } }
                                                 <SelectContent>
                                                     <SelectItem value="draft">Draft</SelectItem>
                                                     <SelectItem value="sent">Sent</SelectItem>
+                                                    <SelectItem value="pending_approval">Pending Approval</SelectItem>
+                                                    <SelectItem value="approved">Approved</SelectItem>
                                                     <SelectItem value="accepted">Accepted</SelectItem>
                                                     <SelectItem value="rejected">Rejected</SelectItem>
                                                     <SelectItem value="expired">Expired</SelectItem>
@@ -637,6 +762,18 @@ export default function EditQuotationPage({ params }: { params: { id: string } }
                         />
                     </div>
                 </div>
+
+                <ApprovalDialog
+                    open={approvalDialogOpen}
+                    onOpenChange={setApprovalDialogOpen}
+                    documentType="quotation"
+                    documentNumber={formData.quotation_number}
+                    currentStatus={formData.status}
+                    approvalRecords={originalQuotation?.approval_records || []}
+                    canApprove={canCurrentUserApprove}
+                    onApprove={handleApprove}
+                    onReject={handleReject}
+                />
             </div>
         </DashboardShell>
     );

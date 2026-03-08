@@ -26,10 +26,14 @@ import {
   Calculator,
   ThumbsUp,
   Clock,
-  CheckCircle2
+  CheckCircle2,
+  Landmark,
+  FileCheck,
+  Coins,
+  Bitcoin
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { createSalaryStructure, generatePayroll, postPayrollToFinance, previewPayroll, updatePayrollStatus } from '@/lib/api';
+import { createSalaryStructure, generatePayroll, postPayrollToFinance, previewPayroll, submitPayrollForApproval, approvePayroll, rejectPayroll, finalizePayroll, auditFebruaryPayroll2026, getDeletedPayrolls, restorePayroll } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import type { Employee, SalaryStructure, Payroll } from '@/lib/db/types';
 
@@ -45,10 +49,16 @@ export function PayrollContent({ employees, salaryStructures, payrolls, onRefres
   const [generateOpen, setGenerateOpen] = useState(false);
   const [posting, setPosting] = useState<string | null>(null);
   const [approving, setApproving] = useState<string | null>(null);
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [rejectingPayroll, setRejectingPayroll] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
   const [filterText, setFilterText] = useState('');
   const [selectedEmployee, setSelectedEmployee] = useState<SalaryStructure | null>(null);
   const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
   const [duplicateMonth, setDuplicateMonth] = useState('');
+  const [febAudit, setFebAudit] = useState<any>(null);
+  const [deletedPayrolls, setDeletedPayrolls] = useState<any[]>([]);
+  const [restoring, setRestoring] = useState<string | null>(null);
   const [payrollPreview, setPayrollPreview] = useState<any>(null);
   const [selectedMonth, setSelectedMonth] = useState('');
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
@@ -114,18 +124,17 @@ export function PayrollContent({ employees, salaryStructures, payrolls, onRefres
     }
   }, []);
 
-  const handleGenerate = async (force = false) => {
+  const handleGenerate = async () => {
     if (!selectedMonth) return;
-    
     try {
-      await generatePayroll(selectedMonth, force);
-      toast.success('Monthly payroll generated');
+      await generatePayroll(selectedMonth);
+      toast.success('Payroll cycle created in draft status');
       setGenerateOpen(false);
       setPayrollPreview(null);
       setSelectedMonth('');
       onRefresh();
     } catch (error: any) {
-      if (error.code === 'DUPLICATE_CYCLE' && !force) {
+      if (error.code === 'DUPLICATE_CYCLE') {
         setDuplicateMonth(selectedMonth);
         setShowDuplicateWarning(true);
       } else {
@@ -133,11 +142,12 @@ export function PayrollContent({ employees, salaryStructures, payrolls, onRefres
       }
     }
   };
-  
-  const handleForceGenerate = () => {
-    setShowDuplicateWarning(false);
-    handleGenerate(true);
-  };
+
+  useEffect(() => {
+    auditFebruaryPayroll2026().then((data) => setFebAudit(data)).catch(() => setFebAudit(null));
+    getDeletedPayrolls().then((data) => setDeletedPayrolls(data || [])).catch(() => setDeletedPayrolls([]));
+    getDeletedPayrolls().then(setDeletedPayrolls).catch(() => setDeletedPayrolls([]));
+  }, [payrolls.length]);
 
   const handlePost = async (payrollId: string) => {
     setPosting(payrollId);
@@ -149,14 +159,66 @@ export function PayrollContent({ employees, salaryStructures, payrolls, onRefres
     finally { setPosting(null); }
   };
 
-  const handleStatusChange = async (payrollId: string, newStatus: string) => {
+  const handleSubmitForApproval = async (payrollId: string) => {
     setApproving(payrollId);
     try {
-      await updatePayrollStatus(payrollId, newStatus);
-      toast.success(`Payroll transitioned to ${newStatus}`);
+      await submitPayrollForApproval(payrollId);
+      toast.success('Payroll submitted for MD/CEO approval');
       onRefresh();
-    } catch (err) { 
-      toast.error(`Failed to update payroll status`); 
+    } catch (err) {
+      toast.error('Failed to submit payroll for approval');
+    }
+    finally { setApproving(null); }
+  };
+
+  const handleApprove = async (payrollId: string) => {
+    setApproving(payrollId);
+    try {
+      await approvePayroll(payrollId);
+      toast.success('Payroll approved successfully');
+      onRefresh();
+    } catch (err: any) {
+      if (err.code === 'FORBIDDEN') {
+        toast.error(err.error || 'Only MD or CEO can approve payroll');
+      } else {
+        toast.error('Failed to approve payroll');
+      }
+    }
+    finally { setApproving(null); }
+  };
+
+  const handleReject = async () => {
+    if (!rejectingPayroll || !rejectReason.trim()) {
+      toast.error('Please provide a rejection reason');
+      return;
+    }
+
+    setApproving(rejectingPayroll);
+    try {
+      await rejectPayroll(rejectingPayroll, rejectReason);
+      toast.success('Payroll rejected');
+      setRejectDialogOpen(false);
+      setRejectReason('');
+      setRejectingPayroll(null);
+      onRefresh();
+    } catch (err: any) {
+      if (err.code === 'FORBIDDEN') {
+        toast.error(err.error || 'Only MD or CEO can reject payroll');
+      } else {
+        toast.error('Failed to reject payroll');
+      }
+    }
+    finally { setApproving(null); }
+  };
+
+  const handleFinalize = async (payrollId: string) => {
+    setApproving(payrollId);
+    try {
+      await finalizePayroll(payrollId);
+      toast.success('Payroll finalized and payslips generated');
+      onRefresh();
+    } catch (err) {
+      toast.error('Failed to finalize payroll');
     }
     finally { setApproving(null); }
   };
@@ -333,13 +395,13 @@ export function PayrollContent({ employees, salaryStructures, payrolls, onRefres
           }}>
             <DialogTrigger asChild>
               <Button size="sm" className="h-9 gap-2 bg-primary hover:bg-primary/90 font-medium text-xs">
-                <Receipt className="h-3.5 w-3.5" /> Run Cycle
+                <Receipt className="h-3.5 w-3.5" /> Create Draft Cycle
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-lg">
               <DialogHeader>
-                <DialogTitle>Run Payroll Cycle</DialogTitle>
-                <DialogDescription>Preview and generate monthly payroll batch</DialogDescription>
+                <DialogTitle>Create Payroll Draft</DialogTitle>
+                <DialogDescription>Create draft payroll cycle for approval workflow</DialogDescription>
               </DialogHeader>
               <div className="space-y-6">
                 <div className="space-y-1.5">
@@ -420,10 +482,10 @@ export function PayrollContent({ employees, salaryStructures, payrolls, onRefres
                 <DialogFooter>
                   {payrollPreview && payrollPreview.canGenerate && (
                     <Button 
-                      onClick={() => handleGenerate(false)} 
+                      onClick={() => handleGenerate()} 
                       className="w-full bg-primary hover:bg-primary/90 h-10 font-medium"
                     >
-                      Confirm & Generate Batch
+                      Create Draft Payroll
                     </Button>
                   )}
                 </DialogFooter>
@@ -440,18 +502,55 @@ export function PayrollContent({ employees, salaryStructures, payrolls, onRefres
                   Payroll Cycle Already Exists
                 </AlertDialogTitle>
                 <AlertDialogDescription>
-                  A payroll batch for <strong>{duplicateMonth}</strong> has already been generated. 
-                  Re-running will delete the existing cycle and create a new one with current salary structures.
+                  A payroll cycle for <strong>{duplicateMonth}</strong> already exists.
+                  Create Draft Cycle is blocked to prevent duplicates.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleForceGenerate} className="bg-yellow-600 hover:bg-yellow-700">
-                  Re-run & Replace
-                </AlertDialogAction>
+                <AlertDialogCancel>Close</AlertDialogCancel>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+
+          {/* Rejection Reason Dialog */}
+          <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Reject Payroll Cycle</DialogTitle>
+                <DialogDescription>
+                  Provide a reason for rejection. This will be visible to the Finance Controller.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="rejection-reason">Rejection Reason</Label>
+                  <textarea
+                    id="rejection-reason"
+                    className="flex min-h-[100px] w-full rounded-md border border-border bg-card px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    placeholder="Explain why this payroll cycle is being rejected..."
+                    value={rejectReason}
+                    onChange={(e) => setRejectReason(e.target.value)}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => {
+                  setRejectDialogOpen(false);
+                  setRejectReason('');
+                  setRejectingPayroll(null);
+                }}>
+                  Cancel
+                </Button>
+                <Button 
+                  variant="destructive" 
+                  onClick={handleReject}
+                  disabled={!rejectReason.trim() || approving !== null}
+                >
+                  {approving ? 'Rejecting...' : 'Confirm Rejection'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
@@ -617,6 +716,35 @@ export function PayrollContent({ employees, salaryStructures, payrolls, onRefres
           <CardHeader className="border-b bg-muted/50 py-4">
             <CardTitle className="text-sm font-medium">Disbursement Log</CardTitle>
           </CardHeader>
+          {!febAudit?.exists && (
+            <div className="mx-4 mt-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+              <div className="flex items-center justify-between">
+                <span>2026-02 payroll cycle not found. Please audit whether it was deleted and restore if required.</span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="ml-2 h-6 bg-white border-amber-300 text-amber-800 hover:bg-amber-100"
+                  onClick={async () => {
+                    const deleted = await getDeletedPayrolls();
+                    const febDeleted = deleted?.find((p: any) => p.month === '2026-02');
+                    if (febDeleted?.id) {
+                      const restored = await restorePayroll(febDeleted.id);
+                      if (restored) {
+                        toast.success('2026-02 payroll cycle restored successfully');
+                        window.location.reload();
+                      } else {
+                        toast.error('Failed to restore payroll cycle');
+                      }
+                    } else {
+                      toast.error('No deleted 2026-02 payroll cycle found to restore');
+                    }
+                  }}
+                >
+                  Restore Cycle
+                </Button>
+              </div>
+            </div>
+          )}
           <div className="divide-y max-h-[600px] overflow-y-auto">
             {payrolls.length === 0 ? (
               <div className="p-8 text-center space-y-3">
@@ -632,7 +760,7 @@ export function PayrollContent({ employees, salaryStructures, payrolls, onRefres
               payrolls.map(p => (
                 <div key={p.id} className="p-4 space-y-4">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-medium text-foreground">{p.month} Cycle</h4>
+                    <h4 className="text-xs font-medium text-foreground">{p.month} Cycle{(p as any).run_number && (p as any).run_number > 1 ? ` (Run ${(p as any).run_number})` : ''}</h4>
                     <Badge variant="outline" className={cn(
                       "text-xs font-semibold",
                       getStatusColor(p.status)
@@ -653,7 +781,7 @@ export function PayrollContent({ employees, salaryStructures, payrolls, onRefres
                   </div>
 
                   <div className="flex gap-2 flex-wrap">
-                    {p.status === 'processed' || p.status === 'posted' || p.status === 'paid' ? (
+                    {(p.status === 'finalized' || p.status === 'processed' || p.status === 'posted' || p.status === 'paid') ? (
                       <Dialog>
                         <DialogTrigger asChild>
                           <Button variant="outline" size="sm" className="h-8 text-xs font-medium gap-1.5 rounded-md">
@@ -666,24 +794,26 @@ export function PayrollContent({ employees, salaryStructures, payrolls, onRefres
                       </Dialog>
                     ) : null}
                     
+                    {/* Draft → Submit for Approval */}
                     {p.status === 'draft' && (
                       <Button 
                         size="sm" 
                         className="h-8 text-xs font-medium bg-yellow-600 hover:bg-yellow-700"
-                        onClick={() => handleStatusChange(p.id, 'pending')}
+                        onClick={() => handleSubmitForApproval(p.id)}
                         disabled={approving === p.id}
                       >
                         <Clock className="h-3 w-3 mr-1" />
-                        {approving === p.id ? 'Sending...' : 'Submit'}
+                        {approving === p.id ? 'Submitting...' : 'Submit for Approval'}
                       </Button>
                     )}
 
-                    {p.status === 'pending' && (
+                    {/* Pending Approval → Approve/Reject (MD/CEO only) */}
+                    {p.status === 'pending_approval' && (
                       <>
                         <Button 
                           size="sm" 
                           className="h-8 text-xs font-medium bg-emerald-600 hover:bg-emerald-700"
-                          onClick={() => handleStatusChange(p.id, 'approved')}
+                          onClick={() => handleApprove(p.id)}
                           disabled={approving === p.id}
                         >
                           <CheckCircle2 className="h-3 w-3 mr-1" />
@@ -691,9 +821,12 @@ export function PayrollContent({ employees, salaryStructures, payrolls, onRefres
                         </Button>
                         <Button 
                           size="sm" 
-                          variant="outline"
+                          variant="destructive"
                           className="h-8 text-xs font-medium"
-                          onClick={() => handleStatusChange(p.id, 'draft')}
+                          onClick={() => {
+                            setRejectingPayroll(p.id);
+                            setRejectDialogOpen(true);
+                          }}
                           disabled={approving === p.id}
                         >
                           Reject
@@ -701,19 +834,21 @@ export function PayrollContent({ employees, salaryStructures, payrolls, onRefres
                       </>
                     )}
 
+                    {/* Approved → Finalize (Generate Payslips) */}
                     {p.status === 'approved' && (
                       <Button 
                         size="sm" 
                         className="h-8 text-xs font-medium bg-primary hover:bg-primary/90"
-                        onClick={() => handleStatusChange(p.id, 'processed')}
+                        onClick={() => handleFinalize(p.id)}
                         disabled={approving === p.id}
                       >
                         <ThumbsUp className="h-3 w-3 mr-1" />
-                        {approving === p.id ? 'Processing...' : 'Process'}
+                        {approving === p.id ? 'Finalizing...' : 'Finalize & Generate Payslips'}
                       </Button>
                     )}
                     
-                    {p.status === 'processed' && !p.posted_to_finance ? (
+                    {/* Finalized → Post to Finance */}
+                    {p.status === 'finalized' && !p.posted_to_finance ? (
                       <Button 
                         size="sm" 
                         className="h-8 text-xs font-medium bg-primary hover:bg-primary/90"
@@ -723,6 +858,14 @@ export function PayrollContent({ employees, salaryStructures, payrolls, onRefres
                         {posting === p.id ? 'Posting...' : 'Post to Ledger'}
                       </Button>
                     ) : null}
+                    
+                    {/* Rejected → Show reason */}
+                    {p.status === 'rejected' && p.rejection_reason && (
+                      <div className="w-full bg-red-50 dark:bg-red-950/10 border border-red-200 dark:border-red-900 rounded-md p-2">
+                        <p className="text-xs font-medium text-red-900 dark:text-red-100">Rejection Reason:</p>
+                        <p className="text-xs text-red-700 dark:text-red-300 mt-1">{p.rejection_reason}</p>
+                      </div>
+                    )}
                     
                     {(p.status === 'posted' || p.status === 'paid') && (
                       <Button variant="outline" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground">
@@ -742,6 +885,38 @@ export function PayrollContent({ employees, salaryStructures, payrolls, onRefres
 
 export function PayslipBrowser({ payroll }: { payroll: Payroll }) {
   const [selectedLine, setSelectedLine] = useState(payroll.lines?.[0] || null);
+  const [paymentDetails, setPaymentDetails] = useState<Map<string, any>>(new Map());
+
+  useEffect(() => {
+    const fetchPaymentDetails = async () => {
+      const details = new Map();
+      for (const line of payroll.lines || []) {
+        if (line.employee?.id) {
+          try {
+            const empId = line.employee?.id;
+            if (!empId) return;
+            const res = await fetch(`/api/hrms/payment-details/${empId}`, {
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+              }
+            });
+            if (res.ok) {
+              const data = await res.json();
+              details.set(empId, data);
+            }
+          } catch (err) {
+            console.error('Failed to fetch payment details:', err);
+          }
+        }
+      }
+      setPaymentDetails(details);
+    };
+
+    if (payroll.lines?.length) {
+      fetchPaymentDetails();
+    }
+  }, [payroll.lines]);
 
   return (
     <div className="flex flex-col h-[80vh] bg-card">
@@ -763,19 +938,37 @@ export function PayslipBrowser({ payroll }: { payroll: Payroll }) {
       <div className="flex-1 flex overflow-hidden">
         {/* Staff List */}
         <div className="w-64 border-r overflow-y-auto divide-y">
-          {payroll.lines?.map((line: any) => (
-            <div 
-              key={line.id} 
-              onClick={() => setSelectedLine(line)}
-              className={cn(
-               "p-4 cursor-pointer transition-colors",
-                selectedLine?.id === line.id ?"bg-primary/5 border-r-2 border-primary" :"hover:bg-accent hover:text-accent-foreground"
-              )}
-            >
-              <p className="text-xs font-medium text-foreground">{line.employee?.name || 'Staff Member'}</p>
-              <p className="text-xs font-medium text-muted-foreground mt-0.5">AED {Number(line.net_pay || 0).toLocaleString()}</p>
-            </div>
-          ))}
+          {payroll.lines?.map((line: any) => {
+            const empPaymentDetails = paymentDetails.get(line.employee?.id || '');
+            const paymentMethod = empPaymentDetails?.payment_method || 'bank_transfer';
+            const PaymentIcon = paymentMethod === 'bank_transfer' ? Landmark : 
+                              paymentMethod === 'cheque' ? FileCheck : 
+                              paymentMethod === 'cash' ? Coins : Bitcoin;
+            
+            return (
+              <div 
+                key={line.id} 
+                onClick={() => setSelectedLine(line)}
+                className={cn(
+                 "p-4 cursor-pointer transition-colors",
+                  selectedLine?.id === line.id ?"bg-primary/5 border-r-2 border-primary" :"hover:bg-accent hover:text-accent-foreground"
+                )}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-foreground truncate">{line.employee?.name || 'Staff Member'}</p>
+                    <p className="text-xs font-medium text-muted-foreground mt-0.5">AED {Number(line.net_pay || 0).toLocaleString()}</p>
+                  </div>
+                  <PaymentIcon className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                </div>
+                {empPaymentDetails && (
+                  <Badge variant="outline" className="text-[9px] mt-1.5 h-4 px-1">
+                    {paymentMethod.replace('_', ' ')}
+                  </Badge>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {/* Payslip Render */}
@@ -813,8 +1006,22 @@ export function PayslipBrowser({ payroll }: { payroll: Payroll }) {
                     <p className="font-medium text-foreground">{selectedLine.employee?.role || 'Architect'}</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground font-medium text-[7px] mb-0.5">Bank Reference</p>
-                    <p className="font-medium text-foreground">WPS - AE042299</p>
+                    <p className="text-muted-foreground font-medium text-[7px] mb-0.5">Payment Method</p>
+                    <p className="font-medium text-foreground">
+                      {(() => {
+                        const empPaymentDetails = paymentDetails.get(selectedLine.employee?.id || '');
+                        if (!empPaymentDetails) return 'Bank Transfer';
+                        const method = empPaymentDetails.payment_method;
+                        if (method === 'bank_transfer') {
+                          const iban = empPaymentDetails.iban || empPaymentDetails.account_number;
+                          return iban ? `Bank - ${(iban || '').slice(-4)}` : 'Bank Transfer';
+                        }
+                        if (method === 'cheque') return 'Cheque Payment';
+                        if (method === 'cash') return 'Cash Disbursement';
+                        if (method === 'crypto') return `Crypto - ${empPaymentDetails.bank_name || 'Wallet'}`;
+                        return 'Bank Transfer';
+                      })()}
+                    </p>
                   </div>
                 </div>
               </div>

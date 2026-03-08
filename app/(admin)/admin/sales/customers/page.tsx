@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/context';
 import { getCustomers, createCustomer, deleteCustomer, updateCustomer, getLeads, getOpportunities, getInvoices } from '@/lib/api';
 import { DashboardShell } from '@/components/shared/layout/dashboard-shell';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     Users, Search, Plus, Building2, Briefcase, Globe, Phone, Target, ChevronRight, Trash2, Edit2,
-    Mail, MapPin, User, DollarSign, FileText, TrendingUp, ArrowUpRight, Calendar, Receipt
+    Mail, MapPin, User, DollarSign, FileText, TrendingUp, ArrowUpRight, Calendar, Receipt, ArrowLeft
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -27,6 +28,7 @@ import { cn } from '@/lib/utils';
 export default function SalesCustomersPage() {
     const { user } = useAuth();
     const { companyProfile } = useTenant();
+    const router = useRouter();
     const [customers, setCustomers] = useState<CustomerAccount[]>([]);
     const [leads, setLeads] = useState<Lead[]>([]);
     const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
@@ -361,7 +363,33 @@ export default function SalesCustomersPage() {
                             const data = getCustomerData(selectedCustomer.id);
                             return (
                                 <div className="flex flex-col h-full bg-card">
-                                    <SheetHeader className="p-6 border-b">
+                                    <SheetHeader className="p-6 border-b space-y-4">
+                                        <div className="flex items-center justify-between">
+                                            <Button 
+                                                variant="ghost" 
+                                                size="sm" 
+                                                className="h-8 gap-2 font-bold text-muted-foreground hover:text-foreground"
+                                                onClick={() => setSelectedCustomer(null)}
+                                            >
+                                                <ArrowLeft className="h-4 w-4" />
+                                                Back
+                                            </Button>
+                                            <Button 
+                                                size="sm" 
+                                                className="h-8 gap-2 font-bold shadow-sm"
+                                                onClick={() => {
+                                                    // Store customer data in localStorage for the opportunities page to pick up
+                                                    localStorage.setItem('newOpportunityCustomer', JSON.stringify({
+                                                        id: selectedCustomer.id,
+                                                        name: selectedCustomer.name
+                                                    }));
+                                                    router.push('/admin/sales/opportunities');
+                                                }}
+                                            >
+                                                <Plus className="h-4 w-4" />
+                                                Create Opportunity
+                                            </Button>
+                                        </div>
                                         <div className="flex items-center gap-4">
                                             <div className="h-12 w-12 rounded-md bg-primary/10 flex items-center justify-center text-primary">
                                                 <Building2 size={24} />

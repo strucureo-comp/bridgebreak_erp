@@ -64,7 +64,9 @@ import {
   Clock,
   HelpCircle,
 } from 'lucide-react';
-import { AuditReport, ChartData, VisualDataPoint } from '@/app/(admin)/admin/finance/_lib/tally-engine';
+type AuditReport = any;
+type ChartData = any;
+type VisualDataPoint = any;
 
 interface AuditReportDashboardProps {
   report: AuditReport;

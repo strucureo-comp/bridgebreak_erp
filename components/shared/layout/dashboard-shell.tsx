@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/auth/context';
 import { Header } from './header';
 import { Sidebar } from './sidebar';
 import { MobileNav } from './mobile-nav';
+import { TitleUpdater } from '../title-updater';
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -47,6 +48,7 @@ export function DashboardShell({
 
   return (
     <div className="min-h-screen bg-muted/20 flex font-sans text-foreground selection:bg-primary/20">
+      <TitleUpdater />
       {/* Sidebar - Desktop Only with Hover Autohide */}
       <Sidebar
         isCollapsed={isCollapsed}

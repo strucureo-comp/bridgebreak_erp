@@ -126,16 +126,61 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
   const refreshTenantStatus = useCallback(async () => {
     try {
       setLoading(true);
-      const [status, profile, branding] = await Promise.all([
-        getTenantStatus(),
-        getSettings<CompanyProfile>('company_profile'),
-        getSettings<any>('branding_config')
-      ]);
+
+      // Try to load from API first, fallback to localStorage
+      let branding = null;
+      let profile = null;
+      let status = null;
+
+      try {
+        [status, profile, branding] = await Promise.all([
+          getTenantStatus(),
+          getSettings<CompanyProfile>('company_profile'),
+          getSettings<any>('branding_config')
+        ]);
+      } catch (apiError) {
+        // API failed, try localStorage fallback
+        console.warn('API failed, using localStorage fallback');
+
+        const localBranding = localStorage.getItem('branding_settings');
+        if (localBranding) {
+          branding = JSON.parse(localBranding);
+        }
+
+        const localCompany = localStorage.getItem('company_settings');
+        if (localCompany) {
+          profile = JSON.parse(localCompany);
+        }
+
+        status = {
+          setup_stage: 'completed',
+          business_type: profile?.businessType || 'service',
+          company_setup_complete: true,
+          finance_setup_complete: true,
+          roles_setup_complete: true,
+          module_finance: true,
+          module_sales: true,
+          module_operations: true,
+          module_hr: true
+        };
+      }
+
       setTenantStatus(status as any);
       setCompanyProfile(profile);
       setBrandingConfig(branding);
     } catch (error) {
       console.error('Failed to load tenant context:', error);
+      // Final fallback to localStorage
+      const localBranding = localStorage.getItem('branding_settings');
+      if (localBranding) {
+        setBrandingConfig(JSON.parse(localBranding));
+      }
+
+      const localCompany = localStorage.getItem('company_settings');
+      if (localCompany) {
+        setCompanyProfile(JSON.parse(localCompany));
+      }
+
       // Set defaults on error
       setTenantStatus({
         setup_stage: 'completed',

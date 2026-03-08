@@ -2,13 +2,12 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/lib/auth/context';
-import { getOpportunities, createOpportunity, updateOpportunity, deleteOpportunity, getCustomers, getLeads } from '@/lib/api';
+import { getOpportunities, createOpportunity, updateOpportunity, deleteOpportunity, getCustomers, convertLeadToCustomer } from '@/lib/api';
 import { DashboardShell } from '@/components/shared/layout/dashboard-shell';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
-    Briefcase, Search, Plus, DollarSign, Calendar, Target, ChevronRight, Edit2, Trash2, AlertCircle, Clock, UserPlus
+    Briefcase, Search, Plus, DollarSign, Calendar, Target, ChevronRight, Edit2, Trash2, AlertCircle, Clock, ArrowRightCircle
 } from 'lucide-react';
-import { LeadForm } from '../_components/lead-form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -51,7 +50,6 @@ export default function SalesOpportunitiesPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
-    const [isLeadCreateOpen, setIsLeadCreateOpen] = useState(false);
 
     const isRetail = companyProfile?.businessType === 'b2c_retail';
 
@@ -71,6 +69,25 @@ export default function SalesOpportunitiesPage() {
     useEffect(() => {
         if (user?.role === 'admin') fetchData();
     }, [user]);
+
+    // Check for customer data from localStorage (when creating opportunity from customer details)
+    useEffect(() => {
+        const customerData = localStorage.getItem('newOpportunityCustomer');
+        if (customerData) {
+            try {
+                const customer = JSON.parse(customerData);
+                setFormData(prev => ({
+                    ...prev,
+                    name: `New Deal - ${customer.name}`,
+                    account_id: customer.id
+                }));
+                setIsCreateOpen(true);
+                localStorage.removeItem('newOpportunityCustomer');
+            } catch (e) {
+                console.error('Failed to parse customer data:', e);
+            }
+        }
+    }, []);
 
     const fetchData = async () => {
         try {
@@ -140,7 +157,8 @@ export default function SalesOpportunitiesPage() {
     }, [filteredOpportunities]);
 
     const handleSubmit = async () => {
-        if (!formData.name || !formData.account_id) return toast.error('Name and Account are required');
+        if (!formData.name) return toast.error('Name is required');
+        // Account is optional - if not provided, it's treated as a lead
         try {
             if (editingId) {
                 await updateOpportunity(editingId, formData);
@@ -178,6 +196,31 @@ export default function SalesOpportunitiesPage() {
             toast.success('Deal deleted');
             fetchData();
         } catch { toast.error('Failed to delete deal'); }
+    };
+
+    const handleConvertToCustomer = async (id: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!confirm('Move this lead to the next stage (Contacted)?')) return;
+        try {
+            // Find the opportunity
+            const opp = opportunities.find(o => o.id === id);
+            if (!opp) return;
+
+            // Move to next stage (from new_lead to contacted)
+            const nextStage = opp.stage === 'new_lead' ? 'contacted' : opp.stage;
+            const updatedProbability = nextStage === 'contacted' ? 20 : opp.probability;
+
+            await updateOpportunity(id, { 
+                ...opp, 
+                stage: nextStage,
+                probability: updatedProbability 
+            });
+            toast.success('Lead moved to next stage successfully!');
+            fetchData();
+        } catch (err) {
+            console.error('Move stage error:', err);
+            toast.error('Failed to move lead to next stage');
+        }
     };
 
     const handleOpenChange = (open: boolean) => {
@@ -232,8 +275,13 @@ export default function SalesOpportunitiesPage() {
                     {/* Header */}
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
                         <div>
-                            <h1 className="text-3xl font-black tracking-tight text-foreground">Pipeline View</h1>
-                            <p className="text-muted-foreground mt-1">Manage sales opportunities across all stages.</p>
+                            <h1 className="text-xl font-bold tracking-tight text-foreground uppercase">Opportunities & Leads</h1>
+                            <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Sales Pipeline</span>
+                                <Badge variant="secondary" className="hidden sm:inline-flex font-bold uppercase text-[9px] tracking-widest bg-slate-100 text-slate-600">
+                                    Lead to Deal
+                                </Badge>
+                            </div>
                         </div>
 
                         <div className="flex items-center gap-4">
@@ -242,29 +290,22 @@ export default function SalesOpportunitiesPage() {
                                 <Input placeholder="Search deals..." className="pl-9 h-10 w-64 border-border bg-background" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
                             </div>
 
-                            {/* Create Lead Button */}
-                            <Dialog open={isLeadCreateOpen} onOpenChange={setIsLeadCreateOpen}>
-                                <DialogTrigger asChild>
-                                    <Button size="sm" variant="outline" className="h-10 gap-2 font-bold shadow-sm">
-                                        <UserPlus className="h-4 w-4" /> Create Lead
-                                    </Button>
-                                </DialogTrigger>
-                                <DialogContent className="max-w-xl p-0 overflow-hidden border-none shadow-2xl rounded-md">
-                                    <LeadForm onSuccess={() => { setIsLeadCreateOpen(false); fetchData(); }} />
-                                </DialogContent>
-                            </Dialog>
-
+                            {/* Single Create Opportunity Button */}
                             <Dialog open={isCreateOpen} onOpenChange={handleOpenChange}>
                                 <DialogTrigger asChild>
                                     <Button size="sm" className="h-10 gap-2 font-bold shadow-sm">
-                                        <Plus className="h-4 w-4" /> New Deal
+                                        <Plus className="h-4 w-4" /> New Opportunity
                                     </Button>
                                 </DialogTrigger>
                                 <DialogContent className="max-w-2xl p-0 border-none shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                                    <DialogHeader className="sr-only">
+                                        <DialogTitle>{editingId ? 'Edit Deal' : 'Create Opportunity'}</DialogTitle>
+                                        <DialogDescription>{editingId ? 'Update deal details and follow-ups' : 'Add a new opportunity to the pipeline (with or without linked customer)'}</DialogDescription>
+                                    </DialogHeader>
                                     <div className="bg-background flex-1 overflow-y-auto w-full flex flex-col">
                                         <div className="p-6 border-b border-border shrink-0">
                                             <h3 className="text-xl font-bold tracking-tight text-foreground">{editingId ? 'Edit Deal' : 'Create Opportunity'}</h3>
-                                            <p className="text-muted-foreground text-xs mt-0.5">{editingId ? 'Update deal details and follow-ups' : 'Add a new deal to the pipeline'}</p>
+                                            <p className="text-muted-foreground text-xs mt-0.5">{editingId ? 'Update deal details and follow-ups' : 'Add a new opportunity to the pipeline'}</p>
                                         </div>
                                         <div className="p-6 space-y-6 flex-1">
 
@@ -278,10 +319,10 @@ export default function SalesOpportunitiesPage() {
                                                 </div>
                                                 <div className="grid grid-cols-2 gap-4">
                                                     <div className="space-y-1.5">
-                                                        <Label className="text-xs font-bold">Customer Account</Label>
+                                                        <Label className="text-xs font-bold">Customer Account <span className="text-muted-foreground font-normal">(Optional)</span></Label>
                                                         <Select value={formData.account_id} onValueChange={v => setFormData({ ...formData, account_id: v })}>
                                                             <SelectTrigger className="h-10 bg-background text-sm">
-                                                                <SelectValue placeholder="Select Account" />
+                                                                <SelectValue placeholder="Select Account or Leave Empty for Lead" />
                                                             </SelectTrigger>
                                                             <SelectContent>
                                                                 {customers.map(c => (
@@ -392,8 +433,8 @@ export default function SalesOpportunitiesPage() {
                         <Card className="border-border shadow-sm">
                             <CardContent className="p-4 flex items-center justify-between">
                                 <div>
-                                    <p className="text-xs font-bold text-muted-foreground mb-1">Total Pipeline Value</p>
-                                    <p className="text-2xl font-black text-foreground">{formatCurrency(kpiStats.totalVal)}</p>
+                                    <p className="text-xs font-medium text-muted-foreground mb-1">Total Pipeline Value</p>
+                                    <p className="text-2xl font-bold tracking-tight text-foreground">{formatCurrency(kpiStats.totalVal)}</p>
                                 </div>
                                 <div className="h-10 w-10 bg-primary/10 text-primary rounded-full flex items-center justify-center">
                                     <DollarSign className="h-5 w-5" />
@@ -403,8 +444,8 @@ export default function SalesOpportunitiesPage() {
                         <Card className="border-border shadow-sm">
                             <CardContent className="p-4 flex items-center justify-between">
                                 <div>
-                                    <p className="text-xs font-bold text-muted-foreground mb-1">Weighted Pipeline</p>
-                                    <p className="text-2xl font-black text-foreground">{formatCurrency(kpiStats.weightedVal)}</p>
+                                    <p className="text-xs font-medium text-muted-foreground mb-1">Weighted Pipeline</p>
+                                    <p className="text-2xl font-bold tracking-tight text-foreground">{formatCurrency(kpiStats.weightedVal)}</p>
                                 </div>
                                 <div className="h-10 w-10 bg-blue-500/10 text-blue-500 rounded-full flex items-center justify-center">
                                     <Target className="h-5 w-5" />
@@ -414,8 +455,8 @@ export default function SalesOpportunitiesPage() {
                         <Card className="border-border shadow-sm">
                             <CardContent className="p-4 flex items-center justify-between">
                                 <div>
-                                    <p className="text-xs font-bold text-muted-foreground mb-1">Deals Closing This Month</p>
-                                    <p className="text-2xl font-black text-foreground">{kpiStats.closingThisMonth}</p>
+                                    <p className="text-xs font-medium text-muted-foreground mb-1">Deals Closing This Month</p>
+                                    <p className="text-2xl font-bold tracking-tight text-foreground">{kpiStats.closingThisMonth}</p>
                                 </div>
                                 <div className="h-10 w-10 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center">
                                     <Calendar className="h-5 w-5" />
@@ -444,14 +485,14 @@ export default function SalesOpportunitiesPage() {
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-2">
                                                 <div className={cn("h-2.5 w-2.5 rounded-full", stage.color)} />
-                                                <span className="font-black text-sm text-foreground uppercase tracking-widest">{stage.label}</span>
+                                                <span className="font-bold text-xs text-foreground uppercase tracking-widest">{stage.label}</span>
                                             </div>
                                             <Badge variant="secondary" className="text-[10px] font-bold bg-background">{stageOpps.length}</Badge>
                                         </div>
                                         <div className="flex justify-between items-center pt-1 mt-1 border-t border-border/50">
                                             <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Pipeline Val</span>
                                             <span className={cn(
-                                                "text-xs font-black",
+                                                "text-xs font-bold",
                                                 isWon ? "text-emerald-600 dark:text-emerald-400" :
                                                     isLost ? "text-red-600 dark:text-red-400" : "text-foreground"
                                             )}>{formatCurrency(totalValue)}</span>
@@ -505,10 +546,22 @@ export default function SalesOpportunitiesPage() {
                                                         {/* Top Row: Name and Closing Warning */}
                                                         <div className="flex justify-between items-start gap-2">
                                                             <div className="space-y-1 w-full">
-                                                                <h4 className="font-bold text-sm text-foreground leading-tight">{opp.name}</h4>
+                                                                <div className="flex items-center gap-2">
+                                                                    <h4 className="font-bold text-sm text-foreground leading-tight">{opp.name}</h4>
+                                                                    {(opp as any).is_lead && (
+                                                                        <Badge variant="secondary" className="text-[9px] font-bold uppercase px-1.5 py-0.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                                                                            LEAD
+                                                                        </Badge>
+                                                                    )}
+                                                                </div>
                                                                 <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-1">
                                                                     <Briefcase size={10} className="shrink-0" />
-                                                                    <span className="truncate">{opp.account?.name || 'Unknown Account'}</span>
+                                                                    <span className="truncate">
+                                                                        {(opp as any).is_lead
+                                                                            ? `${(opp as any).first_name || ''} ${(opp as any).last_name || ''} ${(opp as any).company ? `- ${(opp as any).company}` : ''}`.trim()
+                                                                            : opp.account?.name || 'Unknown Account'
+                                                                        }
+                                                                    </span>
                                                                 </p>
                                                             </div>
                                                             {closingSoon && !isWon && !isLost && (
@@ -517,6 +570,18 @@ export default function SalesOpportunitiesPage() {
                                                                 </div>
                                                             )}
                                                         </div>
+                                                        {(opp as any).is_lead && (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                className="h-7 px-2 rounded-sm bg-primary/10 hover:bg-primary/20 text-primary font-bold text-[10px]"
+                                                                onClick={(e) => handleConvertToCustomer(opp.id, e)}
+                                                                title="Move to next stage"
+                                                            >
+                                                                <ArrowRightCircle size={12} className="mr-1" />
+                                                                Next Stage
+                                                            </Button>
+                                                        )}
 
                                                         {/* Follow-up Badge */}
                                                         <div className="flex items-center">
@@ -538,7 +603,7 @@ export default function SalesOpportunitiesPage() {
                                                             </div>
                                                             <div className="flex items-center gap-2 ml-auto text-right">
                                                                 <Badge variant="outline" className="text-[10px] font-bold px-1.5 py-0 bg-transparent border-border text-muted-foreground">{opp.probability}%</Badge>
-                                                                <span className="text-sm font-black text-foreground">{formatCurrency(Number(opp.amount))}</span>
+                                                                <span className="text-sm font-bold text-foreground">{formatCurrency(Number(opp.amount))}</span>
                                                             </div>
                                                         </div>
 

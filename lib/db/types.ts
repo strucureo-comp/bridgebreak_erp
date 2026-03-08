@@ -17,7 +17,14 @@ export type PriorityLevel = 'low' | 'medium' | 'high';
 
 export type MeetingStatus = 'pending' | 'accepted' | 'declined' | 'completed';
 
-export type InvoiceStatus = 'pending' | 'paid' | 'overdue' | 'cancelled';
+export type InvoiceStatus =
+  | 'pending'
+  | 'pending_approval'
+  | 'approved'
+  | 'rejected'
+  | 'paid'
+  | 'overdue'
+  | 'cancelled';
 
 export type MemberStatus = 'active' | 'inactive';
 
@@ -187,6 +194,16 @@ export interface Invoice {
   lines?: InvoiceLine[];
   tax_breakdown?: any;
   terms?: string;
+
+  // Approval workflow
+  requires_approval?: boolean;
+  approval_role?: string;
+  approval_records?: ApprovalRecord[];
+  approved_by?: string;
+  approved_at?: string;
+  rejected_by?: string;
+  rejected_at?: string;
+  rejection_reason?: string;
 }
 
 export interface InvoiceLine {
@@ -248,13 +265,22 @@ export interface Notification {
 
 
 
-export type QuotationStatus = 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired';
+export type QuotationStatus = 'draft' | 'sent' | 'pending_approval' | 'approved' | 'rejected' | 'accepted' | 'expired';
 
 export interface QuotationItem {
   description: string;
   quantity: number;
   unit_price: number;
   total: number;
+}
+
+export interface ApprovalRecord {
+  user_id: string;
+  user_name: string;
+  user_role: string;
+  action: 'approved' | 'rejected';
+  comment?: string;
+  timestamp: string;
 }
 
 export interface Quotation {
@@ -270,12 +296,33 @@ export interface Quotation {
   description?: string;
   items: QuotationItem[];
   notes?: string;
+  terms_and_conditions?: string;
+
+  // Tax Configuration
+  tax_mode?: 'auto' | 'manual';
+  tax_rate?: number;
+  tax_amount?: number;
+  manual_tax_adjustment?: number;
+
+  // Approval Workflow
+  requires_approval?: boolean;
+  approval_role?: string;
+  approval_records?: ApprovalRecord[];
+  approved_by?: string;
+  approved_at?: string;
+  rejected_by?: string;
+  rejected_at?: string;
+  rejection_reason?: string;
 
   // Manual Client Details (Non-registered)
   client_name?: string;
   client_email?: string;
+  client_phone?: string;
   client_company?: string;
   client_address?: string;
+  client_city?: string;
+  client_country?: string;
+  client_tax_id?: string;
   client_is_company?: boolean;
 
   created_at: string;
@@ -433,8 +480,15 @@ export interface Employee {
   joining_date: string;
   basic_salary: number;
   overtime_rate: number;
-  bank_details?: any;
-  status: 'active' | 'inactive';
+  bank_details?: {
+    account_name?: string;
+    account_number?: string;
+    bank_name?: string;
+    iban?: string;
+    swift_code?: string;
+    branch?: string;
+  };
+  status: 'active' | 'inactive' | 'on-leave' | 'terminated' | 'resigned' | 'separated';
   // Extended
   email?: string;
   phone?: string;
@@ -443,8 +497,28 @@ export interface Employee {
   blood_group?: string;
   marital_status?: string;
   nationality?: string;
+  passport_number?: string;
+  visa_status?: string;
   address?: string;
-  emergency_contact?: { name: string; phone: string; relation: string };
+  city?: string;
+  country?: string;
+  emergency_contacts?: Array<{
+    name: string;
+    relationship: string;
+    phone: string;
+    email?: string;
+    address?: string;
+    is_primary: boolean;
+  }>;
+  documents?: Array<{
+    type: 'passport' | 'visa' | 'id_card' | 'certificate' | 'contract' | 'other';
+    document_number?: string;
+    issue_date?: string;
+    expiry_date?: string;
+    issuing_authority?: string;
+    file_url?: string;
+    notes?: string;
+  }>;
   photo_url?: string;
   lifecycle_status?: EmployeeLifecycleStatus;
   confirmation_date?: string;
@@ -567,6 +641,13 @@ export interface Payroll {
   posted_to_finance?: boolean;
   finance_journal_id?: string;
   lines?: PayrollLine[];
+  
+  // Approval workflow fields
+  submitted_by?: string;
+  submitted_at?: string;
+  approved_by?: string;
+  approved_at?: string;
+  rejection_reason?: string;
 }
 
 export interface PayrollLine {
@@ -910,12 +991,22 @@ export interface FollowUp {
 
 export interface Opportunity {
   id: string;
-  account_id: string;
+  // Lead fields (for opportunities that started as leads)
+  is_lead?: boolean;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  phone?: string;
+  company?: string;
+  source?: string;
+  // Opportunity fields
+  account_id?: string; // Optional now - leads won't have this until converted
   name: string;
   amount: number;
   stage: OpportunityStage;
   probability: number;
   close_date?: string;
+  notes?: string;
   owner?: { full_name: string };
   account?: CustomerAccount;
   followUps?: FollowUp[];

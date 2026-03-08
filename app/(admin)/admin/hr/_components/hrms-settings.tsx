@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { 
   Globe, 
   Settings2, 
@@ -24,25 +26,64 @@ import {
   Pencil,
   Briefcase,
   Building2,
-  Tags
+  Tags,
+  Plane,
+  CalendarDays
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { createHRRole, createDepartment } from '@/lib/api';
+import { 
+  createHRRole, 
+  createDepartment, 
+  createLeaveType, 
+  createHoliday,
+  deleteHRRole,
+  deleteDepartment,
+  deleteLeaveType
+} from '@/lib/api';
 import { toast } from 'sonner';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 
-type ConfigMode = 'statutory' | 'roles' | 'departments' | 'employment-types' | 'components' | 'templates';
+type ConfigMode = 'statutory' | 'roles' | 'departments' | 'employment-types' | 'components' | 'templates' | 'leave-types';
 
 interface HRMSSettingsProps {
   roles?: any[];
   departments?: any[];
+  leaveTypes?: any[];
   onRefresh?: () => void;
 }
 
-export function HRMSSettings({ roles = [], departments = [], onRefresh = () => {} }: HRMSSettingsProps) {
+export function HRMSSettings({ roles = [], departments = [], leaveTypes = [], onRefresh = () => {} }: HRMSSettingsProps) {
   const [mode, setConfigMode] = useState<ConfigMode>('statutory');
   const [editingItem, setEditingItem] = useState<any>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [employmentTypes, setEmploymentTypes] = useState<string[]>(['Permanent', 'Contract', 'Intern', 'Probationary']);
+  const [salaryComponents, setSalaryComponents] = useState([
+    { name: 'Base Salary', cat: 'Earning', type: 'Fixed' },
+    { name: 'Housing', cat: 'Earning', type: '40% of Base' },
+    { name: 'Transport', cat: 'Earning', type: 'Flat' },
+  ]);
+  const [salaryTemplates, setSalaryTemplates] = useState(() => {
+    const deptNames = (departments || []).map((d: any) => d?.name).filter(Boolean);
+    const roleA = deptNames[0] || 'Developing';
+    const roleB = deptNames[1] || deptNames[0] || 'Engine';
+    const roleC = deptNames[2] || deptNames[0] || 'Developing';
+    return [
+      { name: 'Senior Engineer', role: roleA, base: 10000, hra: 4000, ta: 2000 },
+      { name: 'Junior Developer', role: roleB, base: 6000, hra: 2400, ta: 1200 },
+      { name: 'Operations Manager', role: roleC, base: 8500, hra: 3400, ta: 1700 },
+    ];
+  });
+
+  useEffect(() => {
+    if (!departments?.length) return;
+    const deptNames = departments.map((d: any) => d?.name).filter(Boolean);
+    if (!deptNames.length) return;
+    setSalaryTemplates((prev) =>
+      prev.map((template, idx) => {
+        if (deptNames.includes(template.role)) return template;
+        return { ...template, role: deptNames[idx % deptNames.length] };
+      })
+    );
+  }, [departments]);
 
   const handleEdit = (item: any) => {
     setEditingItem(item);
@@ -50,55 +91,51 @@ export function HRMSSettings({ roles = [], departments = [], onRefresh = () => {
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-      {/* Left: Configuration Mode Selector */}
-      <div className="lg:col-span-4 space-y-4">
-        <Label className="text-sm font-medium text-foreground px-1">Configuration Hub</Label>
-        <div className="grid grid-cols-1 gap-2">
-          {[
-            { id: 'statutory', label: 'Statutory Rules', desc: 'Country tax & laws', icon: Globe },
-            { id: 'roles', label: 'Role Architect', desc: 'Designations/Positions', icon: Shield },
-            { id: 'departments', label: 'Work Units', desc: 'Departments/Divisions', icon: Building2 },
-            { id: 'employment-types', label: 'Contract Types', desc: 'Staffing categories', icon: Tags },
-            { id: 'components', label: 'Component Master', desc: 'Earnings & deductions', icon: Calculator },
-            { id: 'templates', label: 'Salary Templates', desc: 'Role-based structures', icon: Wallet },
-          ].map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setConfigMode(item.id as ConfigMode)}
-              className={cn(
-               "flex items-center gap-4 p-4 rounded-md border text-left transition-all",
-                mode === item.id 
-                  ?"border-primary bg-primary/5 shadow-sm" 
-                  :"border-border bg-card hover:bg-accent hover:text-accent-foreground"
-              )}
-            >
-              <div className={cn(
-               "h-10 w-10 rounded-md flex items-center justify-center transition-colors",
-                mode === item.id ?"bg-primary text-card-foreground" :"bg-muted text-muted-foreground"
-              )}>
-                <item.icon size={20} />
-              </div>
-              <div className="min-w-0">
-                <p className={cn("text-xs font-semibold", mode === item.id ?"text-foreground" :"text-muted-foreground")}>{item.label}</p>
-                <p className="text-xs font-medium text-muted-foreground mt-0.5">{item.desc}</p>
-              </div>
-            </button>
-          ))}
-        </div>
+    <div className="w-full space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between px-1">
+        <Label className="text-sm font-medium text-foreground">Configuration Hub</Label>
+        <Button size="sm" className="h-8 gap-2 bg-primary hover:bg-primary/90 font-medium text-xs">
+          <Save className="h-3 w-3" /> Save All Changes
+        </Button>
       </div>
 
-      {/* Right: Input-Based Configuration Area */}
-      <div className="lg:col-span-8 space-y-6">
-        <div className="flex items-center justify-between px-1">
-          <Label className="text-sm font-medium text-foreground">Configure Properties</Label>
-          <Button size="sm" className="h-8 gap-2 bg-primary hover:bg-primary/90 font-medium text-xs">
-            <Save className="h-3 w-3" /> Save All Changes
-          </Button>
-        </div>
+      {/* Tabs Navigation */}
+      <Tabs value={mode} onValueChange={(v) => setConfigMode(v as ConfigMode)} className="w-full space-y-6">
+        <TabsList className="bg-muted p-1 w-full flex justify-start pl-2 rounded-lg gap-1 border-b mb-6 overflow-x-auto h-auto">
+          <TabsTrigger value="statutory" className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-4 py-2 font-medium text-xs">
+            <Globe className="h-4 w-4 mr-2" />
+            Statutory Rules
+          </TabsTrigger>
+          <TabsTrigger value="roles" className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-4 py-2 font-medium text-xs">
+            <Shield className="h-4 w-4 mr-2" />
+            Role Architect
+          </TabsTrigger>
+          <TabsTrigger value="departments" className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-4 py-2 font-medium text-xs">
+            <Building2 className="h-4 w-4 mr-2" />
+            Work Units
+          </TabsTrigger>
+          <TabsTrigger value="leave-types" className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-4 py-2 font-medium text-xs">
+            <Plane className="h-4 w-4 mr-2" />
+            Leave Types
+          </TabsTrigger>
+          <TabsTrigger value="employment-types" className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-4 py-2 font-medium text-xs">
+            <Tags className="h-4 w-4 mr-2" />
+            Contract Types
+          </TabsTrigger>
+          <TabsTrigger value="components" className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-4 py-2 font-medium text-xs">
+            <Calculator className="h-4 w-4 mr-2" />
+            Component Master
+          </TabsTrigger>
+          <TabsTrigger value="templates" className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-4 py-2 font-medium text-xs">
+            <Wallet className="h-4 w-4 mr-2" />
+            Salary Templates
+          </TabsTrigger>
+        </TabsList>
 
-        {mode === 'statutory' && (
-          <Card className="border shadow-sm rounded-md bg-card">
+        <div className="space-y-6 animate-in fade-in duration-300">
+          <TabsContent value="statutory" className="m-0 focus-visible:outline-none">
+            <Card className="border shadow-sm rounded-md bg-card">
             <CardHeader className="border-b bg-muted/50 py-4 flex flex-row items-center justify-between">
               <CardTitle className="text-sm font-semibold text-foreground">Statutory Engine</CardTitle>
               <Landmark className="h-4 w-4 text-muted-foreground/60" />
@@ -142,9 +179,9 @@ export function HRMSSettings({ roles = [], departments = [], onRefresh = () => {
               </div>
             </CardContent>
           </Card>
-        )}
+        </TabsContent>
 
-        {mode === 'roles' && (
+        <TabsContent value="roles" className="m-0 focus-visible:outline-none">
           <Card className="border shadow-sm rounded-md bg-card">
             <CardHeader className="border-b bg-muted/50 py-4 flex flex-row items-center justify-between">
               <CardTitle className="text-sm font-semibold text-foreground">Role Architect</CardTitle>
@@ -173,18 +210,32 @@ export function HRMSSettings({ roles = [], departments = [], onRefresh = () => {
               <div className="space-y-3 pt-4 border-t border-border">
                 <Label className="text-xs font-medium text-foreground">Configured Roles</Label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  {roles && roles.length > 0 ? (
-                    roles.map(role => (
-                      <div key={role.id} className="flex items-center justify-between p-3 border rounded-md bg-muted hover:bg-white transition-all group">
+                  {roles && Array.isArray(roles) && roles.length > 0 ? (
+                    roles.filter(role => role && role.title).map(role => (
+                      <div key={role.id || role._id} className="flex items-center justify-between p-3 border rounded-md bg-muted hover:bg-white transition-all group">
                         <div className="flex items-center gap-3">
                           <Users size={14} className="text-muted-foreground group-hover:text-primary transition-colors" />
                           <span className="text-sm font-medium text-foreground">{role.title}</span>
                         </div>
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => handleEdit({ type: 'role', name: role.title })}>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => handleEdit({ type: 'role', name: role.title, id: role.id || role._id })}>
                             <Pencil size={12} />
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground/60 hover:text-rose-500"><Trash2 size={12} /></Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground/60 hover:text-rose-500" onClick={async () => {
+                            if (!confirm(`Delete role "${role.title}"?`)) return;
+                            try {
+                              const success = await deleteHRRole(role.id || role._id);
+                              if (success) {
+                                toast.success('Role deleted');
+                                onRefresh();
+                              } else {
+                                toast.error('Failed to delete role');
+                              }
+                            } catch (err) {
+                              toast.error('Failed to delete role');
+                              console.error('Delete role error:', err);
+                            }
+                          }}><Trash2 size={12} /></Button>
                         </div>
                       </div>
                     ))
@@ -195,9 +246,9 @@ export function HRMSSettings({ roles = [], departments = [], onRefresh = () => {
               </div>
             </CardContent>
           </Card>
-        )}
+        </TabsContent>
 
-        {mode === 'departments' && (
+        <TabsContent value="departments" className="m-0 focus-visible:outline-none">
           <Card className="border shadow-sm rounded-md bg-card">
             <CardHeader className="border-b bg-muted/50 py-4 flex flex-row items-center justify-between">
               <CardTitle className="text-sm font-semibold text-foreground">Work Units</CardTitle>
@@ -226,18 +277,32 @@ export function HRMSSettings({ roles = [], departments = [], onRefresh = () => {
               <div className="space-y-3 pt-4 border-t border-border">
                 <Label className="text-xs font-medium text-foreground">Active Units</Label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  {departments && departments.length > 0 ? (
-                    departments.map(dept => (
-                      <div key={dept.id} className="flex items-center justify-between p-3 border rounded-md bg-muted hover:bg-white transition-all group">
+                  {departments && Array.isArray(departments) && departments.length > 0 ? (
+                    departments.filter(dept => dept && dept.name).map(dept => (
+                      <div key={dept.id || dept._id} className="flex items-center justify-between p-3 border rounded-md bg-muted hover:bg-white transition-all group">
                         <div className="flex items-center gap-3">
                           <Building2 size={14} className="text-muted-foreground group-hover:text-primary transition-colors" />
                           <span className="text-sm font-medium text-foreground">{dept.name}</span>
                         </div>
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => handleEdit({ type: 'dept', name: dept.name })}>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => handleEdit({ type: 'dept', name: dept.name, id: dept.id || dept._id })}>
                             <Pencil size={12} />
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground/60 hover:text-rose-500"><Trash2 size={12} /></Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground/60 hover:text-rose-500" onClick={async () => {
+                            if (!confirm(`Delete department "${dept.name}"?`)) return;
+                            try {
+                              const success = await deleteDepartment(dept.id || dept._id);
+                              if (success) {
+                                toast.success('Department deleted');
+                                onRefresh();
+                              } else {
+                                toast.error('Failed to delete department');
+                              }
+                            } catch (err) {
+                              toast.error('Failed to delete department');
+                              console.error('Delete department error:', err);
+                            }
+                          }}><Trash2 size={12} /></Button>
                         </div>
                       </div>
                     ))
@@ -248,9 +313,134 @@ export function HRMSSettings({ roles = [], departments = [], onRefresh = () => {
               </div>
             </CardContent>
           </Card>
-        )}
+        </TabsContent>
 
-        {mode === 'employment-types' && (
+        <TabsContent value="leave-types" className="m-0 focus-visible:outline-none">
+          <Card className="border shadow-sm rounded-md bg-card">
+            <CardHeader className="border-b bg-muted/50 py-4 flex flex-row items-center justify-between">
+              <CardTitle className="text-sm font-semibold text-foreground">Leave Types Configuration</CardTitle>
+              <Badge variant="outline" className="text-xs font-medium">Time Off</Badge>
+            </CardHeader>
+            <CardContent className="p-6 space-y-6">
+              <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-md p-3">
+                <p className="text-xs font-medium text-blue-900 dark:text-blue-100">
+                  Configure leave categories that employees can apply for. Each type can have annual limits and approval rules.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-muted-foreground">Create New Leave Type</Label>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                    <Input 
+                      placeholder="e.g. Casual Leave" 
+                      className="h-9 border-border text-xs font-medium" 
+                      id="new-leave-name" 
+                    />
+                    <Input 
+                      placeholder="Code (e.g. CL)" 
+                      className="h-9 border-border text-xs font-medium" 
+                      id="new-leave-code" 
+                    />
+                    <Input 
+                      type="number" 
+                      placeholder="Days per year" 
+                      className="h-9 border-border text-xs font-medium" 
+                      id="new-leave-days" 
+                      defaultValue="5"
+                    />
+                  </div>
+                  <Button size="sm" className="h-9 px-4 bg-primary font-medium text-xs mt-2 w-full md:w-auto" onClick={async () => {
+                    const nameInput = document.getElementById('new-leave-name') as HTMLInputElement;
+                    const codeInput = document.getElementById('new-leave-code') as HTMLInputElement;
+                    const daysInput = document.getElementById('new-leave-days') as HTMLInputElement;
+                    
+                    if (!nameInput.value || !codeInput.value) {
+                      toast.error('Leave name and code are required');
+                      return;
+                    }
+                    
+                    try {
+                      await createLeaveType({ 
+                        name: nameInput.value, 
+                        code: codeInput.value.toUpperCase(),
+                        days_per_year: parseInt(daysInput.value) || 5,
+                        is_paid: true,
+                        requires_approval: true
+                      });
+                      toast.success('Leave type created successfully');
+                      nameInput.value = '';
+                      codeInput.value = '';
+                      daysInput.value = '5';
+                      onRefresh();
+                    } catch { 
+                      toast.error('Failed to create leave type'); 
+                    }
+                  }}>
+                    <Plus className="h-3 w-3 mr-1" />
+                    Add Leave Type
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-3 pt-4 border-t border-border">
+                <Label className="text-xs font-medium text-foreground">Configured Leave Types</Label>
+                <div className="grid grid-cols-1 gap-2">
+                  {leaveTypes && Array.isArray(leaveTypes) && leaveTypes.length > 0 ? (
+                    leaveTypes.filter(lt => lt && lt.name).map(lt => (
+                      <div key={lt.id || lt._id} className="flex items-center justify-between p-4 border rounded-md bg-muted hover:bg-white transition-all group">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-md bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 flex items-center justify-center">
+                            <Plane size={18} />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-semibold text-foreground">{lt.name}</span>
+                              <Badge variant="secondary" className="text-xs font-bold">{lt.code || 'N/A'}</Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {lt.days_per_year || 0} days per year · {lt.is_paid ? 'Paid' : 'Unpaid'}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => handleEdit({ type: 'leave-type', name: lt.name, id: lt.id || lt._id })}>
+                            <Pencil size={12} />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground/60 hover:text-rose-500" onClick={async () => {
+                            if (!confirm(`Delete leave type "${lt.name}"?`)) return;
+                            try {
+                              const success = await deleteLeaveType(lt.id || lt._id);
+                              if (success) {
+                                toast.success('Leave type deleted');
+                                onRefresh();
+                              } else {
+                                toast.error('Failed to delete leave type');
+                              }
+                            } catch (err) {
+                              toast.error('Failed to delete leave type');
+                              console.error('Delete leave type error:', err);
+                            }
+                          }}>
+                            <Trash2 size={12} />
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-8 text-center border-2 border-dashed rounded-md">
+                      <Plane className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
+                      <p className="text-xs text-muted-foreground italic">No leave types configured yet</p>
+                      <p className="text-xs text-muted-foreground/60 mt-1">Create standard types like Casual, Earned, Sick, etc.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="employment-types" className="m-0 focus-visible:outline-none">
           <Card className="border shadow-sm rounded-md bg-card">
             <CardHeader className="border-b bg-muted/50 py-4 flex flex-row items-center justify-between">
               <CardTitle className="text-sm font-semibold text-foreground">Contract Types</CardTitle>
@@ -270,7 +460,7 @@ export function HRMSSettings({ roles = [], departments = [], onRefresh = () => {
               <div className="space-y-3 pt-4 border-t border-border">
                 <Label className="text-xs font-medium text-foreground">Current Categories</Label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  {['Permanent', 'Contract', 'Intern', 'Probationary'].map(type => (
+                  {employmentTypes.map(type => (
                     <div key={type} className="flex items-center justify-between p-3 border rounded-md bg-muted hover:bg-white transition-all group">
                       <div className="flex items-center gap-3">
                         <Tags size={14} className="text-muted-foreground group-hover:text-primary transition-colors" />
@@ -280,7 +470,15 @@ export function HRMSSettings({ roles = [], departments = [], onRefresh = () => {
                         <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => handleEdit({ type: 'contract', name: type })}>
                           <Pencil size={12} />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground/60 hover:text-rose-500"><Trash2 size={12} /></Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground/60 hover:text-rose-500"
+                          onClick={() => {
+                            setEmploymentTypes((prev) => prev.filter((item) => item !== type));
+                            toast.success('Employment type deleted');
+                          }}
+                        ><Trash2 size={12} /></Button>
                       </div>
                     </div>
                   ))}
@@ -288,9 +486,9 @@ export function HRMSSettings({ roles = [], departments = [], onRefresh = () => {
               </div>
             </CardContent>
           </Card>
-        )}
+        </TabsContent>
 
-        {mode === 'components' && (
+        <TabsContent value="components" className="m-0 focus-visible:outline-none">
           <Card className="border shadow-sm rounded-md bg-card overflow-hidden">
             <CardHeader className="border-b bg-muted/50 py-4 flex flex-row items-center justify-between">
               <CardTitle className="text-sm font-semibold text-foreground">Salary Components</CardTitle>
@@ -298,11 +496,7 @@ export function HRMSSettings({ roles = [], departments = [], onRefresh = () => {
             </CardHeader>
             <CardContent className="p-0">
               <div className="divide-y">
-                {[
-                  { name: 'Base Salary', cat: 'Earning', type: 'Fixed' },
-                  { name: 'Housing', cat: 'Earning', type: '40% of Base' },
-                  { name: 'Transport', cat: 'Earning', type: 'Flat' },
-                ].map((comp) => (
+                {salaryComponents.map((comp) => (
                   <div key={comp.name} className="flex items-center justify-between p-4 hover:bg-accent hover:text-accent-foreground transition-colors group">
                     <div className="flex items-center gap-4">
                       <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center text-muted-foreground">
@@ -325,7 +519,15 @@ export function HRMSSettings({ roles = [], departments = [], onRefresh = () => {
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => handleEdit({ ...comp, kind: 'component' })}>
                           <Pencil size={14} />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground/60 hover:text-rose-500"><Trash2 size={14} /></Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground/60 hover:text-rose-500"
+                          onClick={() => {
+                            setSalaryComponents((prev) => prev.filter((item) => item.name !== comp.name));
+                            toast.success('Component removed');
+                          }}
+                        ><Trash2 size={14} /></Button>
                       </div>
                     </div>
                   </div>
@@ -333,9 +535,9 @@ export function HRMSSettings({ roles = [], departments = [], onRefresh = () => {
               </div>
             </CardContent>
           </Card>
-        )}
+        </TabsContent>
 
-        {mode === 'templates' && (
+        <TabsContent value="templates" className="m-0 focus-visible:outline-none">
           <div className="space-y-6">
             <Card className="border shadow-sm rounded-md bg-card">
               <CardHeader className="border-b bg-muted/50 py-4 flex flex-row items-center justify-between text-foreground">
@@ -346,11 +548,7 @@ export function HRMSSettings({ roles = [], departments = [], onRefresh = () => {
               </CardHeader>
               <CardContent className="p-0">
                 <div className="divide-y">
-                  {[
-                    { name: 'Senior Engineer', role: 'Engineering', base: 10000, hra: 4000, ta: 2000 },
-                    { name: 'Junior Developer', role: 'IT', base: 6000, hra: 2400, ta: 1200 },
-                    { name: 'Operations Manager', role: 'Operations', base: 8500, hra: 3400, ta: 1700 },
-                  ].map((template) => (
+                  {salaryTemplates.map((template) => (
                     <div key={template.name} className="flex items-center justify-between p-4 hover:bg-accent hover:text-accent-foreground transition-colors group">
                       <div className="flex items-center gap-4">
                         <div className="h-10 w-10 rounded-md bg-primary/10 text-primary flex items-center justify-center">
@@ -367,10 +565,19 @@ export function HRMSSettings({ roles = [], departments = [], onRefresh = () => {
                           <p className="text-sm font-semibold text-foreground">AED {template.base.toLocaleString()}</p>
                         </div>
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button variant="ghost" size="icon" className="h-8 w-8" title="Edit template">
+                          <Button variant="ghost" size="icon" className="h-8 w-8" title="Edit template" onClick={() => handleEdit({ type: 'template', name: template.name })}>
                             <Pencil size={14} />
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-500/60 hover:text-rose-600" title="Delete template">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-rose-500/60 hover:text-rose-600"
+                            title="Delete template"
+                            onClick={() => {
+                              setSalaryTemplates((prev) => prev.filter((item) => item.name !== template.name));
+                              toast.success('Template deleted');
+                            }}
+                          >
                             <Trash2 size={14} />
                           </Button>
                         </div>
@@ -383,7 +590,7 @@ export function HRMSSettings({ roles = [], departments = [], onRefresh = () => {
 
             <Card className="border shadow-sm rounded-md bg-card">
               <CardHeader className="border-b bg-muted/50 py-4">
-                <CardTitle className="text-sm font-semibold text-foreground">Define Structure: Senior Engineer</CardTitle>
+                <CardTitle className="text-sm font-semibold text-foreground">Define Structure: {salaryTemplates[0]?.name || 'Template'}</CardTitle>
               </CardHeader>
               <CardContent className="p-6 space-y-6">
                 <div className="space-y-4">
@@ -451,8 +658,9 @@ export function HRMSSettings({ roles = [], departments = [], onRefresh = () => {
               </CardContent>
             </Card>
           </div>
-        )}
-      </div>
+        </TabsContent>
+        </div>
+      </Tabs>
 
       {/* Global Edit Dialog */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>

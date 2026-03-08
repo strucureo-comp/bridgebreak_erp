@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/context';
-import { getOpportunities, getLeads, getActivities, getInvoices, getSalesOrders, getQuotes } from '@/lib/api';
+import { getOpportunities, getLeads, getInvoices, getQuotes } from '@/lib/api';
 import { DashboardShell } from '@/components/shared/layout/dashboard-shell';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -13,21 +13,21 @@ import {
     TrendingUp, Users, Target, DollarSign,
     ShoppingCart, FileText, UserPlus,
     Clock, Plus, Receipt,
-    Activity, ArrowUpRight, BarChart3, Briefcase, ChevronRight
+    ArrowUpRight, BarChart3, Briefcase, ChevronRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { Opportunity, Lead, Activity as ActivityType, Invoice } from '@/lib/db/types';
+import type { Opportunity, Lead, Invoice } from '@/lib/db/types';
 import { ModuleGuard } from '@/components/shared/layout/module-guard';
 import { useTenant } from '@/lib/tenant-context';
 
-export function isOverdue(dateStr: string) {
+function isOverdue(dateStr: string) {
     if (!dateStr) return false;
     const d = new Date(dateStr);
     const today = new Date();
     return d < today && d.toDateString() !== today.toDateString();
 }
 
-export function isToday(dateStr: string) {
+function isToday(dateStr: string) {
     if (!dateStr) return false;
     return new Date(dateStr).toDateString() === new Date().toDateString();
 }
@@ -38,9 +38,7 @@ export default function SalesDashboardPage() {
     const { getModuleLabel, companyProfile } = useTenant();
     const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
     const [leads, setLeads] = useState<Lead[]>([]);
-    const [activities, setActivities] = useState<ActivityType[]>([]);
     const [invoices, setInvoices] = useState<Invoice[]>([]);
-    const [salesOrders, setSalesOrders] = useState<any[]>([]);
     const [quotes, setQuotes] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -62,19 +60,15 @@ export default function SalesDashboardPage() {
     const fetchData = async () => {
         try {
             setLoading(true);
-            const [oppsData, leadsData, activityData, invData, ordersData, quotesData] = await Promise.all([
+            const [oppsData, leadsData, invData, quotesData] = await Promise.all([
                 getOpportunities().catch(() => []),
                 getLeads().catch(() => []),
-                getActivities().catch(() => []),
                 getInvoices().catch(() => []),
-                getSalesOrders().catch(() => []),
                 getQuotes().catch(() => []),
             ]);
             setOpportunities((oppsData as any) || []);
             setLeads(leadsData || []);
-            setActivities(activityData || []);
             setInvoices(invData || []);
-            setSalesOrders(ordersData || []);
             setQuotes(quotesData || []);
         } catch (e) { console.error(e); }
         finally { setLoading(false); }
@@ -138,17 +132,17 @@ export default function SalesDashboardPage() {
 
                     {/* Quick Stats: Clear KPI Cards */}
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-                        <MetricCard title="Total Revenue (Won)" value={fmt(stats.revenue)} trend="Confirmed" />
+                        <MetricCard key="revenue" title="Total Revenue (Won)" value={fmt(stats.revenue)} trend="Confirmed" />
                         {!isRetail && (
-                            <MetricCard title="Pipeline Value" value={fmt(stats.pipelineValue)} trend="In Progress" />
+                            <MetricCard key="pipeline" title="Pipeline Value" value={fmt(stats.pipelineValue)} trend="In Progress" />
                         )}
-                        <MetricCard title="Active Leads" value={stats.activeLeads.toString()} trend="To Contact" />
-                        <MetricCard title="Pending Invoices" value={fmt(stats.pendingInvoiceAmount)} trend="Unpaid" />
-                        <Card className="border-border shadow-sm bg-orange-500/5">
+                        <MetricCard key="leads" title="Active Leads" value={stats.activeLeads.toString()} trend="To Contact" />
+                        <MetricCard key="invoices" title="Pending Invoices" value={fmt(stats.pendingInvoiceAmount)} trend="Unpaid" />
+                        <Card key="followups" className="border-border shadow-sm bg-orange-500/5">
                             <CardHeader className="pb-2 pt-4 px-4"><CardTitle className="text-xs font-bold text-orange-600 dark:text-orange-400 uppercase tracking-widest">Follow-ups Today</CardTitle></CardHeader>
                             <CardContent className="px-4 pb-4 pt-0"><div className="text-2xl font-black text-foreground">{stats.followUpsToday}</div></CardContent>
                         </Card>
-                        <Card className="border-red-500/30 shadow-sm bg-red-500/5">
+                        <Card key="overdue" className="border-red-500/30 shadow-sm bg-red-500/5">
                             <CardHeader className="pb-2 pt-4 px-4"><CardTitle className="text-xs font-bold text-red-600 dark:text-red-400 uppercase tracking-widest">Overdue Actions</CardTitle></CardHeader>
                             <CardContent className="px-4 pb-4 pt-0"><div className="text-2xl font-black text-foreground">{stats.overdueFollowUps}</div></CardContent>
                         </Card>
@@ -173,15 +167,15 @@ export default function SalesDashboardPage() {
                                             <div className="p-8 text-center text-sm text-muted-foreground">No active opportunities.</div>
                                         ) : (
                                             <div className="divide-y divide-border">
-                                                {opportunities.slice(0, 5).map(opp => (
-                                                    <div key={opp.id} className="p-4 flex items-center justify-between hover:bg-muted/30 transition-colors">
+                                                {opportunities.slice(0, 5).map((opp, idx) => (
+                                                    <div key={opp.id || (opp as any)._id || `opp-${idx}`} className="p-4 flex items-center justify-between hover:bg-muted/30 transition-colors">
                                                         <div>
                                                             <p className="font-bold text-sm">{opp.name}</p>
                                                             <p className="text-xs text-muted-foreground mt-0.5">{opp.account?.name}</p>
                                                         </div>
                                                         <div className="text-right">
                                                             <p className="font-bold text-sm">{fmt(Number(opp.amount))}</p>
-                                                            <Badge variant="secondary" className="mt-1 text-[10px]">{opp.stage.replace('_', ' ')}</Badge>
+                                                            <Badge variant="secondary" className="mt-1 text-[10px]">{opp.stage?.replace('_', ' ')}</Badge>
                                                         </div>
                                                     </div>
                                                 ))}
@@ -191,32 +185,34 @@ export default function SalesDashboardPage() {
                                 </Card>
                             )}
 
-                            {/* Recent Leads — always visible */}
-                            <Card className="border-border shadow-sm">
-                                <CardHeader className="flex flex-row items-center justify-between border-b border-border py-4">
-                                    <CardTitle className="text-base font-bold">Recent Leads</CardTitle>
-                                    <Button variant="ghost" size="sm" className="h-8 text-xs font-medium" asChild>
-                                        <Link href="/admin/sales/leads">View All</Link>
-                                    </Button>
-                                </CardHeader>
-                                <CardContent className="p-0">
-                                    {leads.length === 0 ? (
-                                        <div className="p-8 text-center text-sm text-muted-foreground">No recent leads.</div>
-                                    ) : (
-                                        <div className="divide-y divide-border">
-                                            {leads.slice(0, 4).map(lead => (
-                                                <div key={lead.id} className="p-4 flex items-center justify-between hover:bg-muted/30 transition-colors">
-                                                    <div>
-                                                        <p className="font-bold text-sm">{lead.first_name} {lead.last_name}</p>
-                                                        <p className="text-xs text-muted-foreground mt-0.5">{lead.company}</p>
+                            {/* Recent Leads Merged into Opportunities */}
+                            {!isRetail && leads.length > 0 && (
+                                <Card className="border-border shadow-sm">
+                                    <CardHeader className="flex flex-row items-center justify-between border-b border-border py-4">
+                                        <CardTitle className="text-base font-bold">Recent Leads</CardTitle>
+                                        <Button variant="ghost" size="sm" className="h-8 text-xs font-medium" asChild>
+                                            <Link href="/admin/sales/opportunities">View Pipeline</Link>
+                                        </Button>
+                                    </CardHeader>
+                                    <CardContent className="p-0">
+                                        {leads.length === 0 ? (
+                                            <div className="p-8 text-center text-sm text-muted-foreground">No recent leads.</div>
+                                        ) : (
+                                            <div className="divide-y divide-border">
+                                                {leads.slice(0, 4).map((lead, idx) => (
+                                                    <div key={lead.id || (lead as any)._id || `lead-${idx}`} className="p-4 flex items-center justify-between hover:bg-muted/30 transition-colors">
+                                                        <div>
+                                                            <p className="font-bold text-sm">{lead.first_name} {lead.last_name}</p>
+                                                            <p className="text-xs text-muted-foreground mt-0.5">{lead.company}</p>
+                                                        </div>
+                                                        <Badge className="bg-primary/10 text-primary border-none text-[10px]">{lead.status?.replace('_', ' ')}</Badge>
                                                     </div>
-                                                    <Badge className="bg-primary/10 text-primary border-none text-[10px]">{lead.status.replace('_', ' ')}</Badge>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </CardContent>
-                            </Card>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            )}
                         </div>
 
                         {/* RIGHT COLUMN */}
@@ -234,8 +230,8 @@ export default function SalesDashboardPage() {
                                         <div className="p-8 text-center text-sm text-muted-foreground">No recent quotes.</div>
                                     ) : (
                                         <div className="divide-y divide-border">
-                                            {quotes.slice(0, 5).map(q => (
-                                                <div key={q.id} className="p-4 flex items-center justify-between hover:bg-muted/30 transition-colors">
+                                            {quotes.slice(0, 5).map((q, idx) => (
+                                                <div key={q.id || q._id || `quote-${idx}`} className="p-4 flex items-center justify-between hover:bg-muted/30 transition-colors">
                                                     <div>
                                                         <p className="font-bold text-sm">{q.quote_number}</p>
                                                         <p className="text-xs text-muted-foreground mt-0.5">{q.account?.name}</p>
@@ -259,7 +255,7 @@ export default function SalesDashboardPage() {
                                     <Link href="/admin/sales/opportunities" className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
                                         <div className="flex items-center gap-3">
                                             <div className="p-2 border border-border rounded-md bg-background shadow-sm"><Target className="h-4 w-4" /></div>
-                                            <span className="font-bold text-sm">Opportunities & Leads</span>
+                                            <span className="font-bold text-sm">Opportunities & Leads Pipeline</span>
                                         </div>
                                         <ChevronRight className="h-4 w-4 text-muted-foreground" />
                                     </Link>

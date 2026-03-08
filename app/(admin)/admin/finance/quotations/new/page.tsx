@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/context';
-import { getUsers, getProjects, createQuotation } from '@/lib/api';
+import { getUsers, getProjects, createQuotation, getSettings } from '@/lib/api';
 import { DashboardShell } from '@/components/shared/layout/dashboard-shell';
 import { toast } from 'sonner';
 import { RefreshCcw } from 'lucide-react';
@@ -12,6 +12,8 @@ import { BrandedDocumentPreview } from '@/components/shared/common/branded-docum
 import { useTenant } from '@/lib/tenant-context';
 import { QuotationForm } from '../_components/quotation-form';
 import { QuotationHeader } from '../_components/quotation-header';
+import { checkApprovalRequired } from '@/lib/approval-workflow';
+import { generateQuotationPDF } from '@/lib/pdf-generator';
 
 export default function NewQuotationPage() {
     const router = useRouter();
@@ -25,12 +27,18 @@ export default function NewQuotationPage() {
     const [projects, setProjects] = useState<Project[]>([]);
 
     const [isManual, setIsManual] = useState(false);
+    const [autoGenerateNumber, setAutoGenerateNumber] = useState(true);
+    const [taxRate, setTaxRate] = useState(5);
     const [formData, setFormData] = useState({
         client_id: '',
         client_name: '',
         client_email: '',
         client_company: '',
         client_address: '',
+        client_phone: '',
+        client_city: '',
+        client_country: '',
+        client_tax_id: '',
         client_is_company: true,
         project_id: '',
         project_title: '',
@@ -40,6 +48,9 @@ export default function NewQuotationPage() {
         currency: companyProfile?.baseCurrency || 'AED',
         description: '',
         notes: '',
+        terms_and_conditions: '',
+        tax_mode: 'auto' as 'auto' | 'manual',
+        manual_tax_adjustment: 0,
     });
 
     const [items, setItems] = useState<QuotationItem[]>([
@@ -48,14 +59,13 @@ export default function NewQuotationPage() {
 
     const totals = useMemo(() => {
         const subtotal = items.reduce((acc, item) => acc + item.total, 0);
-        const taxRate = 5; // Standard VAT
         const tax = subtotal * (taxRate / 100);
         return {
             subtotal,
             tax,
             total: subtotal + tax
         };
-    }, [items]);
+    }, [items, taxRate]);
 
     const selectedClient = useMemo(() => {
         if (isManual) return { name: formData.client_company || formData.client_name, address: formData.client_address };
@@ -65,7 +75,26 @@ export default function NewQuotationPage() {
 
     useEffect(() => {
         fetchData();
+        loadSettings();
     }, []);
+
+    useEffect(() => {
+        if (autoGenerateNumber) {
+            const newNumber = `QT-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+            setFormData(prev => ({ ...prev, quotation_number: newNumber }));
+        }
+    }, [autoGenerateNumber]);
+
+    const loadSettings = async () => {
+        try {
+            const financeSettings = await getSettings<any>('finance');
+            if (financeSettings) {
+                setTaxRate(financeSettings.defaultTaxRate || 5);
+            }
+        } catch (error) {
+            console.warn('Failed to load finance settings, using defaults');
+        }
+    };
 
     const fetchData = async () => {
         try {
@@ -84,8 +113,7 @@ export default function NewQuotationPage() {
 
 
 
-    const handleSubmit = async (e?: React.FormEvent) => {
-        if (e && e.preventDefault) e.preventDefault();
+    const handleSubmit = async (statusToSave: QuotationStatus = 'sent') => {
         if ((!formData.client_id && !isManual) || !formData.quotation_number || !formData.valid_until) {
             return toast.error('Required identity fields missing');
         }
@@ -95,17 +123,55 @@ export default function NewQuotationPage() {
 
         setSaving(true);
         try {
+                // Check if approval is required (only for 'sent' status, not drafts)
+                let finalStatus = statusToSave;
+                let approvalRole = '';
+                if (statusToSave === 'sent') {
+                    const approvalReq = await checkApprovalRequired('quotation', totals.total);
+                    if (approvalReq.requiresApproval) {
+                        finalStatus = 'pending_approval' as QuotationStatus;
+                        approvalRole = approvalReq.approvalRole;
+                        toast.info(`Quotation requires approval from ${approvalRole}`);
+                    }
+                }
+
             const res = await createQuotation({
+                ...formData,
+                    status: finalStatus,
+                amount: totals.total,
+                items: items,
+                    requires_approval: finalStatus === 'pending_approval',
+                    approval_role: approvalRole || undefined,
+            });
+                toast.success(
+                    statusToSave === 'draft' 
+                        ? 'Quotation saved as draft' 
+                        : finalStatus === 'pending_approval'
+                        ? 'Quotation submitted for approval'
+                        : 'Proposal Dispatched'
+                );
+            router.push('/admin/finance/quotations');
+        } catch (error: any) {
+            toast.error(error.message || 'Save failed');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleDownloadPDF = async () => {
+        try {
+            const selectedUser = users.find(u => u.id === formData.client_id);
+            const quotationData = {
                 ...formData,
                 amount: totals.total,
                 items: items,
-            });
-            toast.success('Proposal Dispatched');
-            router.push('/admin/finance/quotations');
+                created_at: new Date().toISOString(),
+            } as any;
+            await generateQuotationPDF(quotationData, selectedUser || null);
+            toast.success('PDF downloaded successfully');
         } catch (error: any) {
-            toast.error(error.message || 'Dispatch failed');
-        } finally {
-            setSaving(false);
+            toast.error('Failed to generate PDF');
+            console.error(error);
         }
     };
 
@@ -124,11 +190,24 @@ export default function NewQuotationPage() {
                     subtitle="Sales CRM Hub"
                     viewMode={viewMode}
                     onViewModeChange={setViewMode}
-                    onSave={() => handleSubmit()}
+                    onSave={() => handleSubmit('sent')}
                     onCancel={() => router.back()}
+                    onDownloadPDF={handleDownloadPDF}
                     saving={saving}
                     variant="modern"
                 />
+
+                {viewMode === 'edit' && (
+                    <div className="flex justify-end gap-2 mb-4">
+                        <button
+                            onClick={() => handleSubmit('draft')}
+                            disabled={saving}
+                            className="px-4 py-2 text-sm font-semibold uppercase tracking-wider border border-border rounded-md hover:bg-muted transition-colors"
+                        >
+                            Save as Draft
+                        </button>
+                    </div>
+                )}
 
                 {viewMode === 'edit' ? (
                     <QuotationForm
@@ -137,9 +216,11 @@ export default function NewQuotationPage() {
                         users={users}
                         projects={projects}
                         isManual={isManual}
+                        autoGenerateNumber={autoGenerateNumber}
                         onFormDataChange={setFormData}
                         onItemsChange={setItems}
                         onIsManualChange={setIsManual}
+                        onAutoGenerateNumberChange={setAutoGenerateNumber}
                         variant="modern"
                     />
                 ) : (
@@ -147,12 +228,16 @@ export default function NewQuotationPage() {
                         <BrandedDocumentPreview
                             type="quotation"
                             number={formData.quotation_number}
-                            entityName={selectedClient.name || undefined}
-                            entityAddress={selectedClient.address || undefined}
+                            validUntil={formData.valid_until}
+                            entityName={isManual ? (formData.client_is_company ? formData.client_company : formData.client_name) : selectedClient.name}
+                            entityAddress={isManual ? `${formData.client_address}${formData.client_city ? '\n' + formData.client_city : ''}${formData.client_country ? ', ' + formData.client_country : ''}` : selectedClient.address}
+                            entityEmail={isManual ? formData.client_email : undefined}
+                            entityTaxId={formData.client_is_company && formData.client_tax_id ? formData.client_tax_id : undefined}
                             lines={items.map(i => ({ ...i, unit_price: i.unit_price }))}
-                            totals={{ subtotal: items.reduce((a, i) => a + i.total, 0), tax: items.reduce((a, i) => a + i.total, 0) * 0.05, total: items.reduce((a, i) => a + i.total, 0) * 1.05 }}
+                            totals={totals}
                             currency={formData.currency}
                             notes={formData.notes}
+                            termsConditions={formData.terms_and_conditions}
                         />
                     </div>
                 )}

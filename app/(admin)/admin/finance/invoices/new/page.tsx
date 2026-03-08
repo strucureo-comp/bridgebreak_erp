@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/context';
 import { getUsers, getProjects, createInvoice } from '@/lib/api';
+import { checkApprovalRequired } from '@/lib/approval-workflow';
 import { DashboardShell } from '@/components/shared/layout/dashboard-shell';
 import { toast } from 'sonner';
 import { RefreshCcw, FileDown, CheckCircle2 } from 'lucide-react';
@@ -129,16 +130,31 @@ export default function NewInvoicePage() {
 
         setSaving(true);
         try {
+            let finalStatus: InvoiceStatus = formData.status;
+            let approvalRole = '';
+
+            if (formData.status === 'pending') {
+                const approvalReq = await checkApprovalRequired('invoice', totals.total);
+                if (approvalReq.requiresApproval) {
+                    finalStatus = 'pending_approval';
+                    approvalRole = approvalReq.approvalRole;
+                    toast.info(`Invoice requires approval from ${approvalRole}`);
+                }
+            }
+
             const result = await createInvoice({
                 ...formData,
+                status: finalStatus,
                 amount: totals.total,
+                requires_approval: finalStatus === 'pending_approval',
+                approval_role: approvalRole || undefined,
             });
 
             if (result && result.id) {
                 setCreatedInvoiceId(result.id);
                 setShowSuccessDialog(true);
             } else {
-                toast.success('Tax Invoice Dispatched');
+                toast.success(finalStatus === 'pending_approval' ? 'Invoice submitted for approval' : 'Tax Invoice Dispatched');
                 router.push('/admin/finance/invoices');
             }
         } catch (error: any) {

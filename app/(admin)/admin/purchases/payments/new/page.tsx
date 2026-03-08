@@ -34,7 +34,7 @@ export default function NewPaymentPage() {
     try {
       const data = await getVendorBills();
       // Filter for unpaid bills
-      setBills(data.filter(b => b.status !== 'paid') || []);
+      setBills(data.filter((b: any) => b.status !== 'paid') || []);
     } catch (e) {
       toast.error('Failed to load bills');
     } finally {

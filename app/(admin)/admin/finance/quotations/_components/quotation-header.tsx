@@ -71,6 +71,16 @@ export function QuotationHeader({
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {onDownloadPDF && (
+            <Button 
+              variant="outline" 
+              className="h-10 px-6 font-bold uppercase text-[10px] tracking-widest" 
+              onClick={onDownloadPDF}
+            >
+              <FileDown className="mr-2 h-4 w-4" />
+              Download PDF
+            </Button>
+          )}
           {onCancel && (
             <Button variant="outline" className="h-10 px-6 font-bold uppercase text-[10px] tracking-widest" onClick={onCancel}>
               Cancel

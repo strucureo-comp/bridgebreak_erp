@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Clock, CheckCircle, XCircle, CalendarDays, TreePalm, ChevronRight, MessageSquare, User, Search } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { toast } from 'sonner';
-import { applyLeave, updateLeaveStatus, createHoliday } from '@/lib/api';
+import { applyLeave, updateLeaveStatus, createHoliday, bulkAssignLeaveType, updateLeave } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import type { Employee, Leave, LeaveType, Holiday } from '@/lib/db/types';
 
@@ -27,9 +27,50 @@ export function AttendanceLeave({ employees, leaves, leaveTypes, holidays, onRef
   const [leaveOpen, setLeaveOpen] = useState(false);
   const [holidayOpen, setHolidayOpen] = useState(false);
   const [selectedLeave, setSelectedLeave] = useState<Leave | null>(null);
+  const [bulkTypeId, setBulkTypeId] = useState('');
+  const [assignTypeOpen, setAssignTypeOpen] = useState(false);
+  const [assigningLeave, setAssigningLeave] = useState<Leave | null>(null);
+  const [singleTypeId, setSingleTypeId] = useState('');
+
+  const missingTypeLeaves = leaves.filter((leave) => !leave.leave_type || (typeof leave.leave_type === 'string' && !leave.leave_type.trim()));
+
+  const leaveTypeLabel = (leave: Leave) => {
+    if (!leave.leave_type || (typeof leave.leave_type === 'string' && !leave.leave_type.trim())) {
+      return 'Type Missing';
+    }
+    return typeof leave.leave_type === 'string' ? leave.leave_type : (leave.leave_type as any)?.name || 'Type Missing';
+  };
+
+  const handleAssignType = async () => {
+    if (!singleTypeId || !assigningLeave) {
+      toast.error('Please select a leave type');
+      return;
+    }
+    try {
+      const { updateLeave } = await import('@/lib/api');
+      await updateLeave(assigningLeave.id, { leave_type_id: singleTypeId });
+      toast.success('Leave type assigned successfully');
+      setAssignTypeOpen(false);
+      setAssigningLeave(null);
+      setSingleTypeId('');
+      onRefresh();
+    } catch (error) {
+      toast.error('Failed to assign leave type');
+    }
+  };
+
+  const openAssignType = (leave: Leave) => {
+    setAssigningLeave(leave);
+    setAssignTypeOpen(true);
+  };
 
   const handleApplyLeave = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!leaveTypes.length) {
+      toast.error('Please configure leave types first in HR Configuration');
+      return;
+    }
+
     const fd = new FormData(e.currentTarget);
     const fromDate = new Date(fd.get('from_date') as string);
     const toDate = new Date(fd.get('to_date') as string);
@@ -53,7 +94,9 @@ export function AttendanceLeave({ employees, leaves, leaveTypes, holidays, onRef
       toast.success('Leave application submitted successfully');
       setLeaveOpen(false);
       onRefresh();
-    } catch { toast.error('Failed to apply leave'); }
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to apply leave');
+    }
   };
 
   const handleLeaveAction = async (id: string, status: 'approved' | 'rejected') => {
@@ -117,14 +160,12 @@ export function AttendanceLeave({ employees, leaves, leaveTypes, holidays, onRef
                     <select name="leave_type" required className="flex h-10 w-full rounded-md border border-border bg-card px-3 py-2 text-sm">
                       <option value="">Select Leave Type</option>
                       {leaveTypes.map(lt => <option key={lt.id} value={lt.id}>{lt.name}</option>)}
-                      {leaveTypes.length === 0 && (
-                        <>
-                          <option value="Annual">Annual</option>
-                          <option value="Medical">Medical</option>
-                          <option value="Emergency">Emergency</option>
-                        </>
-                      )}
                     </select>
+                    {leaveTypes.length === 0 && (
+                      <p className="text-xs text-amber-700">
+                        No leave types configured. Ask your admin to set up leave types in Configuration → Leave Types.
+                      </p>
+                    )}
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
@@ -140,7 +181,7 @@ export function AttendanceLeave({ employees, leaves, leaveTypes, holidays, onRef
                     <Label className="text-xs font-medium text-muted-foreground">Reason</Label>
                     <Input name="reason" placeholder="Medical, Annual, etc." />
                   </div>
-                  <Button type="submit" className="w-full bg-primary h-10 font-medium text-xs">Submit Request</Button>
+                  <Button type="submit" className="w-full bg-primary h-10 font-medium text-xs" disabled={leaveTypes.length === 0}>Submit Request</Button>
                 </form>
               </DialogContent>
             </Dialog>
@@ -180,6 +221,82 @@ export function AttendanceLeave({ employees, leaves, leaveTypes, holidays, onRef
         </div>
 
         <TabsContent value="leaves" className="mt-0 space-y-6">
+          {missingTypeLeaves.length > 0 && (
+            <Card className="border border-red-200 bg-red-50/30 rounded-md">
+              <CardHeader className="py-3">
+                <CardTitle className="text-sm font-medium text-red-700">Missing Leave Type on Existing Records</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0 pb-4 space-y-3">
+                <p className="text-xs text-red-700">{missingTypeLeaves.length} leave record(s) have no leave type. Assign a type retroactively in bulk.</p>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <select
+                    value={bulkTypeId}
+                    onChange={(e) => setBulkTypeId(e.target.value)}
+                    className="flex h-9 w-full rounded-md border border-border bg-card px-3 py-2 text-sm"
+                  >
+                    <option value="">Select Leave Type</option>
+                    {leaveTypes.map((lt) => <option key={lt.id} value={lt.id}>{lt.name}</option>)}
+                  </select>
+                  <Button
+                    size="sm"
+                    className="h-9"
+                    onClick={async () => {
+                      if (!bulkTypeId) {
+                        toast.error('Select a leave type first');
+                        return;
+                      }
+                      const ids = missingTypeLeaves.map((leave) => leave.id);
+                      const result = await bulkAssignLeaveType(ids, bulkTypeId);
+                      if (result) {
+                        toast.success(`Updated ${result.updated || ids.length} leave records`);
+                        setBulkTypeId('');
+                        onRefresh();
+                      } else {
+                        toast.error('Failed to bulk-assign leave type');
+                      }
+                    }}
+                  >
+                    Assign Type To Missing Records
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Single Leave Type Assign Dialog */}
+          <Dialog open={assignTypeOpen} onOpenChange={setAssignTypeOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Assign Leave Type</DialogTitle>
+                <DialogDescription>
+                  Select a leave type to assign to this record.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 pt-4">
+                {assigningLeave && (
+                  <div className="text-sm text-muted-foreground">
+                    <p><strong>Employee:</strong> {assigningLeave.employee?.name}</p>
+                    <p><strong>Dates:</strong> {new Date(assigningLeave.from_date).toLocaleDateString()} - {new Date(assigningLeave.to_date).toLocaleDateString()}</p>
+                  </div>
+                )}
+                <div className="space-y-2">
+                  <Label>Leave Type</Label>
+                  <select
+                    value={singleTypeId}
+                    onChange={(e) => setSingleTypeId(e.target.value)}
+                    className="flex h-10 w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="">Select Leave Type</option>
+                    {leaveTypes.map((lt) => <option key={lt.id} value={lt.id}>{lt.name}</option>)}
+                  </select>
+                </div>
+                <Button onClick={handleAssignType} className="w-full">
+                  Assign Type
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
           {/* Pending Approval Section */}
           <Card className="border shadow-sm rounded-md overflow-hidden">
             <CardHeader className="border-b bg-muted/50 flex flex-row items-center justify-between py-4">
@@ -201,17 +318,32 @@ export function AttendanceLeave({ employees, leaves, leaveTypes, holidays, onRef
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-foreground truncate">{leave.employee?.name}</p>
                         <p className="text-xs text-muted-foreground font-medium mt-0.5">
-                          {leave.leave_type} · {new Date(leave.from_date).toLocaleDateString()} to {new Date(leave.to_date).toLocaleDateString()} ({leave.days}d)
+                          {leaveTypeLabel(leave) === 'Type Missing' ? (
+                            <span className="inline-flex items-center gap-1 text-red-600">
+                              <Badge variant="destructive" className="text-[10px]">Type Missing</Badge>
+                            </span>
+                          ) : leaveTypeLabel(leave)} · {new Date(leave.from_date).toLocaleDateString()} to {new Date(leave.to_date).toLocaleDateString()} ({leave.days}d)
                         </p>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-2 ml-4">
+                      {leaveTypeLabel(leave) === 'Type Missing' && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 w-8 p-0 text-amber-600 hover:text-amber-700 hover:bg-amber-50 rounded-full"
+                          onClick={(e) => { e.stopPropagation(); openAssignType(leave); }}
+                          title="Assign Leave Type"
+                        >
+                          <span className="text-xs font-bold">+</span>
+                        </Button>
+                      )}
                       <Button
                         size="sm"
                         variant="ghost"
                         className="h-8 w-8 p-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-full"
-                        onClick={() => handleLeaveAction(leave.id, 'approved')}
+                        onClick={(e) => { e.stopPropagation(); handleLeaveAction(leave.id, 'approved'); }}
                       >
                         <CheckCircle className="h-4 w-4" />
                       </Button>
@@ -248,7 +380,11 @@ export function AttendanceLeave({ employees, leaves, leaveTypes, holidays, onRef
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-foreground truncate">{leave.employee?.name}</p>
                         <p className="text-xs text-muted-foreground font-medium mt-0.5">
-                          {leave.leave_type} · {new Date(leave.from_date).toLocaleDateString()} to {new Date(leave.to_date).toLocaleDateString()} ({leave.days}d)
+                          {leaveTypeLabel(leave) === 'Type Missing' ? (
+                            <span className="inline-flex items-center gap-1 text-red-600">
+                              <Badge variant="destructive" className="text-[10px]">Type Missing</Badge>
+                            </span>
+                          ) : leaveTypeLabel(leave)} · {new Date(leave.from_date).toLocaleDateString()} to {new Date(leave.to_date).toLocaleDateString()} ({leave.days}d)
                         </p>
                       </div>
                     </div>
@@ -276,7 +412,11 @@ export function AttendanceLeave({ employees, leaves, leaveTypes, holidays, onRef
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-foreground truncate">{leave.employee?.name}</p>
                         <p className="text-xs text-muted-foreground font-medium mt-0.5">
-                          {leave.leave_type} · {new Date(leave.from_date).toLocaleDateString()} to {new Date(leave.to_date).toLocaleDateString()} ({leave.days}d)
+                          {leaveTypeLabel(leave) === 'Type Missing' ? (
+                            <span className="inline-flex items-center gap-1 text-red-600">
+                              <Badge variant="destructive" className="text-[10px]">Type Missing</Badge>
+                            </span>
+                          ) : leaveTypeLabel(leave)} · {new Date(leave.from_date).toLocaleDateString()} to {new Date(leave.to_date).toLocaleDateString()} ({leave.days}d)
                         </p>
                       </div>
                     </div>
@@ -352,7 +492,7 @@ export function AttendanceLeave({ employees, leaves, leaveTypes, holidays, onRef
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                       <Label className="text-xs font-semibold text-muted-foreground">Leave Type</Label>
-                      <p className="text-sm font-medium text-foreground">{typeof selectedLeave.leave_type === 'string' ? selectedLeave.leave_type : (selectedLeave.leave_type as any)?.name || '—'}</p>
+                      <p className="text-sm font-medium text-foreground">{leaveTypeLabel(selectedLeave)}</p>
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-xs font-semibold text-muted-foreground">Duration</Label>

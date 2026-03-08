@@ -6,18 +6,23 @@ import { useAuth } from '@/lib/auth/context';
 import { getInvoice, updateInvoice, getUsers, getProjects } from '@/lib/api';
 import { DashboardShell } from '@/components/shared/layout/dashboard-shell';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import type { Invoice, User, Project } from '@/lib/db/types';
+import type { Invoice, User, Project, InvoiceStatus, ApprovalRecord } from '@/lib/db/types';
 import { generateInvoicePDF } from '@/lib/pdf-generator';
 import { Loader2 } from 'lucide-react';
 import { InvoiceHeader } from '@/app/(admin)/admin/finance/invoices/_components/invoice-header';
 import { InvoiceForm } from '@/app/(admin)/admin/finance/invoices/_components/invoice-form';
+import { ApprovalDialog } from '@/components/shared/approval-dialog';
+import { canApproveDocument, getApprovalStatusBadge } from '@/lib/approval-workflow';
 
 export default function EditInvoicePage({ params }: { params: { id: string } }) {
     const router = useRouter();
     const { user: adminUser } = useAuth();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
     const [originalInvoice, setOriginalInvoice] = useState<Invoice | null>(null);
     const [users, setUsers] = useState<User[]>([]);
     const [projects, setProjects] = useState<Project[]>([]);
@@ -28,7 +33,7 @@ export default function EditInvoicePage({ params }: { params: { id: string } }) 
         invoice_number: '',
         issue_date: '',
         due_date: '',
-        status: 'pending' as 'pending' | 'paid' | 'overdue' | 'cancelled',
+        status: 'pending' as InvoiceStatus,
         
         // Line Items
         line_items: [
@@ -68,6 +73,14 @@ export default function EditInvoicePage({ params }: { params: { id: string } }) 
         notes: '',
         terms_conditions: '',
     });
+
+    const approvalBadge = getApprovalStatusBadge(formData.status);
+    const canCurrentUserApprove = canApproveDocument(
+        adminUser?.role || '',
+        originalInvoice?.approval_role || '',
+        false,
+        false
+    ) && formData.status === 'pending_approval';
 
     useEffect(() => {
         if (adminUser?.role === 'admin') {
@@ -188,6 +201,86 @@ export default function EditInvoicePage({ params }: { params: { id: string } }) 
         }
     };
 
+    const handleApprove = async (comment: string) => {
+        if (!originalInvoice) return;
+
+        const now = new Date().toISOString();
+        const approvalRecord: ApprovalRecord = {
+            user_id: adminUser?.id || 'admin',
+            user_name: adminUser?.full_name || adminUser?.email || 'Administrator',
+            user_role: adminUser?.role || 'admin',
+            action: 'approved',
+            comment: comment || undefined,
+            timestamp: now,
+        };
+
+        const updatedRecords = [...(originalInvoice.approval_records || []), approvalRecord];
+        const success = await updateInvoice(params.id, {
+            status: 'approved',
+            approved_by: approvalRecord.user_id,
+            approved_at: now,
+            approval_records: updatedRecords,
+        });
+
+        if (success) {
+            setFormData((prev) => ({ ...prev, status: 'approved' }));
+            setOriginalInvoice((prev) => prev ? {
+                ...prev,
+                status: 'approved',
+                approved_by: approvalRecord.user_id,
+                approved_at: now,
+                approval_records: updatedRecords,
+            } : prev);
+            toast.success('Invoice approved successfully');
+        } else {
+            toast.error('Failed to approve invoice');
+        }
+    };
+
+    const handleReject = async (reason: string) => {
+        if (!originalInvoice) return;
+
+        const trimmedReason = reason.trim();
+        if (!trimmedReason) {
+            toast.error('Rejection reason is required');
+            return;
+        }
+
+        const now = new Date().toISOString();
+        const approvalRecord: ApprovalRecord = {
+            user_id: adminUser?.id || 'admin',
+            user_name: adminUser?.full_name || adminUser?.email || 'Administrator',
+            user_role: adminUser?.role || 'admin',
+            action: 'rejected',
+            comment: trimmedReason,
+            timestamp: now,
+        };
+
+        const updatedRecords = [...(originalInvoice.approval_records || []), approvalRecord];
+        const success = await updateInvoice(params.id, {
+            status: 'rejected',
+            rejected_by: approvalRecord.user_id,
+            rejected_at: now,
+            rejection_reason: trimmedReason,
+            approval_records: updatedRecords,
+        });
+
+        if (success) {
+            setFormData((prev) => ({ ...prev, status: 'rejected' }));
+            setOriginalInvoice((prev) => prev ? {
+                ...prev,
+                status: 'rejected',
+                rejected_by: approvalRecord.user_id,
+                rejected_at: now,
+                rejection_reason: trimmedReason,
+                approval_records: updatedRecords,
+            } : prev);
+            toast.success('Invoice rejected');
+        } else {
+            toast.error('Failed to reject invoice');
+        }
+    };
+
     return (
         <DashboardShell requireAdmin>
             <div className="space-y-6">
@@ -200,6 +293,30 @@ export default function EditInvoicePage({ params }: { params: { id: string } }) 
                     saving={saving}
                     variant="traditional"
                 />
+
+                <Card className="border-slate-200 bg-slate-50/40">
+                    <CardContent className="py-4 flex items-center justify-between gap-4">
+                        <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                                <p className="text-xs font-semibold">Approval Status</p>
+                                <Badge variant={approvalBadge.variant}>{approvalBadge.label}</Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                                {originalInvoice?.requires_approval
+                                    ? `Required approver role: ${originalInvoice.approval_role || 'Not set'}`
+                                    : 'This invoice is not currently marked for approval.'}
+                            </p>
+                        </div>
+                        {(originalInvoice?.requires_approval || formData.status === 'pending_approval') && (
+                            <Button
+                                variant={formData.status === 'pending_approval' ? 'default' : 'outline'}
+                                onClick={() => setApprovalDialogOpen(true)}
+                            >
+                                {canCurrentUserApprove ? 'Review Approval' : 'Approval Details'}
+                            </Button>
+                        )}
+                    </CardContent>
+                </Card>
 
                 <Card>
                     <CardHeader>
@@ -225,6 +342,18 @@ export default function EditInvoicePage({ params }: { params: { id: string } }) 
                         </div>
                     </CardContent>
                 </Card>
+
+                <ApprovalDialog
+                    open={approvalDialogOpen}
+                    onOpenChange={setApprovalDialogOpen}
+                    documentType="invoice"
+                    documentNumber={formData.invoice_number}
+                    currentStatus={formData.status}
+                    approvalRecords={originalInvoice?.approval_records || []}
+                    canApprove={canCurrentUserApprove}
+                    onApprove={handleApprove}
+                    onReject={handleReject}
+                />
             </div>
         </DashboardShell>
     );

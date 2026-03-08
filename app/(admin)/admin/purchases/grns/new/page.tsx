@@ -72,9 +72,9 @@ export default function NewGRNPage() {
       // Try to auto-match product variant by name
       const initialLines = (poData as any).lines?.map((line: any) => {
         // Simple matching logic: find a variant whose name or parent product name includes the description
-        const matchedProduct = productData.find(p => 
+        const matchedProduct = (productData as any[]).find((p: any) => 
             p.name.toLowerCase().includes(line.description.toLowerCase()) || 
-            p.variants?.some(v => v.name.toLowerCase().includes(line.description.toLowerCase()))
+            p.variants?.some((v: any) => v.name.toLowerCase().includes(line.description.toLowerCase()))
         );
         const matchedVariant = matchedProduct?.variants?.[0]?.id || ''; // Default to first variant if product found
 

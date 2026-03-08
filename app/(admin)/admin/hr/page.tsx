@@ -25,14 +25,26 @@ import {
   getLeaveTypes,
   getHolidays,
   getSalaryStructures,
-  getHREvents
+  getHREvents,
+  getJobOpenings,
+  getApplicants,
+  getOfferLetters,
+  getSeparations,
+  getEmployeeDocuments
 } from '@/lib/api';
 import { HRDashboard } from './_components/hr-dashboard';
 import { EmployeeDirectory } from './_components/employee-directory';
 import { AttendanceLeave } from './_components/attendance-leave';
+import { AttendanceTracking } from './_components/attendance-tracking';
+import { OvertimeTracking } from './_components/overtime-tracking';
 import { PayrollContent, PayslipBrowser } from './_components/payroll-content';
 import { HREvents } from './_components/hr-events';
 import { HRMSSettings } from './_components/hrms-settings';
+import RecruitmentModule from './_components/recruitment-module';
+import DisciplinaryModule from './_components/disciplinary-module';
+import DocumentTrackingModule from './_components/document-tracking';
+import ShiftRosterModule from './_components/shift-roster-module';
+import SeparationModule from './_components/separation-module';
 import type { Employee, Attendance, Payroll, Leave, LeaveType, Holiday, SalaryStructure, HREvent, HRDepartment, HRRole } from '@/lib/db/types';
 import { ModuleGuard } from '@/components/shared/layout/module-guard';
 import { Badge } from '@/components/ui/badge';
@@ -41,7 +53,67 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
-type HRMode = 'dashboard' | 'staff' | 'operations' | 'finance' | 'payslips' | 'setup';
+type HRMode = 'dashboard' | 'staff' | 'operations' | 'workflows' | 'finance' | 'payslips' | 'setup';
+
+function normalizeLeavesForDisplay(leaves: Leave[]): Leave[] {
+  const hasValidRange = (leave: Leave) => {
+    const from = new Date(leave.from_date).getTime();
+    const to = new Date(leave.to_date).getTime();
+    if (Number.isNaN(from) || Number.isNaN(to)) return false;
+    return to >= from && (leave.days ?? 0) > 0;
+  };
+
+  const withValidRange = leaves.filter(hasValidRange);
+
+  // Remove exact duplicates and keep latest by created_at/id for deterministic rendering.
+  const exactDedup = new Map<string, Leave>();
+  for (const leave of withValidRange) {
+    const typeId = typeof leave.leave_type === 'string'
+      ? leave.leave_type
+      : String((leave.leave_type as any)?.id || (leave.leave_type as any)?._id || (leave.leave_type as any)?.name || '');
+    const key = [leave.employee?.id || leave.employee_id, typeId, leave.from_date, leave.to_date, leave.status].join('|');
+    const existing = exactDedup.get(key);
+    const existingCreated = existing?.created_at ? new Date(existing.created_at).getTime() : 0;
+    const currentCreated = leave.created_at ? new Date(leave.created_at).getTime() : 0;
+    if (!existing || currentCreated >= existingCreated) {
+      exactDedup.set(key, leave);
+    }
+  }
+
+  // Resolve overlapping approved leaves for the same employee/type by keeping the latest authoritative record.
+  const approved = Array.from(exactDedup.values()).filter((leave) => leave.status === 'approved');
+  const nonApproved = Array.from(exactDedup.values()).filter((leave) => leave.status !== 'approved');
+  const removedApprovedIds = new Set<string>();
+
+  for (let i = 0; i < approved.length; i += 1) {
+    for (let j = i + 1; j < approved.length; j += 1) {
+      const a = approved[i];
+      const b = approved[j];
+      const aEmp = String(a.employee?.id || a.employee_id || '');
+      const bEmp = String(b.employee?.id || b.employee_id || '');
+      if (!aEmp || aEmp !== bEmp) continue;
+
+      const aType = typeof a.leave_type === 'string' ? a.leave_type : String((a.leave_type as any)?.id || (a.leave_type as any)?._id || '');
+      const bType = typeof b.leave_type === 'string' ? b.leave_type : String((b.leave_type as any)?.id || (b.leave_type as any)?._id || '');
+      if (aType !== bType) continue;
+
+      const aFrom = new Date(a.from_date).getTime();
+      const aTo = new Date(a.to_date).getTime();
+      const bFrom = new Date(b.from_date).getTime();
+      const bTo = new Date(b.to_date).getTime();
+      const overlaps = aFrom <= bTo && bFrom <= aTo;
+      if (!overlaps) continue;
+
+      const aCreated = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const bCreated = b.created_at ? new Date(b.created_at).getTime() : 0;
+      const removeId = aCreated <= bCreated ? a.id : b.id;
+      removedApprovedIds.add(removeId);
+    }
+  }
+
+  const approvedClean = approved.filter((leave) => !removedApprovedIds.has(leave.id));
+  return [...nonApproved, ...approvedClean];
+}
 
 export default function HRPage() {
   const { getModuleLabel } = useTenant();
@@ -59,10 +131,15 @@ export default function HRPage() {
   const [salaryStructures, setSalaryStructures] = useState<SalaryStructure[]>([]);
   const [hrEvents, setHrEvents] = useState<HREvent[]>([]);
   const [selectedPayrollId, setSelectedPayrollId] = useState<string>('none');
+  const [jobOpenings, setJobOpenings] = useState<any[]>([]);
+  const [applicants, setApplicants] = useState<any[]>([]);
+  const [offerLetters, setOfferLetters] = useState<any[]>([]);
+  const [separations, setSeparations] = useState<any[]>([]);
+  const [documentCountByEmployee, setDocumentCountByEmployee] = useState<Record<string, number>>({});
 
   const fetchAll = useCallback(async () => {
     try {
-      const [emps, att, pays, depts, rls, lvs, lvTypes, hols, sals, evts] = await Promise.all([
+      const [emps, att, pays, depts, rls, lvs, lvTypes, hols, sals, evts, jobs, apps, offers, seps, docs] = await Promise.all([
         getEmployees().catch(() => []),
         getAttendance().catch(() => []),
         getPayrolls().catch(() => []),
@@ -73,6 +150,11 @@ export default function HRPage() {
         getHolidays().catch(() => []),
         getSalaryStructures().catch(() => []),
         getHREvents().catch(() => []),
+        getJobOpenings().catch(() => []),
+        getApplicants().catch(() => []),
+        getOfferLetters().catch(() => []),
+        getSeparations().catch(() => []),
+        getEmployeeDocuments().catch(() => []),
       ]);
 
       setEmployees((emps as Employee[]) || []);
@@ -84,11 +166,26 @@ export default function HRPage() {
 
       setDepartments(depts || []);
       setRoles(rls || []);
-      setLeaves(lvs || []);
+      setLeaves(normalizeLeavesForDisplay((lvs as Leave[]) || []));
       setLeaveTypes(lvTypes || []);
       setHolidays(hols || []);
       setSalaryStructures(sals || []);
       setHrEvents(evts || []);
+      setJobOpenings(jobs || []);
+      setApplicants(apps || []);
+      setOfferLetters(offers || []);
+      setSeparations(seps || []);
+
+      const docCounts: Record<string, number> = {};
+      (docs || []).forEach((doc: any) => {
+        const employeeRef = doc.employee_id;
+        const employeeId = typeof employeeRef === 'string'
+          ? employeeRef
+          : String(employeeRef?.id || employeeRef?._id || '');
+        if (!employeeId) return;
+        docCounts[employeeId] = (docCounts[employeeId] || 0) + 1;
+      });
+      setDocumentCountByEmployee(docCounts);
     } catch (err) {
       console.error('[HR Hub Data Error]', err);
     } finally {
@@ -135,6 +232,7 @@ export default function HRPage() {
             <TabsTrigger value="dashboard" className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-4 py-2 font-medium">Dashboard</TabsTrigger>
             <TabsTrigger value="staff" className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-4 py-2 font-medium">Registry</TabsTrigger>
             <TabsTrigger value="operations" className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-4 py-2 font-medium">Field Ops</TabsTrigger>
+            <TabsTrigger value="workflows" className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-4 py-2 font-medium">Workflows</TabsTrigger>
             <TabsTrigger value="finance" className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-4 py-2 font-medium">Payroll</TabsTrigger>
             <TabsTrigger value="payslips" className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-4 py-2 font-medium">Payslips</TabsTrigger>
             <TabsTrigger value="setup" className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md px-4 py-2 font-medium">Configuration</TabsTrigger>
@@ -142,14 +240,88 @@ export default function HRPage() {
 
           <div className="animate-in fade-in duration-500">
             <TabsContent value="dashboard" className="m-0 focus-visible:outline-none">
-              <HRDashboard employees={employees} attendance={attendance} payrolls={payrolls} leaves={leaves} holidays={holidays} />
+              <HRDashboard 
+                employees={employees} 
+                attendance={attendance} 
+                payrolls={payrolls} 
+                leaves={leaves} 
+                holidays={holidays}
+                jobOpenings={jobOpenings}
+                applicants={applicants}
+                offerLetters={offerLetters}
+                separations={separations}
+              />
             </TabsContent>
             <TabsContent value="staff" className="m-0 focus-visible:outline-none space-y-6">
-              <EmployeeDirectory employees={employees} departments={departments} roles={roles} onRefresh={fetchAll} />
+              <EmployeeDirectory
+                employees={employees}
+                departments={departments}
+                roles={roles}
+                documentCountByEmployee={documentCountByEmployee}
+                onRefresh={fetchAll}
+              />
               <HREvents employees={employees} events={hrEvents} onRefresh={fetchAll} />
             </TabsContent>
             <TabsContent value="operations" className="m-0 focus-visible:outline-none">
-              <AttendanceLeave employees={employees} leaves={leaves} leaveTypes={leaveTypes} holidays={holidays} onRefresh={fetchAll} />
+              <Tabs defaultValue="attendance" className="w-full">
+                <TabsList className="bg-muted/50 border h-10 p-0.5 mb-6">
+                  <TabsTrigger value="attendance" className="text-xs font-semibold px-6 h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                    Attendance Tracking
+                  </TabsTrigger>
+                  <TabsTrigger value="leaves" className="text-xs font-semibold px-6 h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                    Leave Management
+                  </TabsTrigger>
+                  <TabsTrigger value="overtime" className="text-xs font-semibold px-6 h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                    Overtime Tracking
+                  </TabsTrigger>
+                </TabsList>
+                <TabsContent value="attendance" className="m-0">
+                  <AttendanceTracking employees={employees} attendance={attendance} leaves={leaves} holidays={holidays} onRefresh={fetchAll} />
+                </TabsContent>
+                <TabsContent value="leaves" className="m-0">
+                  <AttendanceLeave employees={employees} leaves={leaves} leaveTypes={leaveTypes} holidays={holidays} onRefresh={fetchAll} />
+                </TabsContent>
+                <TabsContent value="overtime" className="m-0">
+                  <OvertimeTracking employees={employees} onRefresh={fetchAll} />
+                </TabsContent>
+              </Tabs>
+            </TabsContent>
+            <TabsContent value="workflows" className="m-0 focus-visible:outline-none">
+              <Tabs defaultValue="recruitment" className="w-full">
+                <TabsList className="bg-muted/50 border h-10 p-0.5 mb-6 overflow-x-auto">
+                  <TabsTrigger value="recruitment" className="text-xs font-semibold px-6 h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                    Recruitment
+                  </TabsTrigger>
+                  <TabsTrigger value="disciplinary" className="text-xs font-semibold px-6 h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                    Disciplinary
+                  </TabsTrigger>
+                  <TabsTrigger value="documents" className="text-xs font-semibold px-6 h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                    Documents
+                  </TabsTrigger>
+                  <TabsTrigger value="rosters" className="text-xs font-semibold px-6 h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                    Shift & Roster
+                  </TabsTrigger>
+                  <TabsTrigger value="separation" className="text-xs font-semibold px-6 h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                    Separation
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="recruitment" className="m-0">
+                  <RecruitmentModule />
+                </TabsContent>
+                <TabsContent value="disciplinary" className="m-0">
+                  <DisciplinaryModule />
+                </TabsContent>
+                <TabsContent value="documents" className="m-0">
+                  <DocumentTrackingModule />
+                </TabsContent>
+                <TabsContent value="rosters" className="m-0">
+                  <ShiftRosterModule />
+                </TabsContent>
+                <TabsContent value="separation" className="m-0">
+                  <SeparationModule />
+                </TabsContent>
+              </Tabs>
             </TabsContent>
             <TabsContent value="finance" className="m-0 focus-visible:outline-none">
               <PayrollContent employees={employees} salaryStructures={salaryStructures} payrolls={payrolls} onRefresh={fetchAll} />
@@ -196,7 +368,12 @@ export default function HRPage() {
               )}
             </TabsContent>
             <TabsContent value="setup" className="m-0 focus-visible:outline-none">
-              <HRMSSettings roles={roles} departments={departments} onRefresh={fetchAll} />
+              <HRMSSettings 
+                roles={roles} 
+                departments={departments} 
+                leaveTypes={leaveTypes}
+                onRefresh={fetchAll} 
+              />
             </TabsContent>
           </div>
         </Tabs>

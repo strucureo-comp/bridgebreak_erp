@@ -45,7 +45,7 @@ export default function NewVendorBillPage() {
       const [v, o] = await Promise.all([getVendors(), getPurchaseOrders()]);
       setVendors(v || []);
       // Only show orders that aren't fully billed/paid
-      setOrders(o?.filter(order => ['approved', 'ordered', 'received'].includes(order.status)) || []);
+      setOrders(o?.filter((order: any) => ['approved', 'ordered', 'received'].includes(order.status)) || []);
     } catch (e) {
       toast.error('Failed to load data');
     } finally {

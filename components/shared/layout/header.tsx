@@ -88,27 +88,11 @@ export function Header() {
             </div>
           </SheetContent>
         </Sheet>
-
-        {/* Search Command Proxy */}
-        <div className="hidden md:flex items-center gap-3 px-3 py-1.5 rounded-lg border border-border bg-muted/50 hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer min-w-[240px] group">
-          <Search size={14} className="text-muted-foreground group-hover:text-foreground" />
-          <span className="text-[13px] text-muted-foreground font-medium group-hover:text-foreground">Search anything...</span>
-          <div className="ml-auto flex items-center gap-1">
-            <kbd className="px-1.5 py-0.5 rounded border border-border bg-background text-[10px] font-bold text-muted-foreground tracking-tighter shadow-sm">⌘</kbd>
-            <kbd className="px-1.5 py-0.5 rounded border border-border bg-background text-[10px] font-bold text-muted-foreground tracking-tighter shadow-sm">K</kbd>
-          </div>
-        </div>
       </div>
 
       <div className="flex items-center gap-4">
-        {/* Hub Tools */}
-        <div className="flex items-center gap-1.5 mr-2">
-          <ApprovalsInbox />
-          <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg relative">
-            <Bell size={18} />
-            <div className="absolute top-2.5 right-2.5 h-2 w-2 rounded-full bg-primary ring-2 ring-white" />
-          </Button>
-        </div>
+        {/* Action Inbox */}
+        <ApprovalsInbox />
 
         <div className="h-5 w-px bg-border mx-1" />
 
@@ -149,7 +133,7 @@ export function Header() {
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => signOut()}
-              className="text-[13px] font-semibold py-2.5 px-4 cursor-pointer text-rose-600 focus:bg-rose-50 focus:text-rose-700 rounded-lg mx-1 my-0.5"
+              className="text-[13px] font-semibold py-2.5 px-4 cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive rounded-lg mx-1 my-0.5"
             >
               <LogOut className="mr-3 h-4 w-4 opacity-70" /> Sign Out Session
             </DropdownMenuItem>

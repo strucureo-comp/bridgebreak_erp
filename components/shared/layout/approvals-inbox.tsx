@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/auth/context';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -29,6 +30,7 @@ import { toast } from 'sonner';
 
 export function ApprovalsInbox() {
     const router = useRouter();
+    const { user } = useAuth();
     const [approvals, setApprovals] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(false);
 
@@ -38,9 +40,10 @@ export function ApprovalsInbox() {
             setIsLoading(true);
             try {
                 const token = localStorage.getItem('token');
-                if (!token) return;
+                if (!token || !user?.role) return;
 
-                const response = await fetch('http://localhost:4000/api/approval-engine/requests/pending', {
+                // Fetch approvals for user's specific role
+                const response = await fetch(`http://localhost:4000/api/approval-engine/requests/pending?role=${user.role}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (response.ok) {
@@ -55,7 +58,11 @@ export function ApprovalsInbox() {
             }
         };
         fetchApprovals();
-    }, []);
+        
+        // Poll for updates every 30 seconds
+        const interval = setInterval(fetchApprovals, 30000);
+        return () => clearInterval(interval);
+    }, [user]);
     const [selectedRequest, setSelectedRequest] = useState<any>(null);
     const [actionType, setActionType] = useState<'approve' | 'reject' | null>(null);
     const [notes, setNotes] = useState('');

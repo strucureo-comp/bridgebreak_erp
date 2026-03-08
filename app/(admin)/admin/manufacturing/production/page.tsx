@@ -14,7 +14,7 @@ import {
     AlertTriangle 
 } from 'lucide-react';
 import { getBOMs, getProductionOrders } from '@/lib/api';
-import { ManufacturingContent } from '@/components/manufacturing/manufacturing-content';
+import { ManufacturingContent } from '@/app/(admin)/admin/manufacturing/_components/manufacturing-content';
 import { ModuleGuard } from '@/components/shared/layout/module-guard';
 import { useTenant } from '@/lib/tenant-context';
 import { Card } from '@/components/ui/card';

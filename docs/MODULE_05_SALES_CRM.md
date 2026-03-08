@@ -1,96 +1,127 @@
 # Module 5: Sales & CRM
 
 ## Overview
-Customer relationship management including leads, opportunities, customers, and sales orders.
+Customer relationship management with integrated leads and opportunities pipeline, customer management, and sales orders.
+
+**Latest Update:** Leads module has been merged into Opportunities. The system now uses a unified pipeline where leads can be converted to customers.
+
+## Module Structure
+
+### Dashboard
+Main sales overview with key metrics and quick actions.
+
+### Opportunities & Leads (Pipeline)
+Unified Kanban-style pipeline managing both leads and opportunities across stages:
+- New Lead
+- Contacted  
+- Qualified
+- Proposal Sent
+- Negotiation
+- Won
+- Lost
+
+**Key Features:**
+- Create leads without customer accounts
+- Convert leads to customer accounts
+- Track follow-up activities
+- Pipeline value analytics
+- Weighted pipeline calculations
+
+### Customers
+Customer account management with contact tracking and relationship history.
+
+### Quotations
+Managed under Finance module (`/admin/finance/quotations`)
+
+### Invoices
+Managed under Finance module (`/admin/finance/invoices`)
+
+### Reports
+Sales analytics and pipeline reports
 
 ## Frontend Pages
 - **Location**: `app/(admin)/admin/sales/`
 - **Sub-modules**:
-  - `leads/` - Lead management
-  - `opportunities/` - Opportunity pipeline
+  - `page.tsx` - Main dashboard
+  - `opportunities/` - Unified opportunities and leads pipeline (Kanban view)
   - `customers/` - Customer management
   - `enquiries/` - Customer enquiries
   - `partners/` - Partner management
-  - `activities/` - Activity tracking
-  - `sales-orders/` - Sales order management
 
 ## Backend Routes
 - **Location**: `backend/routes/crm.js`
 - **Endpoints**:
-  - `GET /api/crm/leads` - List leads
-  - `POST /api/crm/leads` - Create lead
-  - `PUT /api/crm/leads/:id` - Update lead
-  - `DELETE /api/crm/leads/:id` - Delete lead
-  - `GET /api/crm/opportunities` - List opportunities
-  - `POST /api/crm/opportunities` - Create opportunity
-  - `PUT /api/crm/opportunities/:id` - Update opportunity
-  - `DELETE /api/crm/opportunities/:id` - Delete opportunity
+  - `GET /api/crm/opportunities` - List all opportunities (includes leads)
+  - `POST /api/crm/opportunities` - Create opportunity or lead
+  - `PUT /api/crm/opportunities/:id` - Update opportunity/lead
+  - `DELETE /api/crm/opportunities/:id` - Delete opportunity/lead
+  - `POST /api/crm/opportunities/:id/convert-to-customer` - Convert lead to customer
+  - `GET /api/crm/leads` - Legacy endpoint (returns opportunities where is_lead=true)
+  - `POST /api/crm/leads` - Legacy endpoint (creates opportunity with is_lead flag)
   - `GET /api/crm/customers` - List customers
   - `POST /api/crm/customers` - Create customer
   - `PUT /api/crm/customers/:id` - Update customer
   - `DELETE /api/crm/customers/:id` - Delete customer
-  - `GET /api/crm/activities` - List activities
-  - `POST /api/crm/activities` - Create activity
   - `GET /api/crm/sales-orders` - List sales orders
   - `POST /api/crm/sales-orders` - Create sales order
 
 ## Data Models
 
-### Lead
+### Opportunity (Unified with Leads)
 ```javascript
-Lead {
-  lead_id: String (unique)
-  name: String
+Opportunity {
+  // Lead fields (for opportunities that started as leads)
+  is_lead: Boolean (default: false)
+  first_name: String
+  last_name: String
   email: String
   phone: String
   company: String
-  industry: String
-  status: 'new' | 'contacted' | 'qualified' | 'lost' | 'converted'
-  source: 'website' | 'referral' | 'cold_call' | 'event' | 'other'
-  assigned_to: String (user email)
-  value: Number (estimated deal value)
-  notes: String
-  createdAt, updatedAt: Date
-}
-```
-
-### Opportunity
-```javascript
-Opportunity {
-  opportunity_id: String (unique)
-  lead_id: ObjectId → Lead
-  name: String
-  stage: 'prospecting' | 'qualification' | 'proposal' | 'negotiation' | 'closed_won' | 'closed_lost'
+  source: String
+  
+  // Opportunity fields
+  account_id: ObjectId → CustomerAccount (optional until converted)
+  name: String (required)
+  amount: Number (default: 0)
+  stage: 'new_lead' | 'contacted' | 'qualified' | 'proposal_sent' | 'negotiation' | 'won' | 'lost'
   probability: Number (0-100)
-  value: Number (deal value)
-  expected_close_date: Date
-  assigned_to: String (user email)
+  close_date: Date
+  owner_id: ObjectId → User
+  notes: String
+  
+  // Activity tracking
+  followUps: [{
+    type: 'Call' | 'Email' | 'Meeting' | 'Site Visit'
+    scheduledAt: Date
+    status: 'Pending' | 'Completed' | 'Missed'
+    notes: String
+    priority: 'Low' | 'Medium' | 'High'
+  }]
+  
+  createdAt, updatedAt: Date
+}
+```
+
+### Customer Account
+```javascript
+CustomerAccount {
+  account_id: String (unique)
+  name: String (required)
+  industry: String
+  website: String
+  phone: String
+  address: String
+  tax_id: String
+  owner_id: ObjectId → User
+  status: 'active' | 'inactive' | 'prospect'
   notes: String
   createdAt, updatedAt: Date
 }
 ```
 
-### Customer
+### Contact
 ```javascript
-Customer {
-  customer_id: String (unique)
-  name: String
-  email: String
-  phone: String
-  billing_address: String
-  shipping_address: String
-  credit_limit: Number
-  payment_terms: String
-  status: 'active' | 'inactive' | 'suspended'
-  customer_type: 'individual' | 'business'
-  tax_id: String
-  createdAt, updatedAt: Date
-}
-```
-
-### Activity
-```javascript
-Activity {
+Contact {
   activity_id: String (unique)
   type: 'call' | 'email' | 'meeting' | 'task' | 'note'
   entity_type: 'lead' | 'opportunity' | 'customer'

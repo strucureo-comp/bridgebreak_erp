@@ -134,6 +134,16 @@ export async function updateCustomer(id: string, data: any) {
 }
 export async function deleteCustomer(id: string) { return mockDelay(true); }
 export async function deleteLead(id: string) { return mockDelay(true); }
+export async function convertLeadToCustomer(id: string): Promise<any> {
+    try {
+        const res = await fetch(`${API_BASE}/crm/opportunities/${id}/convert-to-customer`, {
+            method: 'POST',
+            headers: authHeaders()
+        });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] convertLeadToCustomer error:', e); }
+    return null;
+}
 export async function updateOpportunity(id: string, data: any) { return mockDelay(true); }
 export async function deleteOpportunity(id: string) { return mockDelay(true); }
 export async function getQuotes() { return mockDelay([]); }
@@ -183,35 +193,35 @@ export async function createSalesOrder(data: any) {
 // --- INVOICES & RECEIVABLES ---
 export async function getInvoices(): Promise<any[]> {
     try {
-        const res = await fetch(`${API_BASE}/finance/invoices`);
+        const res = await fetch(`${API_BASE}/finance/invoices`, { headers: authHeaders() });
         if (res.ok) return res.json();
     } catch (e) { console.warn('[API] getInvoices error:', e); }
     return [];
 }
 export async function getInvoice(id: string): Promise<any> {
     try {
-        const res = await fetch(`${API_BASE}/finance/invoices/${id}`);
+        const res = await fetch(`${API_BASE}/finance/invoices/${id}`, { headers: authHeaders() });
         if (res.ok) return res.json();
     } catch (e) { console.warn('[API] getInvoice error:', e); }
     return null;
 }
 export async function createInvoice(data: any): Promise<any> {
     try {
-        const res = await fetch(`${API_BASE}/finance/invoices`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+        const res = await fetch(`${API_BASE}/finance/invoices`, { method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
         if (res.ok) return res.json();
     } catch (e) { console.warn('[API] createInvoice error:', e); }
     return null;
 }
 export async function updateInvoice(id: string, data: any): Promise<boolean> {
     try {
-        const res = await fetch(`${API_BASE}/finance/invoices/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+        const res = await fetch(`${API_BASE}/finance/invoices/${id}`, { method: 'PUT', headers: { ...authHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
         return res.ok;
     } catch (e) { console.warn('[API] updateInvoice error:', e); }
     return false;
 }
 export async function deleteInvoice(id: string): Promise<boolean> {
     try {
-        const res = await fetch(`${API_BASE}/finance/invoices/${id}`, { method: 'DELETE' });
+        const res = await fetch(`${API_BASE}/finance/invoices/${id}`, { method: 'DELETE', headers: authHeaders() });
         return res.ok;
     } catch (e) { console.warn('[API] deleteInvoice error:', e); }
     return false;
@@ -225,28 +235,28 @@ export async function createTransaction(data: any) { return mockDelay({ id: 't-n
 export async function deleteTransaction(id: string) { return mockDelay(true); }
 export async function getAccounts(): Promise<any[]> {
     try {
-        const res = await fetch(`${API_BASE}/finance/accounts`);
+        const res = await fetch(`${API_BASE}/finance/accounts`, { headers: authHeaders() });
         if (res.ok) return res.json();
     } catch (e) { console.warn('[API] getAccounts error:', e); }
     return [];
 }
 export async function createAccount(data: any): Promise<any> {
     try {
-        const res = await fetch(`${API_BASE}/finance/accounts`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+        const res = await fetch(`${API_BASE}/finance/accounts`, { method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
         if (res.ok) return res.json();
     } catch (e) { console.warn('[API] createAccount error:', e); }
     return null;
 }
 export async function getJournalEntries(): Promise<any[]> {
     try {
-        const res = await fetch(`${API_BASE}/finance/journals`);
+        const res = await fetch(`${API_BASE}/finance/journals`, { headers: authHeaders() });
         if (res.ok) return res.json();
     } catch (e) { console.warn('[API] getJournalEntries error:', e); }
     return [];
 }
 export async function createJournalEntry(data: any): Promise<any> {
     try {
-        const res = await fetch(`${API_BASE}/finance/journals`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+        const res = await fetch(`${API_BASE}/finance/journals`, { method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
         if (res.ok) return res.json();
     } catch (e) { console.warn('[API] createJournalEntry error:', e); }
     return null;
@@ -262,28 +272,28 @@ export async function createPayable(data: any) { return createInvoice(data); }
 // --- EXPENSES ---
 export async function getExpenses(): Promise<any[]> {
     try {
-        const res = await fetch(`${API_BASE}/finance/expenses`);
+        const res = await fetch(`${API_BASE}/finance/expenses`, { headers: authHeaders() });
         if (res.ok) return res.json();
     } catch (e) { console.warn('[API] getExpenses error:', e); }
     return [];
 }
 export async function createExpense(data: any): Promise<any> {
     try {
-        const res = await fetch(`${API_BASE}/finance/expenses`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+        const res = await fetch(`${API_BASE}/finance/expenses`, { method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
         if (res.ok) return res.json();
     } catch (e) { console.warn('[API] createExpense error:', e); }
     return null;
 }
 export async function updateExpense(id: string, data: any): Promise<boolean> {
     try {
-        const res = await fetch(`${API_BASE}/finance/expenses/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+        const res = await fetch(`${API_BASE}/finance/expenses/${id}`, { method: 'PUT', headers: { ...authHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
         return res.ok;
     } catch (e) { console.warn('[API] updateExpense error:', e); }
     return false;
 }
 export async function deleteExpense(id: string): Promise<boolean> {
     try {
-        const res = await fetch(`${API_BASE}/finance/expenses/${id}`, { method: 'DELETE' });
+        const res = await fetch(`${API_BASE}/finance/expenses/${id}`, { method: 'DELETE', headers: authHeaders() });
         return res.ok;
     } catch (e) { console.warn('[API] deleteExpense error:', e); }
     return false;
@@ -292,7 +302,7 @@ export async function deleteExpense(id: string): Promise<boolean> {
 // --- FINANCE SUMMARY ---
 export async function getFinanceSummary(): Promise<any> {
     try {
-        const res = await fetch(`${API_BASE}/finance/summary`);
+        const res = await fetch(`${API_BASE}/finance/summary`, { headers: authHeaders() });
         if (res.ok) return res.json();
     } catch (e) { console.warn('[API] getFinanceSummary error:', e); }
     return null;
@@ -301,7 +311,7 @@ export async function getFinanceSummary(): Promise<any> {
 // --- SEED COA ---
 export async function seedChartOfAccounts(): Promise<any> {
     try {
-        const res = await fetch(`${API_BASE}/finance/accounts/seed`, { method: 'POST' });
+        const res = await fetch(`${API_BASE}/finance/accounts/seed`, { method: 'POST', headers: authHeaders() });
         if (res.ok) return res.json();
     } catch (e) { console.warn('[API] seedCOA error:', e); }
     return null;
@@ -377,6 +387,17 @@ export async function markAttendance(data: any) {
     } catch (e) { console.warn('[API] markAttendance error:', e); }
     return null;
 }
+export async function bulkUploadAttendance(records: any[]) {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/attendance/bulk`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify({ records })
+        });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] bulkUploadAttendance error:', e); }
+    return null;
+}
 export async function getDepartments() {
     try {
         const res = await fetch(`${API_BASE}/hrms/departments`, { headers: authHeaders() });
@@ -394,6 +415,40 @@ export async function createDepartment(data: any) {
         if (res.ok) return res.json();
     } catch (e) { console.warn('[API] createDepartment error:', e); }
     return null;
+}
+export async function updateDepartment(id: string, data: any) {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/departments/${id}`, {
+            method: 'PUT',
+            headers: authHeaders(),
+            body: JSON.stringify(data)
+        });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] updateDepartment error:', e); }
+    return null;
+}
+export async function updateDepartmentSalaryPolicy(id: string, policy: any) {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/departments/${id}/salary-policy`, {
+            method: 'PATCH',
+            headers: authHeaders(),
+            body: JSON.stringify(policy)
+        });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] updateDepartmentSalaryPolicy error:', e); }
+    return null;
+}
+export async function deleteDepartment(id: string): Promise<boolean> {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/departments/${id}`, {
+            method: 'DELETE',
+            headers: authHeaders()
+        });
+        return res.ok;
+    } catch (e) {
+        console.warn('[API] deleteDepartment error:', e);
+        return false;
+    }
 }
 export async function getHRRoles() {
     try {
@@ -413,12 +468,55 @@ export async function createHRRole(data: any) {
     } catch (e) { console.warn('[API] createHRRole error:', e); }
     return null;
 }
+export async function deleteHRRole(id: string): Promise<boolean> {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/roles/${id}`, {
+            method: 'DELETE',
+            headers: authHeaders()
+        });
+        return res.ok;
+    } catch (e) {
+        console.warn('[API] deleteHRRole error:', e);
+        return false;
+    }
+}
 export async function getPayrolls() {
     try {
         const res = await fetch(`${API_BASE}/hrms/payrolls`, { headers: authHeaders() });
         if (res.ok) return res.json();
     } catch (e) { console.warn('[API] getPayrolls error:', e); }
     return [];
+}
+
+export async function getDeletedPayrolls() {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/payrolls/deleted`, { headers: authHeaders() });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] getDeletedPayrolls error:', e); }
+    return [];
+}
+
+export async function deletePayroll(id: string, reason?: string) {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/payrolls/${id}`, {
+            method: 'DELETE',
+            headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reason })
+        });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] deletePayroll error:', e); }
+    return null;
+}
+
+export async function restorePayroll(id: string) {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/payrolls/restore/${id}`, {
+            method: 'POST',
+            headers: authHeaders()
+        });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] restorePayroll error:', e); }
+    return null;
 }
 
 export async function previewPayroll(month: string) {
@@ -433,15 +531,15 @@ export async function previewPayroll(month: string) {
     throw new Error('Failed to preview payroll');
 }
 
-export async function generatePayroll(month: string, force = false) {
+export async function generatePayroll(month: string) {
     try {
         const res = await fetch(`${API_BASE}/hrms/payrolls/generate`, {
             method: 'POST',
             headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-            body: JSON.stringify({ month, force })
+            body: JSON.stringify({ month })
         });
         if (res.ok) return res.json();
-        
+
         // Handle duplicate cycle error
         if (res.status === 409) {
             const errorData = await res.json();
@@ -472,6 +570,71 @@ export async function updatePayrollStatus(id: string, status: string) {
         if (res.ok) return res.json();
     } catch (e) { console.warn('[API] updatePayrollStatus error:', e); }
     throw new Error('Failed to update payroll status');
+}
+
+export async function submitPayrollForApproval(id: string) {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/payrolls/${id}/submit`, {
+            method: 'POST',
+            headers: authHeaders()
+        });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] submitPayrollForApproval error:', e); }
+    throw new Error('Failed to submit payroll for approval');
+}
+
+export async function approvePayroll(id: string) {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/payrolls/${id}/approve`, {
+            method: 'POST',
+            headers: authHeaders()
+        });
+        if (res.ok) return res.json();
+
+        // Handle permission error
+        if (res.status === 403) {
+            const errorData = await res.json();
+            throw { code: 'FORBIDDEN', ...errorData };
+        }
+    } catch (e) { console.warn('[API] approvePayroll error:', e); throw e; }
+    throw new Error('Failed to approve payroll');
+}
+
+export async function rejectPayroll(id: string, reason: string) {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/payrolls/${id}/reject`, {
+            method: 'POST',
+            headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reason })
+        });
+        if (res.ok) return res.json();
+
+        // Handle permission error
+        if (res.status === 403) {
+            const errorData = await res.json();
+            throw { code: 'FORBIDDEN', ...errorData };
+        }
+    } catch (e) { console.warn('[API] rejectPayroll error:', e); throw e; }
+    throw new Error('Failed to reject payroll');
+}
+
+export async function finalizePayroll(id: string) {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/payrolls/${id}/finalize`, {
+            method: 'POST',
+            headers: authHeaders()
+        });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] finalizePayroll error:', e); }
+    throw new Error('Failed to finalize payroll');
+}
+
+export async function getPendingPayrollApprovals() {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/payrolls/pending`, { headers: authHeaders() });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] getPendingPayrollApprovals error:', e); }
+    return [];
 }
 
 export async function getSalaryStructures(empId?: string) {
@@ -509,9 +672,22 @@ export async function applyLeave(data: any) {
             headers: authHeaders(),
             body: JSON.stringify(data)
         });
+
         if (res.ok) return res.json();
-    } catch (e) { console.warn('[API] applyLeave error:', e); }
-    return null;
+
+        let errorMessage = 'Failed to apply leave';
+        try {
+            const errorData = await res.json();
+            errorMessage = errorData?.detail || errorData?.error || errorMessage;
+        } catch {
+            // Ignore parse failure and use default message.
+        }
+
+        throw new Error(errorMessage);
+    } catch (e) {
+        console.warn('[API] applyLeave error:', e);
+        throw e;
+    }
 }
 export async function updateLeaveStatus(id: string, s: string) {
     try {
@@ -522,6 +698,17 @@ export async function updateLeaveStatus(id: string, s: string) {
         });
         if (res.ok) return res.json();
     } catch (e) { console.warn('[API] updateLeaveStatus error:', e); }
+    return null;
+}
+export async function updateLeave(id: string, data: any) {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/leaves/${id}`, {
+            method: 'PUT',
+            headers: authHeaders(),
+            body: JSON.stringify(data)
+        });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] updateLeave error:', e); }
     return null;
 }
 export async function getLeaveTypes() {
@@ -542,6 +729,18 @@ export async function createLeaveType(data: any) {
     } catch (e) { console.warn('[API] createLeaveType error:', e); }
     return null;
 }
+export async function deleteLeaveType(id: string): Promise<boolean> {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/leave-types/${id}`, {
+            method: 'DELETE',
+            headers: authHeaders()
+        });
+        return res.ok;
+    } catch (e) {
+        console.warn('[API] deleteLeaveType error:', e);
+        return false;
+    }
+}
 export async function getHolidays() {
     try {
         const res = await fetch(`${API_BASE}/hrms/holidays`, { headers: authHeaders() });
@@ -560,12 +759,390 @@ export async function createHoliday(data: any) {
     } catch (e) { console.warn('[API] createHoliday error:', e); }
     return null;
 }
-export async function getHREvents(f?: any) { return mockDelay([]); }
-export async function createHREvent(data: any) { return mockDelay(data); }
+export async function deleteHoliday(id: string): Promise<boolean> {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/holidays/${id}`, {
+            method: 'DELETE',
+            headers: authHeaders()
+        });
+        return res.ok;
+    } catch (e) {
+        console.warn('[API] deleteHoliday error:', e);
+        return false;
+    }
+}
+export async function getHREvents(employeeId?: string) {
+    try {
+        const url = employeeId ? `${API_BASE}/hrms/events?employee_id=${employeeId}` : `${API_BASE}/hrms/events`;
+        const res = await fetch(url, { headers: authHeaders() });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] getHREvents error:', e); }
+    return [];
+}
+
+export async function createHREvent(data: any) {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/events`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify(data)
+        });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] createHREvent error:', e); }
+    return null;
+}
+
+export async function getJobOpenings(status?: string) {
+    try {
+        const url = status ? `${API_BASE}/hrms/job-openings?status=${status}` : `${API_BASE}/hrms/job-openings`;
+        const res = await fetch(url, { headers: authHeaders() });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] getJobOpenings error:', e); }
+    return [];
+}
+
+export async function createJobOpening(data: any) {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/job-openings`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify(data)
+        });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] createJobOpening error:', e); }
+    return null;
+}
+
+export async function updateJobOpeningStatus(id: string, status: string) {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/job-openings/${id}/status`, {
+            method: 'PATCH',
+            headers: authHeaders(),
+            body: JSON.stringify({ status })
+        });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] updateJobOpeningStatus error:', e); }
+    return null;
+}
+
+export async function getApplicants(status?: string) {
+    try {
+        const url = status ? `${API_BASE}/hrms/applicants?status=${status}` : `${API_BASE}/hrms/applicants`;
+        const res = await fetch(url, { headers: authHeaders() });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] getApplicants error:', e); }
+    return [];
+}
+
+export async function createApplicant(data: any) {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/applicants`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify(data)
+        });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] createApplicant error:', e); }
+    return null;
+}
+
+export async function updateApplicant(applicantId: string, data: any) {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/applicants/${applicantId}`, {
+            method: 'PUT',
+            headers: authHeaders(),
+            body: JSON.stringify(data)
+        });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] updateApplicant error:', e); }
+    return null;
+}
+
+export async function convertApplicantToEmployee(applicantId: string, data?: any) {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/applicants/${applicantId}/convert-to-employee`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify(data || {})
+        });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] convertApplicantToEmployee error:', e); }
+    return null;
+}
+
+export async function getOfferLetters(status?: string) {
+    try {
+        const url = status ? `${API_BASE}/hrms/offer-letters?status=${status}` : `${API_BASE}/hrms/offer-letters`;
+        const res = await fetch(url, { headers: authHeaders() });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] getOfferLetters error:', e); }
+    return [];
+}
+
+export async function createOfferLetter(data: any) {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/offer-letters`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify(data)
+        });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] createOfferLetter error:', e); }
+    return null;
+}
+
+export async function acceptOfferLetter(id: string) {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/offer-letters/${id}/accept`, {
+            method: 'PATCH',
+            headers: authHeaders()
+        });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] acceptOfferLetter error:', e); }
+    return null;
+}
+
+export async function getLeaveBalances(employeeId?: string, year?: number) {
+    try {
+        const params = new URLSearchParams();
+        if (employeeId) params.set('employee_id', employeeId);
+        if (year) params.set('year', String(year));
+        const qs = params.toString();
+        const res = await fetch(`${API_BASE}/hrms/leave-balance${qs ? `?${qs}` : ''}`, { headers: authHeaders() });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] getLeaveBalances error:', e); }
+    return [];
+}
+
+export async function initializeLeaveBalances(year: number) {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/leave-balance/initialize`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify({ year })
+        });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] initializeLeaveBalances error:', e); }
+    return null;
+}
+
+export async function approveLeaveRequest(id: string, payload: { approved_by?: string; remarks?: string } = {}) {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/leaves/${id}/approve`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify(payload)
+        });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] approveLeaveRequest error:', e); }
+    return null;
+}
+
+export async function rejectLeaveRequest(id: string, payload: { approved_by?: string; remarks?: string } = {}) {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/leaves/${id}/reject`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify(payload)
+        });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] rejectLeaveRequest error:', e); }
+    return null;
+}
+
+export async function bulkAssignLeaveType(leaveIds: string[], leaveTypeId: string) {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/leaves/bulk-assign-type`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify({ leave_ids: leaveIds, leave_type: leaveTypeId })
+        });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] bulkAssignLeaveType error:', e); }
+    return null;
+}
+
+export async function fixInvalidLeaveRanges(payload: { employee_id?: string; from_date?: string; to_date?: string } = {}) {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/leaves/fix-invalid-range`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify(payload)
+        });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] fixInvalidLeaveRanges error:', e); }
+    return null;
+}
+
+export async function auditFebruaryPayroll2026() {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/payrolls/audit/feb-2026`, { headers: authHeaders() });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] auditFebruaryPayroll2026 error:', e); }
+    return null;
+}
+
+export async function getDisciplinaryActions(employeeId?: string) {
+    try {
+        const url = employeeId ? `${API_BASE}/hrms/disciplinary-actions?employee_id=${employeeId}` : `${API_BASE}/hrms/disciplinary-actions`;
+        const res = await fetch(url, { headers: authHeaders() });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] getDisciplinaryActions error:', e); }
+    return [];
+}
+
+export async function createDisciplinaryAction(data: any) {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/disciplinary-actions`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify(data)
+        });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] createDisciplinaryAction error:', e); }
+    return null;
+}
+
 export async function allocateLabour(data: any) { return mockDelay(data); }
 export async function getLabourAllocations() { return mockDelay([]); }
-export async function getEmployeeDocuments(id?: string) { return mockDelay([]); }
-export async function createEmployeeDocument(data: any) { return mockDelay(data); }
+export async function getEmployeeDocuments(employeeId?: string, expiringSoon = false) {
+    try {
+        const params = new URLSearchParams();
+        if (employeeId) params.set('employee_id', employeeId);
+        if (expiringSoon) params.set('expiring_soon', 'true');
+        const qs = params.toString();
+        const res = await fetch(`${API_BASE}/hrms/employee-documents${qs ? `?${qs}` : ''}`, { headers: authHeaders() });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] getEmployeeDocuments error:', e); }
+    return [];
+}
+
+export async function createEmployeeDocument(data: any) {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/employee-documents`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify(data)
+        });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] createEmployeeDocument error:', e); }
+    return null;
+}
+
+export async function getShifts() {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/shifts`, { headers: authHeaders() });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] getShifts error:', e); }
+    return [];
+}
+
+export async function createShift(data: any) {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/shifts`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify(data)
+        });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] createShift error:', e); }
+    return null;
+}
+
+export async function getRosters() {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/rosters`, { headers: authHeaders() });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] getRosters error:', e); }
+    return [];
+}
+
+export async function createRoster(data: any) {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/rosters`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify(data)
+        });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] createRoster error:', e); }
+    return null;
+}
+
+export async function updateRoster(id: string, data: any) {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/rosters/${id}`, {
+            method: 'PUT',
+            headers: authHeaders(),
+            body: JSON.stringify(data)
+        });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] updateRoster error:', e); }
+    return null;
+}
+
+export async function getSeparations() {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/separations`, { headers: authHeaders() });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] getSeparations error:', e); }
+    return [];
+}
+
+export async function createSeparation(data: any) {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/separations`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify(data)
+        });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] createSeparation error:', e); }
+    return null;
+}
+
+export async function updateSeparationStatus(id: string, status: string) {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/separations/${id}/status`, {
+            method: 'PATCH',
+            headers: authHeaders(),
+            body: JSON.stringify({ status })
+        });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] updateSeparationStatus error:', e); }
+    return null;
+}
+
+export async function getFinalSettlements() {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/final-settlements`, { headers: authHeaders() });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] getFinalSettlements error:', e); }
+    return [];
+}
+
+export async function createFinalSettlement(data: any) {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/final-settlements`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify(data)
+        });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] createFinalSettlement error:', e); }
+    return null;
+}
+
+export async function approveFinalSettlement(id: string) {
+    try {
+        const res = await fetch(`${API_BASE}/hrms/final-settlements/${id}/approve`, {
+            method: 'POST',
+            headers: authHeaders()
+        });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] approveFinalSettlement error:', e); }
+    return null;
+}
 
 // --- PROCUREMENT & INVENTORY ---
 async function invFetch(path: string, opts?: RequestInit) {
@@ -578,7 +1155,7 @@ export async function getInventoryItems() { try { return await invFetch('/items'
 export async function createInventoryItem(data: any) { return invFetch('/items', { method: 'POST', body: JSON.stringify(data) }); }
 export async function updateInventoryItem(id: string, data: any) { return invFetch(`/items/${id}`, { method: 'PUT', body: JSON.stringify(data) }); }
 
-export async function getProducts() { return getInventoryItems(); }
+export async function getProducts(): Promise<any[]> { return getInventoryItems(); }
 export async function createProduct(data: any) { return createInventoryItem(data); }
 
 export async function getWarehouses() { try { return await invFetch('/warehouses'); } catch { return []; } }
@@ -623,14 +1200,14 @@ export async function createPurchaseRequest(data: any) {
     } catch (e) { console.warn('[API] createPurchaseRequest error:', e); }
     return null;
 }
-export async function getPurchaseOrders() {
+export async function getPurchaseOrders(): Promise<any[]> {
     try {
         const res = await fetch(`${API_BASE}/procurement/orders`, { headers: authHeaders() });
         if (res.ok) return res.json();
     } catch (e) { console.warn('[API] getPurchaseOrders error:', e); }
     return [];
 }
-export async function getPurchaseOrder(id: string) { return mockDelay(null); }
+export async function getPurchaseOrder(id: string): Promise<any | null> { return mockDelay(null); }
 export async function createPurchaseOrder(data: any) {
     try {
         const res = await fetch(`${API_BASE}/procurement/orders`, {
@@ -651,7 +1228,7 @@ export async function getGRNs() {
 }
 export async function createGRN(data: any) { return mockDelay(data); }
 export async function createGRNs(data: any) { return mockDelay(data); }
-export async function getVendorBills() {
+export async function getVendorBills(): Promise<any[]> {
     try {
         const res = await fetch(`${API_BASE}/payables/bills`, { headers: authHeaders() });
         if (res.ok) return res.json();
@@ -799,7 +1376,7 @@ function getToken(): string | null {
     return localStorage.getItem('bb_token');
 }
 
-function authHeaders(): HeadersInit {
+export function authHeaders(): HeadersInit {
     const token = getToken();
     const headers: HeadersInit = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -983,7 +1560,7 @@ export async function getSupportRequests() {
     } catch (e) { console.warn('[API] getSupportRequests error:', e); }
     return [];
 }
-export async function getSupportRequest(id: string) { return mockDelay(null); }
+export async function getSupportRequest(id: string): Promise<any | null> { return mockDelay(null); }
 export async function createSupportRequest(data: any) {
     try {
         const res = await fetch(`${API_BASE}/support-meetings/support`, {
@@ -1005,7 +1582,7 @@ export async function getMeetings() {
     } catch (e) { console.warn('[API] getMeetings error:', e); }
     return [];
 }
-export async function getMeeting(id: string) { return mockDelay(null); }
+export async function getMeeting(id: string): Promise<any | null> { return mockDelay(null); }
 export async function createMeetingRequest(data: any) {
     try {
         const res = await fetch(`${API_BASE}/support-meetings/meetings`, {

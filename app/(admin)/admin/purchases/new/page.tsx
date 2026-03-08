@@ -30,7 +30,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import type { Vendor, PurchaseRequest } from '@/lib/db/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { POPreview } from '@/components/purchases/po-preview';
+import { POPreview } from '@/app/(admin)/admin/purchases/_components/po-preview';
 import { useTenant } from '@/lib/tenant-context';
 
 export default function NewPurchaseOrderPage() {

@@ -1,32 +1,111 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { DashboardNav } from './dashboard-nav';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { PanelLeftClose, PanelLeftOpen, Cpu } from 'lucide-react';
 import Link from 'next/link';
-import { useTenant } from '@/lib/tenant-context';
 
 interface SidebarProps {
   isCollapsed: boolean;
   toggleCollapse: () => void;
 }
 
-export function Sidebar({ isCollapsed, toggleCollapse }: SidebarProps) {
-  // Safely get tenant data with fallbacks
-  let brandingConfig = null;
-  let companyProfile = null;
+// Helper functions for color conversion (same as theme-context)
+function hexToRGB(hex: string): { r: number; g: number; b: number } | null {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? {
+    r: parseInt(result[1], 16),
+    g: parseInt(result[2], 16),
+    b: parseInt(result[3], 16)
+  } : null;
+}
 
-  try {
-    const tenant = useTenant();
-    brandingConfig = tenant.brandingConfig;
-    companyProfile = tenant.companyProfile;
-  } catch (error) {
-    console.warn('Tenant context not available in Sidebar');
+function rgbToHSL(r: number, g: number, b: number): { h: number; s: number; l: number } {
+  r /= 255;
+  g /= 255;
+  b /= 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let h = 0;
+  let s = 0;
+  const l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+      case g: h = ((b - r) / d + 2) / 6; break;
+      case b: h = ((r - g) / d + 4) / 6; break;
+    }
   }
+  return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
+}
 
-  const logo = brandingConfig?.logo;
-  const companyName = companyProfile?.tradingName || 'BridgeBreak';
+function applyBrandingColors(primaryColor: string, accentColor: string) {
+  const root = document.documentElement;
+  const primaryRGB = hexToRGB(primaryColor);
+  if (primaryRGB) {
+    const primaryHSL = rgbToHSL(primaryRGB.r, primaryRGB.g, primaryRGB.b);
+    root.style.setProperty('--primary', `${primaryHSL.h} ${primaryHSL.s}% ${primaryHSL.l}%`);
+    root.style.setProperty('--ring', `${primaryHSL.h} ${primaryHSL.s}% ${primaryHSL.l}%`);
+    root.style.setProperty('--sidebar-primary', `${primaryHSL.h} ${primaryHSL.s}% ${primaryHSL.l}%`);
+    root.style.setProperty('--sidebar-ring', `${primaryHSL.h} ${primaryHSL.s}% ${primaryHSL.l}%`);
+  }
+  const accentRGB = hexToRGB(accentColor);
+  if (accentRGB) {
+    const accentHSL = rgbToHSL(accentRGB.r, accentRGB.g, accentRGB.b);
+    root.style.setProperty('--accent', `${accentHSL.h} ${accentHSL.s}% ${accentHSL.l}%`);
+    root.style.setProperty('--sidebar-accent', `${accentHSL.h} ${accentHSL.s}% ${accentHSL.l}%`);
+  }
+}
+
+export function Sidebar({ isCollapsed, toggleCollapse }: SidebarProps) {
+  const [logo, setLogo] = useState<string | null>(null);
+  const [companyName, setCompanyName] = useState('BridgeBreak');
+
+  useEffect(() => {
+    // Load branding and company settings
+    const loadSettings = () => {
+      // Load branding - check both new and old keys
+      let brandingSaved = localStorage.getItem('branding_settings');
+      if (!brandingSaved) {
+        brandingSaved = localStorage.getItem('branding_config');
+      }
+
+      if (brandingSaved) {
+        const branding = JSON.parse(brandingSaved);
+        setLogo(branding.logo || null);
+
+        // Apply branding colors
+        if (branding.primaryColor && branding.accentColor) {
+          applyBrandingColors(branding.primaryColor, branding.accentColor);
+        }
+      }
+
+      // Load company name
+      const companySaved = localStorage.getItem('company_settings');
+      if (companySaved) {
+        const company = JSON.parse(companySaved);
+        setCompanyName(company.companyName || 'BridgeBreak');
+      } else {
+        const appName = localStorage.getItem('app_company_name');
+        if (appName) setCompanyName(appName);
+      }
+    };
+
+    loadSettings();
+
+    // Listen for storage changes
+    window.addEventListener('storage', loadSettings);
+    const interval = setInterval(loadSettings, 1000);
+
+    return () => {
+      window.removeEventListener('storage', loadSettings);
+      clearInterval(interval);
+    };
+  }, []);
 
   return (
     <aside

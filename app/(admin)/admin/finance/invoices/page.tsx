@@ -99,7 +99,10 @@ export default function AdminInvoicesPage() {
                     <Badge variant="outline" className={cn(
                       "text-[10px]",
                       inv.status === 'paid' ? "bg-emerald-50 text-emerald-600 border-none" :
+                        inv.status === 'approved' ? "bg-emerald-50 text-emerald-700 border-none" :
                         inv.status === 'overdue' ? "bg-rose-50 text-rose-600 border-none" :
+                          inv.status === 'rejected' ? "bg-rose-50 text-rose-700 border-none" :
+                            inv.status === 'pending_approval' ? "bg-blue-50 text-blue-700 border-none" :
                           "bg-amber-50 text-amber-600 border-none"
                     )}>
                       {inv.status}
