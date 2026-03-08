@@ -13,7 +13,7 @@ import {
     TrendingUp, Users, Target, DollarSign,
     ShoppingCart, FileText, UserPlus,
     Clock, Plus, Receipt,
-    ArrowUpRight, BarChart3, Briefcase, ChevronRight
+    ArrowUpRight, BarChart3, Briefcase, ChevronRight, Truck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Opportunity, Lead, Invoice } from '@/lib/db/types';
@@ -266,10 +266,31 @@ export default function SalesDashboardPage() {
                                         </div>
                                         <ChevronRight className="h-4 w-4 text-muted-foreground" />
                                     </Link>
-                                    <Link href="/admin/finance/invoices" className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
+                                    <Link href="/admin/sales/invoices" className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
                                         <div className="flex items-center gap-3">
                                             <div className="p-2 border border-border rounded-md bg-background shadow-sm"><Receipt className="h-4 w-4" /></div>
-                                            <span className="font-bold text-sm">All Invoices</span>
+                                            <span className="font-bold text-sm">Sales Invoices</span>
+                                        </div>
+                                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                    </Link>
+                                    <Link href="/admin/sales/quotations" className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 border border-border rounded-md bg-background shadow-sm"><FileText className="h-4 w-4" /></div>
+                                            <span className="font-bold text-sm">Quotations</span>
+                                        </div>
+                                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                    </Link>
+                                    <Link href="/admin/sales/proforma" className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 border border-border rounded-md bg-background shadow-sm"><Receipt className="h-4 w-4" /></div>
+                                            <span className="font-bold text-sm">Proforma Invoices</span>
+                                        </div>
+                                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                    </Link>
+                                    <Link href="/admin/sales/delivery-notes" className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 border border-border rounded-md bg-background shadow-sm"><Truck className="h-4 w-4" /></div>
+                                            <span className="font-bold text-sm">Delivery Notes</span>
                                         </div>
                                         <ChevronRight className="h-4 w-4 text-muted-foreground" />
                                     </Link>

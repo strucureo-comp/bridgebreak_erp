@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Save, Loader2, Plus, Trash2, ArrowRight, Workflow, Edit2, DollarSign, Receipt, ShoppingCart, Users, FileText, Building2 } from 'lucide-react';
+import { Save, Loader2, Plus, Trash2, ArrowRight, Workflow, Edit2, DollarSign, Receipt, ShoppingCart, Users, FileText, Building2, Truck } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -34,9 +34,16 @@ interface ApprovalWorkflow {
     allowSelfApproval: boolean;
 }
 
+// Sales CRM Document Approval Config
+interface SalesApprovalConfig {
+    quotation: { enabled: boolean; approverRole: string };
+    proformaInvoice: { enabled: boolean; approverRole: string };
+    salesInvoice: { enabled: boolean; approverRole: string };
+    deliveryNote: { enabled: boolean; approverRole: string };
+}
+
 // ============= DEFAULT DATA =============
 
-// Get roles from localStorage or use defaults
 const getRoles = (): string[] => {
     const saved = localStorage.getItem('roles_settings');
     if (saved) {
@@ -54,6 +61,14 @@ const MODULES = [
     { id: 'leaves', name: 'Leave Requests', icon: Users },
     { id: 'quotations', name: 'Quotations', icon: FileText },
     { id: 'projects', name: 'Project Budget', icon: Building2 },
+];
+
+// Sales CRM Documents
+const SALES_MODULES = [
+    { id: 'quotation', name: 'Quotation', icon: FileText },
+    { id: 'proformaInvoice', name: 'Proforma Invoice', icon: Receipt },
+    { id: 'salesInvoice', name: 'Sales Invoice', icon: Receipt },
+    { id: 'deliveryNote', name: 'Delivery Note', icon: Truck },
 ];
 
 const DEFAULT_WORKFLOWS: ApprovalWorkflow[] = [
@@ -98,22 +113,32 @@ const DEFAULT_WORKFLOWS: ApprovalWorkflow[] = [
     },
 ];
 
+const DEFAULT_SALES_APPROVAL: SalesApprovalConfig = {
+    quotation: { enabled: false, approverRole: '' },
+    proformaInvoice: { enabled: false, approverRole: '' },
+    salesInvoice: { enabled: false, approverRole: '' },
+    deliveryNote: { enabled: false, approverRole: '' },
+};
+
 // ============= MAIN COMPONENT =============
 
 export default function ApprovalsSettingsPage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [workflows, setWorkflows] = useState<ApprovalWorkflow[]>(DEFAULT_WORKFLOWS);
+    const [salesApproval, setSalesApproval] = useState<SalesApprovalConfig>(DEFAULT_SALES_APPROVAL);
     const [roles, setRoles] = useState<string[]>(getRoles());
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editingWorkflow, setEditingWorkflow] = useState<ApprovalWorkflow | null>(null);
-    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-    const [workflowToDelete, setWorkflowToDelete] = useState<string | null>(null);
+    const [activeTab, setActiveTab] = useState('general');
 
     useEffect(() => {
         const savedWorkflows = localStorage.getItem('approval_workflows');
         const savedRoles = localStorage.getItem('roles_settings');
+        const savedSalesApproval = localStorage.getItem('sales_approval_config');
+
         if (savedWorkflows) setWorkflows(JSON.parse(savedWorkflows));
+        if (savedSalesApproval) setSalesApproval(JSON.parse(savedSalesApproval));
         if (savedRoles) {
             const parsedRoles = JSON.parse(savedRoles);
             setRoles(parsedRoles.map((r: any) => r.name));
@@ -157,7 +182,6 @@ export default function ApprovalsSettingsPage() {
             setWorkflows([...workflows, editingWorkflow]);
             toast.success('Workflow created');
         }
-
         setDialogOpen(false);
         setEditingWorkflow(null);
     };
@@ -165,8 +189,6 @@ export default function ApprovalsSettingsPage() {
     const handleDeleteWorkflow = (id: string) => {
         setWorkflows(workflows.filter(w => w.id !== id));
         toast.success('Workflow deleted');
-        setDeleteConfirmOpen(false);
-        setWorkflowToDelete(null);
     };
 
     const handleToggleWorkflow = (id: string) => {
@@ -192,10 +214,25 @@ export default function ApprovalsSettingsPage() {
         setEditingWorkflow({ ...editingWorkflow, steps: updatedSteps });
     };
 
+    const handleSalesApprovalToggle = (docId: keyof SalesApprovalConfig) => {
+        setSalesApproval(prev => ({
+            ...prev,
+            [docId]: { ...prev[docId], enabled: !prev[docId].enabled }
+        }));
+    };
+
+    const handleSalesApprovalRoleChange = (docId: keyof SalesApprovalConfig, role: string) => {
+        setSalesApproval(prev => ({
+            ...prev,
+            [docId]: { ...prev[docId], approverRole: role }
+        }));
+    };
+
     const handleSave = async () => {
         setSaving(true);
         await new Promise(r => setTimeout(r, 1000));
         localStorage.setItem('approval_workflows', JSON.stringify(workflows));
+        localStorage.setItem('sales_approval_config', JSON.stringify(salesApproval));
         toast.success('Approvals saved');
         setSaving(false);
     };
@@ -211,208 +248,140 @@ export default function ApprovalsSettingsPage() {
     return (
         <div className="space-y-6 max-w-4xl">
             {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-semibold">Approval Workflows</h1>
-                    <p className="text-muted-foreground">Create custom approval chains based on roles</p>
-                </div>
-                <Button onClick={handleAddWorkflow} className="gap-1">
-                    <Plus className="h-4 w-4" /> Create Workflow
-                </Button>
+            <div>
+                <h1 className="text-2xl font-semibold">Approval Workflows</h1>
+                <p className="text-muted-foreground">Configure approval chains for all modules</p>
             </div>
 
-            {/* Workflows List */}
-            <div className="grid gap-4">
-                {workflows.map((workflow) => {
-                    const module = MODULES.find(m => m.id === workflow.module);
-                    return (
-                        <Card key={workflow.id} className={cn(!workflow.enabled && "opacity-60")}>
-                            <CardContent className="p-4">
-                                <div className="flex items-start justify-between">
-                                    <div className="flex items-start gap-4">
-                                        <div className={cn("h-12 w-12 rounded-lg flex items-center justify-center", workflow.enabled ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground")}>
-                                            {module ? <module.icon className="h-6 w-6" /> : <Workflow className="h-6 w-6" />}
-                                        </div>
-                                        <div>
-                                            <div className="flex items-center gap-2">
-                                                <p className="font-medium">{workflow.name}</p>
-                                                <Badge variant={workflow.enabled ? "default" : "secondary"}>
-                                                    {workflow.enabled ? "Active" : "Disabled"}
-                                                </Badge>
-                                            </div>
-                                            <p className="text-sm text-muted-foreground">{workflow.description}</p>
-                                            {workflow.threshold !== undefined && workflow.threshold > 0 && (
-                                                <p className="text-xs text-muted-foreground mt-1">
-                                                    Threshold: AED {workflow.threshold.toLocaleString()}
-                                                </p>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <Switch checked={workflow.enabled} onCheckedChange={() => handleToggleWorkflow(workflow.id)} />
-                                        <Button variant="ghost" size="sm" onClick={() => handleEditWorkflow(workflow)}>
-                                            <Edit2 className="h-4 w-4" />
-                                        </Button>
-                                        <Button variant="ghost" size="sm" onClick={() => { setWorkflowToDelete(workflow.id); setDeleteConfirmOpen(true); }}>
-                                            <Trash2 className="h-4 w-4 text-red-500" />
-                                        </Button>
-                                    </div>
-                                </div>
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+                <TabsList>
+                    <TabsTrigger value="general">General Approvals</TabsTrigger>
+                    <TabsTrigger value="sales">Sales & CRM</TabsTrigger>
+                </TabsList>
 
-                                {/* Approval Chain Visual */}
-                                {workflow.steps.length > 0 && (
-                                    <div className="mt-4 pt-4 border-t">
-                                        <p className="text-xs text-muted-foreground mb-2">Approval Chain:</p>
-                                        <div className="flex items-center gap-2 flex-wrap">
-                                            {workflow.steps.map((step, idx) => (
-                                                <div key={step.id} className="flex items-center gap-2">
-                                                    <Badge variant="outline" className="text-xs">
-                                                        {idx + 1}. {step.role} ({step.action})
-                                                    </Badge>
-                                                    {idx < workflow.steps.length - 1 && (
-                                                        <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                                                    )}
+                {/* General Approvals Tab */}
+                <TabsContent value="general" className="space-y-4">
+                    <div className="flex justify-end">
+                        <Button onClick={handleAddWorkflow} className="gap-1">
+                            <Plus className="h-4 w-4" /> Create Workflow
+                        </Button>
+                    </div>
+
+                    {/* Workflows List */}
+                    <div className="grid gap-4">
+                        {workflows.map((workflow) => {
+                            const module = MODULES.find(m => m.id === workflow.module);
+                            return (
+                                <Card key={workflow.id} className={cn(!workflow.enabled && "opacity-60")}>
+                                    <CardContent className="p-4">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-4">
+                                                <Switch
+                                                    checked={workflow.enabled}
+                                                    onCheckedChange={() => handleToggleWorkflow(workflow.id)}
+                                                />
+                                                <div className={cn("h-10 w-10 rounded-lg flex items-center justify-center", workflow.enabled ? "bg-primary text-primary-foreground" : "bg-muted")}>
+                                                    {module?.icon && <module.icon className="h-5 w-5" />}
                                                 </div>
-                                            ))}
+                                                <div>
+                                                    <p className="font-medium">{workflow.name}</p>
+                                                    <p className="text-sm text-muted-foreground">{workflow.description}</p>
+                                                    <div className="flex items-center gap-1 mt-1">
+                                                        {workflow.steps.map((step, idx) => (
+                                                            <span key={step.id} className="flex items-center text-xs">
+                                                                <Badge variant="outline" className="mr-1">{step.role}</Badge>
+                                                                {idx < workflow.steps.length - 1 && <ArrowRight className="h-3 w-3 mx-1 text-muted-foreground" />}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Button variant="outline" size="sm" onClick={() => handleEditWorkflow(workflow)}>
+                                                    <Edit2 className="h-4 w-4" />
+                                                </Button>
+                                                <Button variant="ghost" size="sm" onClick={() => handleDeleteWorkflow(workflow.id)}>
+                                                    <Trash2 className="h-4 w-4 text-red-500" />
+                                                </Button>
+                                            </div>
                                         </div>
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
-                    );
-                })}
-            </div>
+                                    </CardContent>
+                                </Card>
+                            );
+                        })}
+                    </div>
+                </TabsContent>
 
-            {workflows.length === 0 && (
-                <div className="text-center py-12 text-muted-foreground">
-                    <Workflow className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No approval workflows created</p>
-                    <Button variant="outline" className="mt-4" onClick={handleAddWorkflow}>
-                        <Plus className="h-4 w-4 mr-2" /> Create First Workflow
-                    </Button>
-                </div>
-            )}
-
-            {/* Create/Edit Dialog */}
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                <DialogContent className="max-w-2xl">
-                    <DialogHeader>
-                        <DialogTitle>{editingWorkflow?.id && workflows.find(w => w.id === editingWorkflow.id) ? 'Edit Workflow' : 'Create Workflow'}</DialogTitle>
-                    </DialogHeader>
-                    {editingWorkflow && (
-                        <div className="space-y-4 py-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label>Workflow Name *</Label>
-                                    <Input
-                                        value={editingWorkflow.name}
-                                        onChange={(e) => setEditingWorkflow({ ...editingWorkflow, name: e.target.value })}
-                                        placeholder="e.g., Payroll Approval"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label>Module</Label>
-                                    <Select value={editingWorkflow.module} onValueChange={(v) => setEditingWorkflow({ ...editingWorkflow, module: v })}>
-                                        <SelectTrigger><SelectValue /></SelectTrigger>
-                                        <SelectContent>
-                                            {MODULES.map(m => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label>Description</Label>
-                                <Input
-                                    value={editingWorkflow.description}
-                                    onChange={(e) => setEditingWorkflow({ ...editingWorkflow, description: e.target.value })}
-                                    placeholder="Brief description of this workflow"
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label>Threshold Amount (Optional)</Label>
-                                    <Input
-                                        type="number"
-                                        value={editingWorkflow.threshold || ''}
-                                        onChange={(e) => setEditingWorkflow({ ...editingWorkflow, threshold: parseFloat(e.target.value) || undefined })}
-                                        placeholder="0 for all amounts"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label>Status</Label>
-                                    <div className="flex items-center gap-2 h-10">
-                                        <Switch checked={editingWorkflow.enabled} onCheckedChange={(v) => setEditingWorkflow({ ...editingWorkflow, enabled: v })} />
-                                        <span className="text-sm">{editingWorkflow.enabled ? 'Active' : 'Disabled'}</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Approval Steps */}
-                            <div className="space-y-2">
-                                <div className="flex items-center justify-between">
-                                    <Label>Approval Chain *</Label>
-                                    <Button variant="outline" size="sm" onClick={handleAddStep}>
-                                        <Plus className="h-3 w-3 mr-1" /> Add Step
-                                    </Button>
-                                </div>
-                                <p className="text-xs text-muted-foreground">Define the order of approvers. Example: HR Manager → Finance → MD</p>
-                                <div className="space-y-2">
-                                    {editingWorkflow.steps.map((step, idx) => (
-                                        <div key={step.id} className="flex items-center gap-2 p-3 border rounded-lg">
-                                            <Badge variant="outline" className="w-8">{idx + 1}</Badge>
-                                            <Select value={step.role} onValueChange={(v) => {
-                                                const updated = [...editingWorkflow.steps];
-                                                updated[idx].role = v;
-                                                setEditingWorkflow({ ...editingWorkflow, steps: updated });
-                                            }}>
-                                                <SelectTrigger className="flex-1"><SelectValue placeholder="Select role" /></SelectTrigger>
+                {/* Sales & CRM Approvals Tab */}
+                <TabsContent value="sales" className="space-y-4">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-base">Sales & CRM Document Approvals</CardTitle>
+                            <CardDescription>
+                                Configure which roles can approve Sales & CRM documents.
+                                Only selected role users will see Approve/Reject buttons.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            {SALES_MODULES.map((doc) => {
+                                const config = salesApproval[doc.id as keyof SalesApprovalConfig];
+                                return (
+                                    <div key={doc.id} className="flex items-center justify-between p-4 border rounded-lg">
+                                        <div className="flex items-center gap-4">
+                                            <Switch
+                                                checked={config.enabled}
+                                                onCheckedChange={() => handleSalesApprovalToggle(doc.id as keyof SalesApprovalConfig)}
+                                            />
+                                            <div className={cn("h-10 w-10 rounded-lg flex items-center justify-center", config.enabled ? "bg-primary text-primary-foreground" : "bg-muted")}>
+                                                <doc.icon className="h-5 w-5" />
+                                            </div>
+                                            <div>
+                                                <p className="font-medium">{doc.name}</p>
+                                                <p className="text-sm text-muted-foreground">
+                                                    {config.enabled ? `Approver: ${config.approverRole || 'Not set'}` : 'Approval not required'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="w-[200px]">
+                                            <Select
+                                                value={config.approverRole}
+                                                onValueChange={(v) => handleSalesApprovalRoleChange(doc.id as keyof SalesApprovalConfig, v)}
+                                                disabled={!config.enabled}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select approver role" />
+                                                </SelectTrigger>
                                                 <SelectContent>
-                                                    {roles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                                                    {roles.map((role) => (
+                                                        <SelectItem key={role} value={role}>{role}</SelectItem>
+                                                    ))}
                                                 </SelectContent>
                                             </Select>
-                                            <Select value={step.action} onValueChange={(v: any) => {
-                                                const updated = [...editingWorkflow.steps];
-                                                updated[idx].action = v;
-                                                setEditingWorkflow({ ...editingWorkflow, steps: updated });
-                                            }}>
-                                                <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="approve">Approve</SelectItem>
-                                                    <SelectItem value="verify">Verify</SelectItem>
-                                                    <SelectItem value="authorize">Authorize</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                            <Button variant="ghost" size="sm" onClick={() => handleRemoveStep(step.id)} disabled={editingWorkflow.steps.length === 1}>
-                                                <Trash2 className="h-4 w-4 text-red-500" />
-                                            </Button>
                                         </div>
-                                    ))}
+                                    </div>
+                                );
+                            })}
+                        </CardContent>
+                    </Card>
+
+                    <Card className="bg-blue-50 border-blue-200">
+                        <CardContent className="p-4">
+                            <div className="flex items-start gap-3">
+                                <Workflow className="h-5 w-5 text-blue-600 mt-0.5" />
+                                <div className="text-sm text-blue-800">
+                                    <p className="font-medium">How it works:</p>
+                                    <ul className="list-disc list-inside mt-1 space-y-1">
+                                        <li>Enable approval for a document type</li>
+                                        <li>Select which role can approve (e.g., Finance Manager, Sales Manager)</li>
+                                        <li>Only users with that role will see Approve/Reject buttons</li>
+                                        <li>Documents will go through: Draft → Pending Approval → Approved/Rejected → Completed</li>
+                                    </ul>
                                 </div>
                             </div>
-                        </div>
-                    )}
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-                        <Button onClick={handleSaveWorkflow}>Save Workflow</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
-            {/* Delete Confirmation */}
-            <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Delete Workflow</DialogTitle>
-                    </DialogHeader>
-                    <p>Are you sure you want to delete this workflow? This action cannot be undone.</p>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
-                        <Button variant="destructive" onClick={() => workflowToDelete && handleDeleteWorkflow(workflowToDelete)}>Delete</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+            </Tabs>
 
             {/* Save Button */}
             <div className="flex justify-end">
@@ -421,6 +390,105 @@ export default function ApprovalsSettingsPage() {
                     Save Changes
                 </Button>
             </div>
+
+            {/* Edit Workflow Dialog */}
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>{editingWorkflow?.id ? 'Edit Workflow' : 'Create Workflow'}</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label>Workflow Name</Label>
+                            <Input
+                                value={editingWorkflow?.name || ''}
+                                onChange={(e) => setEditingWorkflow(prev => prev ? { ...prev, name: e.target.value } : null)}
+                                placeholder="e.g., Payroll Approval"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Module</Label>
+                            <Select
+                                value={editingWorkflow?.module || 'payroll'}
+                                onValueChange={(v) => setEditingWorkflow(prev => prev ? { ...prev, module: v } : null)}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {MODULES.map((m) => (
+                                        <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Description</Label>
+                            <Input
+                                value={editingWorkflow?.description || ''}
+                                onChange={(e) => setEditingWorkflow(prev => prev ? { ...prev, description: e.target.value } : null)}
+                                placeholder="Brief description"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Approval Steps</Label>
+                            <div className="space-y-2">
+                                {editingWorkflow?.steps.map((step, idx) => (
+                                    <div key={step.id} className="flex items-center gap-2">
+                                        <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm">
+                                            {idx + 1}
+                                        </div>
+                                        <Select
+                                            value={step.role}
+                                            onValueChange={(v) => {
+                                                const updated = editingWorkflow.steps.map(s => s.id === step.id ? { ...s, role: v } : s);
+                                                setEditingWorkflow(prev => prev ? { ...prev, steps: updated } : null);
+                                            }}
+                                        >
+                                            <SelectTrigger className="flex-1">
+                                                <SelectValue placeholder="Select role" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {roles.map((role) => (
+                                                    <SelectItem key={role} value={role}>{role}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <Select
+                                            value={step.action}
+                                            onValueChange={(v: 'approve' | 'verify' | 'authorize') => {
+                                                const updated = editingWorkflow.steps.map(s => s.id === step.id ? { ...s, action: v } : s);
+                                                setEditingWorkflow(prev => prev ? { ...prev, steps: updated } : null);
+                                            }}
+                                        >
+                                            <SelectTrigger className="w-[120px]">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="approve">Approve</SelectItem>
+                                                <SelectItem value="verify">Verify</SelectItem>
+                                                <SelectItem value="authorize">Authorize</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        {editingWorkflow.steps.length > 1 && (
+                                            <Button variant="ghost" size="icon" onClick={() => handleRemoveStep(step.id)}>
+                                                <Trash2 className="h-4 w-4 text-red-500" />
+                                            </Button>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                            <Button variant="outline" size="sm" onClick={handleAddStep} className="mt-2">
+                                <Plus className="h-4 w-4 mr-1" /> Add Step
+                            </Button>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+                        <Button onClick={handleSaveWorkflow}>Save Workflow</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
