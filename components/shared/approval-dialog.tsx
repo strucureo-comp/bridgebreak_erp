@@ -6,18 +6,30 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import { CheckCircle2, XCircle, Clock, User, Calendar, MessageSquare } from 'lucide-react';
+import { CheckCircle2, XCircle, Clock, User, Calendar, MessageSquare, DollarSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { ApprovalRecord } from '@/lib/db/types';
+import { getDocumentTypeLabel, getModuleLabel, getStatusInfo, AppModule, DocumentType } from '@/lib/approval-system';
+
+interface ApprovalRecord {
+    id: string;
+    action: 'approved' | 'rejected';
+    user_name: string;
+    user_role: string;
+    timestamp: string;
+    comment?: string;
+}
 
 interface ApprovalDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    documentType: 'quotation' | 'invoice';
+    module?: AppModule;
+    documentType: DocumentType | 'quotation' | 'invoice';
     documentNumber: string;
     currentStatus: string;
-    approvalRecords: ApprovalRecord[];
+    approvalRecords?: ApprovalRecord[];
     canApprove: boolean;
+    documentAmount?: number;
+    threshold?: number;
     onApprove: (comment: string) => Promise<void>;
     onReject: (reason: string) => Promise<void>;
 }
@@ -25,11 +37,14 @@ interface ApprovalDialogProps {
 export function ApprovalDialog({
     open,
     onOpenChange,
+    module,
     documentType,
     documentNumber,
     currentStatus,
-    approvalRecords,
+    approvalRecords = [],
     canApprove,
+    documentAmount,
+    threshold,
     onApprove,
     onReject
 }: ApprovalDialogProps) {
@@ -39,7 +54,7 @@ export function ApprovalDialog({
 
     const handleSubmit = async () => {
         if (!action) return;
-        
+
         try {
             setLoading(true);
             if (action === 'approve') {
@@ -57,11 +72,15 @@ export function ApprovalDialog({
         }
     };
 
-    const statusColor = currentStatus === 'pending_approval' 
-        ? 'bg-yellow-100 text-yellow-800' 
-        : currentStatus === 'approved'
-        ? 'bg-green-100 text-green-800'
-        : 'bg-red-100 text-red-800';
+    // Get document type label
+    const getDocLabel = (): string => {
+        if (documentType === 'invoice') return 'Invoice';
+        if (documentType === 'quotation') return 'Quotation';
+        return getDocumentTypeLabel(documentType as DocumentType);
+    };
+
+    const statusInfo = getStatusInfo(currentStatus as any);
+    const docLabel = getDocLabel();
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -69,10 +88,15 @@ export function ApprovalDialog({
                 <DialogHeader>
                     <div className="flex items-center justify-between">
                         <DialogTitle className="text-lg font-black uppercase tracking-tight">
-                            {documentType === 'quotation' ? 'Quotation' : 'Invoice'} Approval
+                            {docLabel} Approval
+                            {module && (
+                                <span className="ml-2 text-sm font-normal text-muted-foreground">
+                                    ({getModuleLabel(module)})
+                                </span>
+                            )}
                         </DialogTitle>
-                        <Badge className={cn("text-[10px] font-black uppercase", statusColor)}>
-                            {currentStatus.replace('_', ' ')}
+                        <Badge className={cn("text-[10px] font-black uppercase", statusInfo.color)}>
+                            {statusInfo.label}
                         </Badge>
                     </div>
                     <DialogDescription className="text-xs">
@@ -81,6 +105,37 @@ export function ApprovalDialog({
                 </DialogHeader>
 
                 <div className="space-y-6 py-4">
+                    {/* Threshold Information */}
+                    {threshold && threshold > 0 && (
+                        <div className="flex items-center justify-between p-3 rounded-lg border border-blue-200 bg-blue-50">
+                            <div className="flex items-center gap-2">
+                                <DollarSign className="h-4 w-4 text-blue-600" />
+                                <span className="text-sm font-medium text-blue-900">Approval Threshold</span>
+                            </div>
+                            <span className="text-sm text-blue-700">
+                                {new Intl.NumberFormat('en-AE', {
+                                    style: 'currency',
+                                    currency: 'AED',
+                                    maximumFractionDigits: 0
+                                }).format(threshold)}
+                            </span>
+                        </div>
+                    )}
+
+                    {/* Document Amount */}
+                    {documentAmount && (
+                        <div className="flex items-center justify-between p-3 rounded-lg border border-slate-200 bg-slate-50">
+                            <span className="text-sm font-medium text-slate-900">Document Amount</span>
+                            <span className="text-sm font-bold text-slate-900">
+                                {new Intl.NumberFormat('en-AE', {
+                                    style: 'currency',
+                                    currency: 'AED',
+                                    maximumFractionDigits: 2
+                                }).format(documentAmount)}
+                            </span>
+                        </div>
+                    )}
+
                     {/* Approval History */}
                     {approvalRecords && approvalRecords.length > 0 && (
                         <div className="space-y-3">
@@ -89,13 +144,13 @@ export function ApprovalDialog({
                             </Label>
                             <div className="space-y-2 max-h-60 overflow-y-auto">
                                 {approvalRecords.map((record, index) => (
-                                    <div 
+                                    <div
                                         key={index}
                                         className="flex items-start gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50/50"
                                     >
                                         <div className={cn(
                                             "h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0",
-                                            record.action === 'approved' 
+                                            record.action === 'approved'
                                                 ? "bg-green-100 text-green-700"
                                                 : "bg-red-100 text-red-700"
                                         )}>
@@ -165,7 +220,7 @@ export function ApprovalDialog({
                                     <Textarea
                                         value={comment}
                                         onChange={(e) => setComment(e.target.value)}
-                                        placeholder={action === 'approve' 
+                                        placeholder={action === 'approve'
                                             ? 'Add a comment about your approval...'
                                             : 'Explain why this document is being rejected...'
                                         }
@@ -196,10 +251,10 @@ export function ApprovalDialog({
                             <MessageSquare className="h-5 w-5 text-slate-600 flex-shrink-0 mt-0.5" />
                             <div className="space-y-1">
                                 <p className="text-xs font-bold text-slate-900">
-                                    Document {currentStatus === 'approved' ? 'Approved' : 'Rejected'}
+                                    Document {currentStatus === 'approved' ? 'Approved' : currentStatus === 'rejected' ? 'Rejected' : currentStatus}
                                 </p>
                                 <p className="text-[11px] text-slate-700">
-                                    This document has already been {currentStatus === 'approved' ? 'approved' : 'rejected'}.
+                                    This document has already been {currentStatus === 'approved' ? 'approved' : currentStatus === 'rejected' ? 'rejected' : 'processed'}.
                                 </p>
                             </div>
                         </div>
@@ -223,7 +278,7 @@ export function ApprovalDialog({
                             onClick={handleSubmit}
                             disabled={loading || (action === 'reject' && !comment.trim())}
                             className={cn(
-                                action === 'approve' 
+                                action === 'approve'
                                     ? "bg-green-600 hover:bg-green-700"
                                     : "bg-red-600 hover:bg-red-700"
                             )}

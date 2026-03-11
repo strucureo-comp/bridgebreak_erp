@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { DashboardShell } from '@/components/shared/layout/dashboard-shell';
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -64,8 +64,7 @@ export default function MasterDataPage() {
     ];
 
     return (
-        <DashboardShell requireAdmin>
-            <div className="space-y-6 pb-20">
+        <div className="space-y-6 pb-20">
                 {/* Header Section */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-border pb-6">
                     <div className="flex items-center gap-4">
@@ -165,6 +164,5 @@ export default function MasterDataPage() {
                     </div>
                 </Card>
             </div>
-        </DashboardShell>
     );
 }

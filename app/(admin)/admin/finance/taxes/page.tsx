@@ -17,7 +17,7 @@ import {
 import {
   Scale, ChevronLeft, Globe, Plus, Lock,
   AlertTriangle, Settings, BookOpen, Trash2, Edit2,
-  FileText, Calendar
+  FileText, Calendar, CheckCircle, Clock
 } from 'lucide-react';
 import { useCurrency } from '@/lib/hooks/use-currency';
 import { cn } from '@/lib/utils';
@@ -27,6 +27,8 @@ import {
   getTaxCodes as apiGetCodes, createTaxCode, updateTaxCode, deleteTaxCode as apiDeleteCode,
   getFilingPeriods as apiGetFilings, createFilingPeriod, toggleFilingPeriodStatus as apiToggleFiling,
   getTaxAdjustments, createTaxAdjustment, postTaxAdjustment as apiPostAdj, deleteTaxAdjustment as apiDeleteAdj,
+  getVATReturns, createVATReturn, fileVATReturn,
+  getCorporateTaxFilings, createCorporateTaxFiling, fileCorporateTaxFiling
 } from '@/lib/api';
 
 // ── TYPES ──────────────────────────────────────────────────────────────────────
@@ -51,6 +53,22 @@ interface FilingPeriod {
 interface TaxAdjustment {
   id: string; date: string; type: string; period: string;
   description: string; amount: number; je: string; status: string;
+}
+interface VATReturn {
+  id: string; period: string; periodStart: string; periodEnd: string;
+  jurisdiction: string; status: 'draft' | 'filed' | 'amended' | 'pending';
+  filedAt: string; filedBy: string;
+  totalOutputVAT: number; totalInputVAT: number; netVAT: number;
+  totalSales: number; totalPurchases: number; adjustments: number;
+  referenceNumber: string;
+}
+interface CorporateTaxFiling {
+  id: string; taxYear: string; periodStart: string; periodEnd: string;
+  jurisdiction: string; status: 'draft' | 'filed' | 'amended' | 'pending' | 'assessed';
+  filedAt: string; filedBy: string; assessedAt: string;
+  taxableIncome: number; taxRate: number; taxLiability: number;
+  lossesCarriedForward: number; taxPayable: number; referenceNumber: string;
+  attachments: string[];
 }
 
 const COUNTRIES = [
@@ -91,22 +109,35 @@ export default function TaxCenterPage() {
   const [codeDialogOpen, setCodeDialogOpen] = useState(false);
   const [filingDialogOpen, setFilingDialogOpen] = useState(false);
   const [adjDialogOpen, setAdjDialogOpen] = useState(false);
+  const [vatFilingDialogOpen, setVatFilingDialogOpen] = useState(false);
+  const [corpTaxDialogOpen, setCorpTaxDialogOpen] = useState(false);
 
   const [editingJur, setEditingJur] = useState<Jurisdiction | null>(null);
   const [editingCode, setEditingCode] = useState<TaxCode | null>(null);
   const [editingFiling, setEditingFiling] = useState<FilingPeriod | null>(null);
   const [editingAdj, setEditingAdj] = useState<TaxAdjustment | null>(null);
 
+  // ── VAT RETURNS STATE ──
+  const [vatReturns, setVatReturns] = useState<any[]>([]);
+  const [selectedVatPeriod, setSelectedVatPeriod] = useState<string>('');
+
+  // ── CORPORATE TAX STATE ──
+  const [corpTaxFilings, setCorpTaxFilings] = useState<any[]>([]);
+  const [selectedCorpYear, setSelectedCorpYear] = useState<string>(new Date().getFullYear().toString());
+
   // ── LOAD FROM BACKEND ──
   const normalize = (item: any): any => ({ ...item, id: item._id || item.id });
   const loadAll = useCallback(async () => {
-    const [jurs, codes, filings, adjs] = await Promise.all([
+    const [jurs, codes, filings, adjs, vat, corp] = await Promise.all([
       getTaxJurisdictions(), apiGetCodes(), apiGetFilings(), getTaxAdjustments(),
+      getVATReturns(), getCorporateTaxFilings()
     ]);
     setJurisdictions(jurs.map(normalize));
     setTaxCodes(codes.map(normalize));
     setFilingPeriods(filings.map(normalize));
     setAdjustments(adjs.map(normalize));
+    setVatReturns(vat.map(normalize));
+    setCorpTaxFilings(corp.map(normalize));
   }, []);
   useEffect(() => { loadAll(); }, [loadAll]);
 
@@ -243,6 +274,8 @@ export default function TaxCenterPage() {
             <TabsTrigger value="jurisdictions" className="text-xs font-semibold h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">Jurisdictions</TabsTrigger>
             <TabsTrigger value="codes" className="text-xs font-semibold h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">Tax Codes</TabsTrigger>
             <TabsTrigger value="filing" className="text-xs font-semibold h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">Filing Periods</TabsTrigger>
+            <TabsTrigger value="vatfiling" className="text-xs font-semibold h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">VAT Filing</TabsTrigger>
+            <TabsTrigger value="corpTax" className="text-xs font-semibold h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">Corporate Tax</TabsTrigger>
             <TabsTrigger value="adjustments" className="text-xs font-semibold h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">Adjustments</TabsTrigger>
             <TabsTrigger value="controls" className="text-xs font-semibold h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">Filing Controls</TabsTrigger>
             <TabsTrigger value="entries" className="text-xs font-semibold h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">JE Logic</TabsTrigger>
@@ -366,6 +399,258 @@ export default function TaxCenterPage() {
                             <Button variant="outline" size="sm" className="h-6 text-[10px] px-2" onClick={() => toggleFilingStatus(fp.id)}>
                               {fp.status === 'open' ? 'Mark Filed' : 'Lock'}
                             </Button>
+                          )}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          {/* ── VAT FILING ── */}
+          <TabsContent value="vatfiling" className="mt-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-bold">VAT Return Filing</p>
+                <p className="text-[11px] text-muted-foreground">Prepare and file VAT returns to tax authorities</p>
+              </div>
+              <Button size="sm" className="gap-2 bg-red-600 hover:bg-red-700" onClick={() => setVatFilingDialogOpen(true)}>
+                <Plus className="h-3.5 w-3.5" /> New VAT Return
+              </Button>
+            </div>
+
+            {/* VAT Filing Summary Cards */}
+            <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
+              <Card className="border shadow-sm">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                    <FileText className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Total Returns</p>
+                    <p className="text-xl font-bold">{vatReturns.length}</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="border shadow-sm">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-green-50 text-green-600 flex items-center justify-center">
+                    <CheckCircle className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Filed</p>
+                    <p className="text-xl font-bold">{vatReturns.filter(v => v.status === 'filed').length}</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="border shadow-sm">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-yellow-50 text-yellow-600 flex items-center justify-center">
+                    <Clock className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Pending</p>
+                    <p className="text-xl font-bold">{vatReturns.filter(v => v.status === 'pending' || v.status === 'draft').length}</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="border shadow-sm">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-red-50 text-red-600 flex items-center justify-center">
+                    <Scale className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Net Liability</p>
+                    <p className="text-xl font-bold">{fmt(vatReturns.reduce((s, v) => s + (v.netVAT || 0), 0))}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* VAT Returns Table */}
+            {vatReturns.length === 0 ? (
+              <Card className="border-border shadow-sm">
+                <CardContent className="p-12 text-center">
+                  <FileText className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground">No VAT returns filed</p>
+                  <p className="text-[11px] text-muted-foreground mt-1">Create a new VAT return to start filing</p>
+                  <Button size="sm" className="mt-4 gap-2" onClick={() => setVatFilingDialogOpen(true)}>
+                    <Plus className="h-3.5 w-3.5" /> New VAT Return
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className="border-border shadow-sm">
+                <CardContent className="p-0">
+                  <div className="divide-y border-t">
+                    <div className="grid grid-cols-12 px-6 py-2.5 bg-muted/50 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                      <span className="col-span-2">Period</span>
+                      <span className="col-span-1">Jurisdiction</span>
+                      <span className="col-span-2 text-right">Sales</span>
+                      <span className="col-span-2 text-right">Purchases</span>
+                      <span className="col-span-1 text-right">Output VAT</span>
+                      <span className="col-span-1 text-right">Input VAT</span>
+                      <span className="col-span-1 text-right">Net VAT</span>
+                      <span className="col-span-1">Status</span>
+                      <span className="col-span-1 text-right">Actions</span>
+                    </div>
+                    {vatReturns.map(v => (
+                      <div key={v.id} className="grid grid-cols-12 px-6 py-3 items-center hover:bg-muted/30 transition-colors text-sm">
+                        <span className="col-span-2 text-xs font-medium">{v.period}</span>
+                        <span className="col-span-1 text-xs">{v.jurisdiction}</span>
+                        <span className="col-span-2 text-xs text-right">{fmt(v.totalSales)}</span>
+                        <span className="col-span-2 text-xs text-right">{fmt(v.totalPurchases)}</span>
+                        <span className="col-span-1 text-xs text-right text-red-600">{fmt(v.totalOutputVAT)}</span>
+                        <span className="col-span-1 text-xs text-right text-green-600">{fmt(v.totalInputVAT)}</span>
+                        <span className={cn("col-span-1 text-xs text-right font-bold", v.netVAT >= 0 ? "text-red-600" : "text-green-600")}>
+                          {fmt(v.netVAT)}
+                        </span>
+                        <span className="col-span-1">
+                          <Badge className={cn("text-[8px]", v.status === 'filed' ? "bg-green-100 text-green-700" : v.status === 'amended' ? "bg-yellow-100 text-yellow-700" : "bg-gray-100 text-gray-700")}>
+                            {v.status}
+                          </Badge>
+                        </span>
+                        <span className="col-span-1 text-right">
+                          {v.status === 'draft' && (
+                            <Button variant="outline" size="sm" className="h-6 text-[10px] px-2">File</Button>
+                          )}
+                          {v.status === 'filed' && (
+                            <Button variant="outline" size="sm" className="h-6 text-[10px] px-2">View</Button>
+                          )}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          {/* ── CORPORATE TAX FILING ── */}
+          <TabsContent value="corpTax" className="mt-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-bold">Corporate Tax Filing</p>
+                <p className="text-[11px] text-muted-foreground">Manage corporate tax filings and assessments</p>
+              </div>
+              <Button size="sm" className="gap-2 bg-red-600 hover:bg-red-700" onClick={() => setCorpTaxDialogOpen(true)}>
+                <Plus className="h-3.5 w-3.5" /> New Tax Return
+              </Button>
+            </div>
+
+            {/* Corporate Tax Summary Cards */}
+            <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
+              <Card className="border shadow-sm">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                    <FileText className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Total Filings</p>
+                    <p className="text-xl font-bold">{corpTaxFilings.length}</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="border shadow-sm">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-green-50 text-green-600 flex items-center justify-center">
+                    <CheckCircle className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Filed</p>
+                    <p className="text-xl font-bold">{corpTaxFilings.filter(c => c.status === 'filed').length}</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="border shadow-sm">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
+                    <Scale className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Tax Liability</p>
+                    <p className="text-xl font-bold">{fmt(corpTaxFilings.reduce((s, c) => s + (c.taxLiability || 0), 0))}</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="border shadow-sm">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                    <Calendar className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Assessed</p>
+                    <p className="text-xl font-bold">{corpTaxFilings.filter(c => c.status === 'assessed').length}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Year Filter */}
+            <div className="flex items-center gap-2">
+              <Label className="text-xs">Tax Year:</Label>
+              <Select value={selectedCorpYear} onValueChange={setSelectedCorpYear}>
+                <SelectTrigger className="w-[140px] h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: 5 }, (_, i) => {
+                    const year = new Date().getFullYear() - i;
+                    return <SelectItem key={year} value={String(year)}>{year}</SelectItem>;
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Corporate Tax Filings Table */}
+            {corpTaxFilings.length === 0 ? (
+              <Card className="border-border shadow-sm">
+                <CardContent className="p-12 text-center">
+                  <Scale className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground">No corporate tax filings</p>
+                  <p className="text-[11px] text-muted-foreground mt-1">Create a new corporate tax return to start filing</p>
+                  <Button size="sm" className="mt-4 gap-2" onClick={() => setCorpTaxDialogOpen(true)}>
+                    <Plus className="h-3.5 w-3.5" /> New Tax Return
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className="border-border shadow-sm">
+                <CardContent className="p-0">
+                  <div className="divide-y border-t">
+                    <div className="grid grid-cols-12 px-6 py-2.5 bg-muted/50 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                      <span className="col-span-1">Year</span>
+                      <span className="col-span-2">Period</span>
+                      <span className="col-span-1">Jurisdiction</span>
+                      <span className="col-span-2 text-right">Taxable Income</span>
+                      <span className="col-span-1 text-right">Tax Rate</span>
+                      <span className="col-span-1 text-right">Tax Due</span>
+                      <span className="col-span-2 text-right">Losses CF</span>
+                      <span className="col-span-1">Status</span>
+                      <span className="col-span-1 text-right">Actions</span>
+                    </div>
+                    {corpTaxFilings.map(c => (
+                      <div key={c.id} className="grid grid-cols-12 px-6 py-3 items-center hover:bg-muted/30 transition-colors text-sm">
+                        <span className="col-span-1 text-xs font-medium">{c.taxYear}</span>
+                        <span className="col-span-2 text-xs">{c.periodStart} - {c.periodEnd}</span>
+                        <span className="col-span-1 text-xs">{c.jurisdiction}</span>
+                        <span className="col-span-2 text-xs text-right">{fmt(c.taxableIncome)}</span>
+                        <span className="col-span-1 text-xs text-right">{c.taxRate}%</span>
+                        <span className="col-span-1 text-xs text-right text-red-600 font-medium">{fmt(c.taxLiability)}</span>
+                        <span className="col-span-2 text-xs text-right text-muted-foreground">{fmt(c.lossesCarriedForward)}</span>
+                        <span className="col-span-1">
+                          <Badge className={cn("text-[8px]", c.status === 'filed' ? "bg-green-100 text-green-700" : c.status === 'assessed' ? "bg-purple-100 text-purple-700" : c.status === 'amended' ? "bg-yellow-100 text-yellow-700" : "bg-gray-100 text-gray-700")}>
+                            {c.status}
+                          </Badge>
+                        </span>
+                        <span className="col-span-1 text-right">
+                          {c.status === 'draft' && (
+                            <Button variant="outline" size="sm" className="h-6 text-[10px] px-2">File</Button>
+                          )}
+                          {c.status === 'filed' && (
+                            <Button variant="outline" size="sm" className="h-6 text-[10px] px-2">View</Button>
                           )}
                         </span>
                       </div>

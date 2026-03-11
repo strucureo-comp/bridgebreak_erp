@@ -37,6 +37,7 @@ import { EmployeeDirectory } from './_components/employee-directory';
 import { AttendanceLeave } from './_components/attendance-leave';
 import { AttendanceTracking } from './_components/attendance-tracking';
 import { OvertimeTracking } from './_components/overtime-tracking';
+import { TimesheetTracking } from './_components/timesheet-tracking';
 import { PayrollContent, PayslipBrowser } from './_components/payroll-content';
 import { HREvents } from './_components/hr-events';
 import { HRMSSettings } from './_components/hrms-settings';
@@ -268,11 +269,17 @@ export default function HRPage() {
                   <TabsTrigger value="attendance" className="text-xs font-semibold px-6 h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">
                     Attendance Tracking
                   </TabsTrigger>
+                  <TabsTrigger value="timesheet" className="text-xs font-semibold px-6 h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                    Timesheet Entry
+                  </TabsTrigger>
                   <TabsTrigger value="leaves" className="text-xs font-semibold px-6 h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">
                     Leave Management
                   </TabsTrigger>
                   <TabsTrigger value="overtime" className="text-xs font-semibold px-6 h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">
                     Overtime Tracking
+                  </TabsTrigger>
+                  <TabsTrigger value="timesheet" className="text-xs font-semibold px-6 h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                    Timesheet Entry
                   </TabsTrigger>
                 </TabsList>
                 <TabsContent value="attendance" className="m-0">
@@ -283,6 +290,9 @@ export default function HRPage() {
                 </TabsContent>
                 <TabsContent value="overtime" className="m-0">
                   <OvertimeTracking employees={employees} onRefresh={fetchAll} />
+                </TabsContent>
+                <TabsContent value="timesheet" className="m-0">
+                  <TimesheetTracking employees={employees} onRefresh={fetchAll} />
                 </TabsContent>
               </Tabs>
             </TabsContent>

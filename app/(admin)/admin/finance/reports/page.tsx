@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { DashboardShell } from '@/components/shared/layout/dashboard-shell';
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -137,7 +137,7 @@ export default function FinancialReportingPage() {
     };
 
     return (
-        <DashboardShell requireAdmin>
+
             <div className="space-y-6 pb-8">
 
                 <FinancePageHeader
@@ -314,7 +314,6 @@ export default function FinancialReportingPage() {
                     </TabsContent>
                 </Tabs>
             </div>
-        </DashboardShell>
     );
 }
 

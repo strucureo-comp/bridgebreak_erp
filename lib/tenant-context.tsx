@@ -11,6 +11,8 @@ import {
 } from '@/lib/module-gate';
 import { useAuth } from '@/lib/auth/context';
 
+type ModulesConfig = Record<string, boolean>;
+
 interface BrandingConfig {
   color: string;
   template: 'modern' | 'classic' | 'mono';
@@ -127,61 +129,32 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     try {
       setLoading(true);
 
-      // Try to load from API first, fallback to localStorage
-      let branding = null;
-      let profile = null;
-      let status = null;
+      const [status, company, branding, modules] = await Promise.all([
+        getTenantStatus(),
+        getSettings<any>('company'),
+        getSettings<any>('branding'),
+        getSettings<ModulesConfig>('modules')
+      ]);
 
-      try {
-        [status, profile, branding] = await Promise.all([
-          getTenantStatus(),
-          getSettings<CompanyProfile>('company_profile'),
-          getSettings<any>('branding_config')
-        ]);
-      } catch (apiError) {
-        // API failed, try localStorage fallback
-        console.warn('API failed, using localStorage fallback');
-
-        const localBranding = localStorage.getItem('branding_settings');
-        if (localBranding) {
-          branding = JSON.parse(localBranding);
-        }
-
-        const localCompany = localStorage.getItem('company_settings');
-        if (localCompany) {
-          profile = JSON.parse(localCompany);
-        }
-
-        status = {
-          setup_stage: 'completed',
-          business_type: profile?.businessType || 'service',
-          company_setup_complete: true,
-          finance_setup_complete: true,
-          roles_setup_complete: true,
-          module_finance: true,
-          module_sales: true,
-          module_operations: true,
-          module_hr: true
-        };
-      }
+      const normalizedProfile: CompanyProfile | null = company ? {
+        tradingName: company.companyName || '',
+        legalName: company.legalName || '',
+        baseCurrency: company.baseCurrency || 'USD',
+        taxId: company.taxId || '',
+        address: company.address,
+        businessType: company.businessType || status?.business_type,
+        activeModules: (modules as any)?.modules || modules || undefined
+      } : null;
 
       setTenantStatus(status as any);
-      setCompanyProfile(profile);
-      setBrandingConfig(branding);
+      setCompanyProfile(normalizedProfile);
+      setBrandingConfig(branding || null);
     } catch (error) {
       console.error('Failed to load tenant context:', error);
-      // Final fallback to localStorage
-      const localBranding = localStorage.getItem('branding_settings');
-      if (localBranding) {
-        setBrandingConfig(JSON.parse(localBranding));
-      }
+      setCompanyProfile(null);
+      setBrandingConfig(null);
 
-      const localCompany = localStorage.getItem('company_settings');
-      if (localCompany) {
-        setCompanyProfile(JSON.parse(localCompany));
-      }
-
-      // Set defaults on error
+      // Keep a safe default when API is unavailable.
       setTenantStatus({
         setup_stage: 'completed',
         business_type: 'service',

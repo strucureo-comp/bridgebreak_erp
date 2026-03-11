@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { DashboardShell } from '@/components/shared/layout/dashboard-shell';
+
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -169,8 +169,7 @@ export default function PeriodClosePage() {
     }, []);
 
     return (
-        <DashboardShell requireAdmin>
-            <div className="space-y-6 pb-8">
+        <div className="space-y-6 pb-8">
 
                 {/* Header */}
                 <FinancePageHeader
@@ -393,6 +392,5 @@ export default function PeriodClosePage() {
                     </TabsContent>
                 </Tabs>
             </div>
-        </DashboardShell>
     );
 }

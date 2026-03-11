@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { DashboardShell } from '@/components/shared/layout/dashboard-shell';
+
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ModuleGuard } from '@/components/shared/layout/module-guard';
@@ -149,8 +149,7 @@ export default function FinancePage() {
     }, []);
 
     return (
-        <DashboardShell requireAdmin>
-            <ModuleGuard module="finance">
+        <ModuleGuard module="finance">
                 <div className="space-y-8 pb-8">
 
                     {/* ── Hub Header ─ */}
@@ -211,7 +210,6 @@ export default function FinancePage() {
 
                 </div>
             </ModuleGuard>
-        </DashboardShell>
     );
 }
 

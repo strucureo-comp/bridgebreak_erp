@@ -5,6 +5,13 @@ const connectDB = require('./config/db');
 
 const authRoutes = require('./routes/auth');
 const settingsRoutes = require('./routes/settings');
+const companyProfileRoutes = require('./routes/company-profile');
+const brandingRoutes = require('./routes/branding');
+const financeConfigRoutes = require('./routes/finance-config');
+const taxConfigurationRoutes = require('./routes/tax-configuration');
+const rolesRoutes = require('./routes/roles');
+const modulesRoutes = require('./routes/modules');
+const approvalConfigRoutes = require('./routes/approval-config');
 const workflowRoutes = require('./routes/workflows');
 const taxRoutes = require('./routes/tax');
 const financeRoutes = require('./routes/finance');
@@ -23,6 +30,7 @@ const fixedAssetsRoutes = require('./routes/fixed-assets');
 const stockJournalRoutes = require('./routes/stock-journal');
 const projectOpsRoutes = require('./routes/project-ops');
 const miscRoutes = require('./routes/misc');
+const reportsRoutes = require('./routes/reports');
 const seedCompleteData = require('./seed');
 
 const app = express();
@@ -34,7 +42,17 @@ app.use(express.json({ limit: '10mb' }));
 
 // Routes
 app.use('/api/auth', authRoutes);
+// Settings module routes
+app.use('/api/settings/company', companyProfileRoutes);
+app.use('/api/settings/branding', brandingRoutes);
+app.use('/api/settings/finance-config', financeConfigRoutes);
+app.use('/api/settings/taxes', taxConfigurationRoutes);
+app.use('/api/settings/roles', rolesRoutes);
+app.use('/api/settings/modules', modulesRoutes);
+app.use('/api/settings/approvals', approvalConfigRoutes);
+// Generic settings key-value route (must come after specific settings routes)
 app.use('/api/settings', settingsRoutes);
+// Other routes
 app.use('/api/workflows', workflowRoutes);
 app.use('/api/tax', taxRoutes);
 app.use('/api/finance', financeRoutes);
@@ -53,6 +71,8 @@ app.use('/api/fixed-assets', fixedAssetsRoutes);
 app.use('/api/stock-journal', stockJournalRoutes);
 app.use('/api/project-ops', projectOpsRoutes);
 app.use('/api/misc', miscRoutes);
+app.use('/api/reports', reportsRoutes);
+app.use('/api/reports', reportsRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

@@ -4,7 +4,6 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/context';
 import { getOpportunities, getLeads, getInvoices, getQuotes } from '@/lib/api';
-import { DashboardShell } from '@/components/shared/layout/dashboard-shell';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -102,8 +101,7 @@ export default function SalesDashboardPage() {
     if (loading) return null;
 
     return (
-        <DashboardShell requireAdmin>
-            <ModuleGuard module="sales">
+        <ModuleGuard module="sales">
                 <div className="space-y-8 max-w-6xl mx-auto pb-12">
 
                     {/* Header: Simple & Clear */}
@@ -302,7 +300,6 @@ export default function SalesDashboardPage() {
                     </div>
                 </div>
             </ModuleGuard>
-        </DashboardShell>
     );
 }
 

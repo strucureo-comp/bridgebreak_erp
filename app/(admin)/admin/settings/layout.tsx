@@ -1,13 +1,12 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import {
-    Settings, Building2, Palette, DollarSign, Receipt,
+    Building2, Palette, DollarSign, Receipt,
     Users, Shield, Layers, ChevronRight,
-    ArrowLeft, Workflow
+    Workflow
 } from 'lucide-react';
 
 const settingsNav = [
@@ -49,29 +48,10 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
     const pathname = usePathname();
 
     return (
-        <div className="min-h-screen bg-background">
-            {/* Header with Back Button */}
-            <div className="border-b bg-card sticky top-0 z-50">
-                <div className="flex items-center justify-between px-6 py-3">
-                    <div className="flex items-center gap-4">
-                        <Link
-                            href="/admin"
-                            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                        >
-                            <ArrowLeft className="h-4 w-4" />
-                            Back to ERP
-                        </Link>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <Settings className="h-5 w-5 text-primary" />
-                        <span className="font-semibold text-sm">Settings</span>
-                    </div>
-                </div>
-            </div>
-
-            <div className="flex">
+        <>
+            <div className="-mx-4 md:-mx-8 -mt-4 md:-mt-8 flex min-h-[calc(100vh-3.5rem)]">
                 {/* Left Sidebar */}
-                <aside className="w-64 border-r bg-card min-h-screen sticky top-[57px]">
+                <aside className="w-64 shrink-0 border-r bg-card overflow-y-auto">
                     <nav className="p-4 space-y-6">
                         {settingsNav.map((group) => (
                             <div key={group.title}>
@@ -107,10 +87,10 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
                 </aside>
 
                 {/* Main Content */}
-                <main className="flex-1 p-8">
+                <main className="flex-1 p-6 md:p-8 overflow-y-auto">
                     {children}
                 </main>
             </div>
-        </div>
+        </>
     );
 }

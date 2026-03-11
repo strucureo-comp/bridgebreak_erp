@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Save, Loader2, CheckCircle2, Globe, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
+import { settingsApi } from '@/lib/settings-api';
 
 // ============= TYPES =============
 
@@ -152,11 +153,21 @@ export default function CompanySettingsPage() {
     const [company, setCompany] = useState<CompanyProfile>(DEFAULT_COMPANY);
 
     useEffect(() => {
-        const saved = localStorage.getItem('company_settings');
-        if (saved) {
-            setCompany(JSON.parse(saved));
-        }
-        setLoading(false);
+        const loadCompany = async () => {
+            try {
+                const data = await settingsApi.getCompany();
+                setCompany({
+                    ...DEFAULT_COMPANY,
+                    ...data,
+                    fiscalYearStart: String(data?.fiscalYearStart ?? DEFAULT_COMPANY.fiscalYearStart),
+                });
+            } catch (error: any) {
+                toast.error(error?.message || 'Failed to load company settings');
+            } finally {
+                setLoading(false);
+            }
+        };
+        loadCompany();
     }, []);
 
     const handleCountryChange = (countryCode: string) => {
@@ -177,19 +188,17 @@ export default function CompanySettingsPage() {
 
     const handleSave = async () => {
         setSaving(true);
-        await new Promise(r => setTimeout(r, 1000));
-        localStorage.setItem('company_settings', JSON.stringify(company));
-
-        // Sync with tax settings
-        const taxSaved = localStorage.getItem('tax_settings');
-        const taxConfig = taxSaved ? JSON.parse(taxSaved) : {};
-        localStorage.setItem('tax_settings', JSON.stringify({
-            ...taxConfig,
-            selectedCountry: company.country,
-        }));
-
-        toast.success('Company settings saved');
-        setSaving(false);
+        try {
+            await settingsApi.saveCompany({
+                ...company,
+                fiscalYearStart: String(company.fiscalYearStart),
+            });
+            toast.success('Company settings saved');
+        } catch (error: any) {
+            toast.error(error?.message || 'Failed to save company settings');
+        } finally {
+            setSaving(false);
+        }
     };
 
     if (loading) {

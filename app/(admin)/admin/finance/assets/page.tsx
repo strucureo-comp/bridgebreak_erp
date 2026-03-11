@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { DashboardShell } from '@/components/shared/layout/dashboard-shell';
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -154,8 +154,7 @@ export default function FixedAssetsPage() {
     // It will calculate per asset, deduct from NBV, add to AccDep, and post a summary journal entry.
 
     return (
-        <DashboardShell requireAdmin>
-            <div className="space-y-6 pb-8">
+        <div className="space-y-6 pb-8">
 
                 <FinancePageHeader
                     title="Fixed Assets"
@@ -380,7 +379,6 @@ export default function FixedAssetsPage() {
                         </Card>
                     </TabsContent>
                 </Tabs>
-            </div>
 
             {/* Modals for Add & Dispose would usually go here, simplified for structure limit */}
             <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
@@ -409,6 +407,6 @@ export default function FixedAssetsPage() {
                     <DialogFooter><Button onClick={() => setIsAddOpen(false)}>Save Asset</Button></DialogFooter>
                 </DialogContent>
             </Dialog>
-        </DashboardShell>
+        </div>
     );
 }

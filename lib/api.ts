@@ -1640,6 +1640,121 @@ export async function updateEnquiry(id: string, data: any) { return mockDelay(tr
 export async function getPerformanceData(t: string) { return mockDelay([]); }
 export async function createPerformanceItem(data: any) { return mockDelay(true); }
 
+// --- REPORTS API ---
+export async function getPnLReport(period = 'month') {
+    try {
+        const res = await fetch(`${API_BASE}/reports/financial/pnl?period=${period}`, { headers: authHeaders() });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] getPnLReport error:', e); }
+    return null;
+}
+
+// Alias for getPnLReport (backward compatibility)
+export async function getProfitLoss(period = 'month') {
+    return getPnLReport(period);
+}
+
+export async function getBalanceSheet() {
+    try {
+        const res = await fetch(`${API_BASE}/reports/financial/balance-sheet`, { headers: authHeaders() });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] getBalanceSheet error:', e); }
+    return null;
+}
+
+export async function getCashFlowReport(period = 'month') {
+    try {
+        const res = await fetch(`${API_BASE}/reports/financial/cash-flow?period=${period}`, { headers: authHeaders() });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] getCashFlowReport error:', e); }
+    return null;
+}
+
+// Alias for getCashFlowReport (backward compatibility)
+export async function getCashFlow(period = 'month') {
+    return getCashFlowReport(period);
+}
+
+export async function getSalesAnalytics(period = 'month') {
+    try {
+        const res = await fetch(`${API_BASE}/reports/sales/analytics?period=${period}`, { headers: authHeaders() });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] getSalesAnalytics error:', e); }
+    return null;
+}
+
+export async function getSalesPipeline() {
+    try {
+        const res = await fetch(`${API_BASE}/reports/sales/pipeline`, { headers: authHeaders() });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] getSalesPipeline error:', e); }
+    return null;
+}
+
+export async function getCustomerAnalytics() {
+    try {
+        const res = await fetch(`${API_BASE}/reports/sales/customers`, { headers: authHeaders() });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] getCustomerAnalytics error:', e); }
+    return null;
+}
+
+export async function getPayrollReport(period = 'month') {
+    try {
+        const res = await fetch(`${API_BASE}/reports/hr/payroll?period=${period}`, { headers: authHeaders() });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] getPayrollReport error:', e); }
+    return null;
+}
+
+export async function getAttendanceReport(period = 'month') {
+    try {
+        const res = await fetch(`${API_BASE}/reports/hr/attendance?period=${period}`, { headers: authHeaders() });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] getAttendanceReport error:', e); }
+    return null;
+}
+
+export async function getWorkforceReport() {
+    try {
+        const res = await fetch(`${API_BASE}/reports/hr/workforce`, { headers: authHeaders() });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] getWorkforceReport error:', e); }
+    return null;
+}
+
+export async function getInventoryValuation() {
+    try {
+        const res = await fetch(`${API_BASE}/reports/inventory/valuation`, { headers: authHeaders() });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] getInventoryValuation error:', e); }
+    return null;
+}
+
+export async function getStockMovements(period = 'month') {
+    try {
+        const res = await fetch(`${API_BASE}/reports/inventory/movements?period=${period}`, { headers: authHeaders() });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] getStockMovements error:', e); }
+    return null;
+}
+
+export async function getVatReport(period = 'quarter') {
+    try {
+        const res = await fetch(`${API_BASE}/reports/tax/vat?period=${period}`, { headers: authHeaders() });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] getVatReport error:', e); }
+    return null;
+}
+
+export async function getDashboardSummary() {
+    try {
+        const res = await fetch(`${API_BASE}/reports/dashboard/summary`, { headers: authHeaders() });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] getDashboardSummary error:', e); }
+    return null;
+}
+
 // --- APPROVAL WORKFLOWS (REAL BACKEND) ---
 export async function getApprovalWorkflows() {
     try {
@@ -1722,6 +1837,19 @@ export async function deleteTaxAdjustment(id: string) { return tcFetch(`/adjustm
 
 // Tax Center Summary
 export async function getTaxCenterSummary() { try { return await tcFetch('/center-summary'); } catch { return { jurisdictions: 0, codes: 0, openPeriods: 0, totalLiability: 0, adjustments: 0 }; } }
+
+// VAT Returns API
+export async function getVATReturns() { try { return await tcFetch('/vat-returns'); } catch { return []; } }
+export async function createVATReturn(data: any) { return tcFetch('/vat-returns', { method: 'POST', body: JSON.stringify(data) }); }
+export async function updateVATReturn(id: string, data: any) { return tcFetch(`/vat-returns/${id}`, { method: 'PUT', body: JSON.stringify(data) }); }
+export async function fileVATReturn(id: string, data: any) { return tcFetch(`/vat-returns/${id}/file`, { method: 'POST', body: JSON.stringify(data) }); }
+
+// Corporate Tax Filings API
+export async function getCorporateTaxFilings(year?: string) { try { return await tcFetch(`/corporate-tax${year ? `?year=${year}` : ''}`); } catch { return []; } }
+export async function createCorporateTaxFiling(data: any) { return tcFetch('/corporate-tax', { method: 'POST', body: JSON.stringify(data) }); }
+export async function updateCorporateTaxFiling(id: string, data: any) { return tcFetch(`/corporate-tax/${id}`, { method: 'PUT', body: JSON.stringify(data) }); }
+export async function fileCorporateTaxFiling(id: string, data: any) { return tcFetch(`/corporate-tax/${id}/file`, { method: 'POST', body: JSON.stringify(data) }); }
+export async function requestCorporateTaxAssessment(id: string) { return tcFetch(`/corporate-tax/${id}/request-assessment`, { method: 'POST', body: JSON.stringify({}) }); }
 
 // ====================================================================
 // RECEIVABLES API (REAL BACKEND)

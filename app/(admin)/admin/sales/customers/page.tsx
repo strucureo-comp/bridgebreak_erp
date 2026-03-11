@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/context';
 import { getCustomers, createCustomer, deleteCustomer, updateCustomer, getLeads, getOpportunities, getInvoices } from '@/lib/api';
@@ -8,7 +8,8 @@ import { DashboardShell } from '@/components/shared/layout/dashboard-shell';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     Users, Search, Plus, Building2, Briefcase, Globe, Phone, Target, ChevronRight, Trash2, Edit2,
-    Mail, MapPin, User, DollarSign, FileText, TrendingUp, ArrowUpRight, Calendar, Receipt, ArrowLeft
+    Mail, MapPin, User, DollarSign, FileText, TrendingUp, ArrowUpRight, Calendar, Receipt, ArrowLeft,
+    MessageSquare, CreditCard, BarChart3, Download, Printer
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -17,6 +18,7 @@ import {
     Dialog, DialogContent, DialogTrigger
 } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import type { CustomerAccount, Lead, Opportunity, Invoice } from '@/lib/db/types';
 import { useTenant } from '@/lib/tenant-context';
@@ -35,14 +37,20 @@ export default function SalesCustomersPage() {
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
-    const [isCreateOpen, setIsCreateOpen] = useState(false);
-    const [editingId, setEditingId] = useState<string | null>(null);
     const [selectedCustomer, setSelectedCustomer] = useState<CustomerAccount | null>(null);
+    const [customerComments, setCustomerComments] = useState<{ id: string; text: string; createdAt: string; createdBy: string }[]>([]);
+    const [newComment, setNewComment] = useState('');
+    const [customerPayments, setCustomerPayments] = useState<any[]>([]);
+    const [customerSalesOrders, setCustomerSalesOrders] = useState<any[]>([]);
 
     const isRetail = companyProfile?.businessType === 'b2c_retail';
     const currency = companyProfile?.baseCurrency || 'AED';
 
     const fmt = (n: number) => new Intl.NumberFormat('en-AE', {
+        style: 'currency', currency, maximumFractionDigits: 2
+    }).format(n);
+
+    const fmtNoDecimals = (n: number) => new Intl.NumberFormat('en-AE', {
         style: 'currency', currency, maximumFractionDigits: 0
     }).format(n);
 
@@ -58,8 +66,12 @@ export default function SalesCustomersPage() {
     const fetchData = async () => {
         try {
             setLoading(true);
-            const [custsData, leadsData, oppsData, invsData] = await Promise.all([
-                getCustomers().catch(() => []),
+            // First try to load from localStorage, then fallback to API
+            let custsData = JSON.parse(localStorage.getItem('sales_customers') || '[]');
+            if (!custsData || custsData.length === 0) {
+                custsData = await getCustomers().catch(() => []) || [];
+            }
+            const [leadsData, oppsData, invsData] = await Promise.all([
                 getLeads().catch(() => []),
                 getOpportunities().catch(() => []),
                 getInvoices().catch(() => []),
@@ -92,15 +104,93 @@ export default function SalesCustomersPage() {
         const pendingAmount = custInvoices.filter(i => i.status === 'pending' || i.status === 'overdue').reduce((s, i) => s + Number(i.amount || 0), 0);
         const pipelineValue = custOpps.filter(o => o.stage !== 'won' && o.stage !== 'lost').reduce((s, o) => s + Number(o.amount || 0), 0);
 
+        // Get payments from localStorage
+        const allPayments = JSON.parse(localStorage.getItem('sales_payments') || '[]');
+        const custPayments = allPayments.filter((p: any) => p.customerId === customerId || p.customer_id === customerId);
+
+        // Get sales orders from localStorage
+        const allSalesOrders = JSON.parse(localStorage.getItem('sales_orders') || '[]');
+        const custSalesOrders = allSalesOrders.filter((o: any) => o.customerId === customerId || o.customer_id === customerId);
+
+        // Calculate totals
+        const totalPaid = custPayments.reduce((s: number, p: any) => s + Number(p.amount || p.total || 0), 0);
+        const totalInvoiced = custInvoices.reduce((s: number, i: any) => s + Number(i.amount || 0), 0);
+        const balance = totalInvoiced - totalPaid;
+
+        // Calculate income by month (last 6 months)
+        const monthlyIncome: { month: string; amount: number }[] = [];
+        const now = new Date();
+        for (let i = 5; i >= 0; i--) {
+            const month = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const key = month.toLocaleString('default', { month: 'short', year: '2-digit' });
+            const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
+
+            const monthRevenue = custInvoices
+                .filter(i => i.status === 'paid' && i.paid_date)
+                .filter(i => {
+                    const paidDate = new Date(i.paid_date);
+                    return paidDate >= monthStart && paidDate <= monthEnd;
+                })
+                .reduce((s, i) => s + Number(i.amount || 0), 0);
+
+            monthlyIncome.push({ month: key, amount: monthRevenue });
+        }
+
         return {
             opportunities: custOpps,
             invoices: custInvoices,
+            payments: custPayments,
+            salesOrders: custSalesOrders,
             wonDeals: wonDeals.length,
             totalRevenue,
             pendingAmount,
             pipelineValue,
             totalDeals: custOpps.length,
+            totalPaid,
+            totalInvoiced,
+            balance,
+            monthlyIncome,
         };
+    };
+
+    // Load customer-specific data when a customer is selected
+    const loadCustomerData = (customer: CustomerAccount) => {
+        // Load comments from localStorage
+        const savedComments = localStorage.getItem(`customer_comments_${customer.id}`);
+        if (savedComments) {
+            setCustomerComments(JSON.parse(savedComments));
+        } else {
+            setCustomerComments([]);
+        }
+        setNewComment('');
+    };
+
+    // Handle adding a comment
+    const handleAddComment = () => {
+        if (!newComment.trim() || !selectedCustomer) return;
+
+        const comment = {
+            id: Date.now().toString(),
+            text: newComment.trim(),
+            createdAt: new Date().toISOString(),
+            createdBy: localStorage.getItem('user_name') || 'User'
+        };
+
+        const updatedComments = [...customerComments, comment];
+        setCustomerComments(updatedComments);
+        localStorage.setItem(`customer_comments_${selectedCustomer.id}`, JSON.stringify(updatedComments));
+        setNewComment('');
+        toast.success('Comment added');
+    };
+
+    // Handle deleting a comment
+    const handleDeleteComment = (commentId: string) => {
+        if (!selectedCustomer) return;
+        const updatedComments = customerComments.filter(c => c.id !== commentId);
+        setCustomerComments(updatedComments);
+        localStorage.setItem(`customer_comments_${selectedCustomer.id}`, JSON.stringify(updatedComments));
+        toast.success('Comment deleted');
     };
 
     // Calculate overall stats
@@ -148,7 +238,10 @@ export default function SalesCustomersPage() {
     const handleDelete = async (id: string) => {
         if (!confirm('Are you sure you want to delete this customer?')) return;
         try {
-            await deleteCustomer(id);
+            // Use localStorage for deletion
+            const existingCustomers = JSON.parse(localStorage.getItem('sales_customers') || '[]');
+            const updatedCustomers = existingCustomers.filter((c: any) => c.id !== id);
+            localStorage.setItem('sales_customers', JSON.stringify(updatedCustomers));
             toast.success('Customer deleted');
             fetchData();
         } catch {
@@ -164,13 +257,24 @@ export default function SalesCustomersPage() {
                 <div className="space-y-6 max-w-7xl mx-auto pb-12">
                     {/* Header */}
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
-                        <div>
-                            <h1 className="text-3xl font-black tracking-tight text-foreground">
-                                Customer Details
-                            </h1>
-                            <p className="text-muted-foreground mt-1">
-                                Complete customer information aggregated from all CRM sections.
-                            </p>
+                        <div className="flex items-center gap-4">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => router.push('/admin/sales')}
+                                className="h-8 w-8"
+                                title="Back to Sales"
+                            >
+                                <ArrowLeft className="h-5 w-5" />
+                            </Button>
+                            <div>
+                                <h1 className="text-3xl font-black tracking-tight text-foreground">
+                                    Customer Details
+                                </h1>
+                                <p className="text-muted-foreground mt-1">
+                                    Complete customer information aggregated from all CRM sections.
+                                </p>
+                            </div>
                         </div>
 
                         <div className="flex items-center gap-4">
@@ -184,78 +288,9 @@ export default function SalesCustomersPage() {
                                 />
                             </div>
 
-                            <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-                                <DialogTrigger asChild>
-                                    <Button size="sm" className="h-10 gap-2 font-bold shadow-sm">
-                                        <Plus className="h-4 w-4" /> New Customer
-                                    </Button>
-                                </DialogTrigger>
-                                <DialogContent className="max-w-2xl p-0 border-none shadow-2xl">
-                                    <div className="bg-background">
-                                        <div className="p-6 border-b border-border">
-                                            <h3 className="text-xl font-bold tracking-tight text-foreground">{editingId ? 'Edit Customer' : 'Register Customer'}</h3>
-                                            <p className="text-muted-foreground text-xs mt-0.5">{editingId ? 'Update customer details' : 'Add a new customer to the directory'}</p>
-                                        </div>
-                                        <div className="p-6 space-y-6">
-                                            <div className="space-y-4">
-                                                <h4 className="text-xs font-bold text-foreground uppercase border-b border-border pb-2">Organization</h4>
-                                                <div className="grid grid-cols-2 gap-4">
-                                                    <div className="space-y-1.5">
-                                                        <Label className="text-xs font-bold">Account Name</Label>
-                                                        <Input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="h-10 bg-background" placeholder="Prestige LLC" />
-                                                    </div>
-                                                    <div className="space-y-1.5">
-                                                        <Label className="text-xs font-bold">Industry</Label>
-                                                        <Input value={formData.industry} onChange={e => setFormData({ ...formData, industry: e.target.value })} className="h-10 bg-background" placeholder="Construction" />
-                                                    </div>
-                                                    <div className="space-y-1.5">
-                                                        <Label className="text-xs font-bold">Email</Label>
-                                                        <Input value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} className="h-10 bg-background" placeholder="info@company.com" />
-                                                    </div>
-                                                    <div className="space-y-1.5">
-                                                        <Label className="text-xs font-bold">Phone</Label>
-                                                        <Input value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} className="h-10 bg-background" />
-                                                    </div>
-                                                    <div className="space-y-1.5">
-                                                        <Label className="text-xs font-bold">Website</Label>
-                                                        <Input value={formData.website} onChange={e => setFormData({ ...formData, website: e.target.value })} className="h-10 bg-background" placeholder="https://" />
-                                                    </div>
-                                                    <div className="space-y-1.5">
-                                                        <Label className="text-xs font-bold">Address</Label>
-                                                        <Input value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} className="h-10 bg-background" />
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div className="space-y-4">
-                                                <h4 className="text-xs font-bold text-foreground uppercase border-b border-border pb-2">Primary Contact</h4>
-                                                <div className="grid grid-cols-2 gap-4">
-                                                    <div className="space-y-1.5">
-                                                        <Label className="text-xs font-bold">First Name</Label>
-                                                        <Input value={formData.primary_contact.first_name} onChange={e => setFormData({ ...formData, primary_contact: { ...formData.primary_contact, first_name: e.target.value } })} className="h-10 bg-background" />
-                                                    </div>
-                                                    <div className="space-y-1.5">
-                                                        <Label className="text-xs font-bold">Last Name</Label>
-                                                        <Input value={formData.primary_contact.last_name} onChange={e => setFormData({ ...formData, primary_contact: { ...formData.primary_contact, last_name: e.target.value } })} className="h-10 bg-background" />
-                                                    </div>
-                                                    <div className="space-y-1.5">
-                                                        <Label className="text-xs font-bold">Email</Label>
-                                                        <Input value={formData.primary_contact.email} onChange={e => setFormData({ ...formData, primary_contact: { ...formData.primary_contact, email: e.target.value } })} className="h-10 bg-background" />
-                                                    </div>
-                                                    <div className="space-y-1.5">
-                                                        <Label className="text-xs font-bold">Title</Label>
-                                                        <Input value={formData.primary_contact.title} onChange={e => setFormData({ ...formData, primary_contact: { ...formData.primary_contact, title: e.target.value } })} className="h-10 bg-background" placeholder="CEO, Manager..." />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="p-6 border-t border-border flex justify-end gap-2">
-                                            <Button variant="outline" className="h-10 font-bold" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
-                                            <Button onClick={handleSubmit} className="h-10 px-8 font-bold">{editingId ? 'Save Changes' : 'Register Customer'}</Button>
-                                        </div>
-                                    </div>
-                                </DialogContent>
-                            </Dialog>
+                            <Button size="sm" className="h-10 gap-2 font-bold shadow-sm" onClick={() => router.push('/admin/sales/customers/new')}>
+                                <Plus className="h-4 w-4" /> New Customer
+                            </Button>
                         </div>
                     </div>
 
@@ -295,7 +330,7 @@ export default function SalesCustomersPage() {
                                 <Card
                                     key={customer.id}
                                     className="border border-border shadow-sm bg-card hover:border-primary/40 transition-colors cursor-pointer group"
-                                    onClick={() => setSelectedCustomer(customer)}
+                                    onClick={() => router.push(`/admin/sales/customers/${customer.id}`)}
                                 >
                                     <CardContent className="p-5">
                                         <div className="flex items-start justify-between mb-4">
@@ -304,7 +339,7 @@ export default function SalesCustomersPage() {
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <Badge variant="secondary" className="text-[10px] font-bold">Active</Badge>
-                                                <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary" onClick={(e) => { e.stopPropagation(); handleEdit(customer); }}>
+                                                <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary" onClick={(e) => { e.stopPropagation(); router.push(`/admin/sales/customers/${customer.id}`); }}>
                                                     <Edit2 size={12} />
                                                 </Button>
                                                 <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={(e) => { e.stopPropagation(); handleDelete(customer.id); }}>
@@ -404,9 +439,10 @@ export default function SalesCustomersPage() {
                                     <div className="flex-1 overflow-y-auto">
                                         <Tabs defaultValue="overview" className="w-full">
                                             <TabsList className="w-full rounded-none border-b bg-muted/30 h-10 p-0">
-                                                <TabsTrigger value="overview" className="flex-1 h-full text-xs font-bold data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-none">Overview</TabsTrigger>
-                                                <TabsTrigger value="deals" className="flex-1 h-full text-xs font-bold data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-none">Deals ({data.totalDeals})</TabsTrigger>
-                                                <TabsTrigger value="invoices" className="flex-1 h-full text-xs font-bold data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-none">Invoices ({data.invoices.length})</TabsTrigger>
+                                                <TabsTrigger key="overview" value="overview" className="flex-1 h-full text-xs font-bold data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-none">Overview</TabsTrigger>
+                                                <TabsTrigger key="comments" value="comments" className="flex-1 h-full text-xs font-bold data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-none">Comments</TabsTrigger>
+                                                <TabsTrigger key="transactions" value="transactions" className="flex-1 h-full text-xs font-bold data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-none">Transactions</TabsTrigger>
+                                                <TabsTrigger key="statement" value="statement" className="flex-1 h-full text-xs font-bold data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-none">Statement</TabsTrigger>
                                             </TabsList>
 
                                             <TabsContent value="overview" className="p-6 space-y-6 mt-0">
@@ -421,12 +457,42 @@ export default function SalesCustomersPage() {
                                                         <p className="text-lg font-black text-foreground">{fmt(data.pendingAmount)}</p>
                                                     </div>
                                                     <div className="bg-blue-500/5 border border-blue-500/20 rounded-md p-3">
-                                                        <p className="text-[10px] font-bold text-blue-600 uppercase">Pipeline Value</p>
-                                                        <p className="text-lg font-black text-foreground">{fmt(data.pipelineValue)}</p>
+                                                        <p className="text-[10px] font-bold text-blue-600 uppercase">Total Paid</p>
+                                                        <p className="text-lg font-black text-foreground">{fmt(data.totalPaid)}</p>
                                                     </div>
                                                     <div className="bg-primary/5 border border-primary/20 rounded-md p-3">
-                                                        <p className="text-[10px] font-bold text-primary uppercase">Won Deals</p>
-                                                        <p className="text-lg font-black text-foreground">{data.wonDeals}</p>
+                                                        <p className="text-[10px] font-bold text-primary uppercase">Balance Due</p>
+                                                        <p className="text-lg font-black text-foreground">{fmt(data.balance)}</p>
+                                                    </div>
+                                                </div>
+
+                                                {/* Income Chart */}
+                                                <div className="space-y-3">
+                                                    <h4 className="text-xs font-bold text-foreground uppercase border-b border-border pb-2">Income Overview (Last 6 Months)</h4>
+                                                    <div className="h-32 flex items-end justify-between gap-2 px-2">
+                                                        {data.monthlyIncome?.map((item, idx) => {
+                                                            const maxAmount = Math.max(...data.monthlyIncome.map((m: any) => m.amount), 1);
+                                                            const height = Math.max((item.amount / maxAmount) * 100, 4);
+                                                            return (
+                                                                <div key={idx} className="flex-1 flex flex-col items-center gap-1">
+                                                                    <div
+                                                                        className="w-full bg-primary/80 rounded-t transition-all hover:bg-primary"
+                                                                        style={{ height: `${height}%` }}
+                                                                        title={fmt(item.amount)}
+                                                                    />
+                                                                    <span className="text-[8px] text-muted-foreground">{item.month}</span>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                    <p className="text-[10px] text-muted-foreground text-center">Monthly revenue from paid invoices</p>
+                                                </div>
+
+                                                {/* Address */}
+                                                <div className="space-y-3">
+                                                    <h4 className="text-xs font-bold text-foreground uppercase border-b border-border pb-2">Address</h4>
+                                                    <div className="bg-muted/30 rounded-md p-3">
+                                                        <p className="text-xs text-foreground">{(selectedCustomer as any).address || 'No address on file'}</p>
                                                     </div>
                                                 </div>
 
@@ -437,6 +503,7 @@ export default function SalesCustomersPage() {
                                                         <DetailRow icon={Phone} label="Phone" value={selectedCustomer.phone || '—'} />
                                                         <DetailRow icon={Globe} label="Website" value={selectedCustomer.website || '—'} />
                                                         <DetailRow icon={Briefcase} label="Industry" value={selectedCustomer.industry || '—'} />
+                                                        <DetailRow icon={Mail} label="Email" value={(selectedCustomer as any).email || '—'} />
                                                     </div>
                                                 </div>
 
@@ -448,72 +515,282 @@ export default function SalesCustomersPage() {
                                                             <DetailRow icon={User} label="Name" value={`${(selectedCustomer as any).primary_contact.first_name || ''} ${(selectedCustomer as any).primary_contact.last_name || ''}`.trim() || '—'} />
                                                             <DetailRow icon={Mail} label="Email" value={(selectedCustomer as any).primary_contact.email || '—'} />
                                                             <DetailRow icon={Briefcase} label="Title" value={(selectedCustomer as any).primary_contact.title || '—'} />
+                                                            <DetailRow icon={Phone} label="Phone" value={(selectedCustomer as any).primary_contact.phone || '—'} />
                                                         </div>
                                                     </div>
                                                 )}
                                             </TabsContent>
 
-                                            <TabsContent value="deals" className="p-6 space-y-3 mt-0">
-                                                {data.opportunities.length === 0 ? (
-                                                    <div className="py-12 text-center text-muted-foreground">
-                                                        <Target className="h-8 w-8 mx-auto mb-2 opacity-40" />
-                                                        <p className="text-xs font-bold">No deals found for this customer.</p>
-                                                    </div>
-                                                ) : (
-                                                    data.opportunities.map(opp => (
-                                                        <Card key={opp.id} className="border-border shadow-sm">
-                                                            <CardContent className="p-4 flex items-center justify-between">
-                                                                <div>
-                                                                    <p className="text-sm font-bold text-foreground">{opp.name}</p>
-                                                                    <p className="text-xs text-muted-foreground mt-0.5">
-                                                                        {opp.close_date ? new Date(opp.close_date).toLocaleDateString() : 'No close date'}
-                                                                    </p>
-                                                                </div>
-                                                                <div className="text-right">
-                                                                    <p className="text-sm font-black text-foreground">{fmt(Number(opp.amount))}</p>
-                                                                    <Badge variant={opp.stage === 'won' ? 'default' : 'secondary'} className="mt-1 text-[10px]">
-                                                                        {opp.stage.replace('_', ' ')}
-                                                                    </Badge>
-                                                                </div>
-                                                            </CardContent>
-                                                        </Card>
-                                                    ))
-                                                )}
+                                            {/* Comments Tab */}
+                                            <TabsContent value="comments" className="p-6 space-y-4 mt-0">
+                                                <div className="space-y-3">
+                                                    <Textarea
+                                                        placeholder="Add a note or internal comment..."
+                                                        value={newComment}
+                                                        onChange={(e) => setNewComment(e.target.value)}
+                                                        className="min-h-[80px] text-xs"
+                                                    />
+                                                    <Button
+                                                        size="sm"
+                                                        onClick={handleAddComment}
+                                                        disabled={!newComment.trim()}
+                                                        className="w-full font-bold"
+                                                    >
+                                                        Add Comment
+                                                    </Button>
+                                                </div>
+
+                                                <div className="space-y-3">
+                                                    {customerComments.length === 0 ? (
+                                                        <div className="py-8 text-center text-muted-foreground">
+                                                            <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                                                            <p className="text-xs font-bold">No comments yet</p>
+                                                        </div>
+                                                    ) : (
+                                                        customerComments.map(comment => (
+                                                            <Card key={comment.id} className="border-border shadow-sm">
+                                                                <CardContent className="p-3">
+                                                                    <div className="flex justify-between items-start gap-2">
+                                                                        <div className="flex-1">
+                                                                            <p className="text-xs text-foreground whitespace-pre-wrap">{comment.text}</p>
+                                                                            <p className="text-[10px] text-muted-foreground mt-2">
+                                                                                {comment.createdBy} • {new Date(comment.createdAt).toLocaleString()}
+                                                                            </p>
+                                                                        </div>
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="icon"
+                                                                            className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                                                                            onClick={() => handleDeleteComment(comment.id)}
+                                                                        >
+                                                                            <Trash2 size={12} />
+                                                                        </Button>
+                                                                    </div>
+                                                                </CardContent>
+                                                            </Card>
+                                                        ))
+                                                    )}
+                                                </div>
                                             </TabsContent>
 
-                                            <TabsContent value="invoices" className="p-6 space-y-3 mt-0">
-                                                {data.invoices.length === 0 ? (
-                                                    <div className="py-12 text-center text-muted-foreground">
-                                                        <Receipt className="h-8 w-8 mx-auto mb-2 opacity-40" />
-                                                        <p className="text-xs font-bold">No invoices found for this customer.</p>
+                                            {/* Transactions Tab */}
+                                            <TabsContent value="transactions" className="p-6 space-y-6 mt-0">
+                                                {/* Invoices */}
+                                                <div className="space-y-3">
+                                                    <div className="flex items-center justify-between">
+                                                        <h4 className="text-xs font-bold text-foreground uppercase">Invoices ({data.invoices.length})</h4>
                                                     </div>
-                                                ) : (
-                                                    data.invoices.map(inv => (
-                                                        <Card key={inv.id} className="border-border shadow-sm">
-                                                            <CardContent className="p-4 flex items-center justify-between">
-                                                                <div>
-                                                                    <p className="text-sm font-bold text-foreground">{inv.invoice_number}</p>
-                                                                    <p className="text-xs text-muted-foreground mt-0.5">
-                                                                        Due: {new Date(inv.due_date).toLocaleDateString()}
-                                                                    </p>
-                                                                </div>
-                                                                <div className="text-right">
-                                                                    <p className="text-sm font-black text-foreground">{fmt(Number(inv.amount))}</p>
-                                                                    <Badge
-                                                                        variant="outline"
-                                                                        className={cn("mt-1 text-[10px] font-bold",
-                                                                            inv.status === 'paid' ? 'border-emerald-200 text-emerald-700 bg-emerald-50' :
+                                                    {data.invoices.length === 0 ? (
+                                                        <div className="py-6 text-center text-muted-foreground">
+                                                            <Receipt className="h-6 w-6 mx-auto mb-2 opacity-40" />
+                                                            <p className="text-xs">No invoices</p>
+                                                        </div>
+                                                    ) : (
+                                                        data.invoices.map(inv => (
+                                                            <Card key={inv.id} className="border-border shadow-sm">
+                                                                <CardContent className="p-3 flex items-center justify-between">
+                                                                    <div className="flex items-center gap-3">
+                                                                        <div className="h-8 w-8 rounded bg-blue-100 flex items-center justify-center">
+                                                                            <FileText size={14} className="text-blue-600" />
+                                                                        </div>
+                                                                        <div>
+                                                                            <p className="text-xs font-bold text-foreground">{inv.invoice_number}</p>
+                                                                            <p className="text-[10px] text-muted-foreground">{new Date(inv.date).toLocaleDateString()}</p>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="text-right">
+                                                                        <p className="text-xs font-black text-foreground">{fmt(Number(inv.amount))}</p>
+                                                                        <Badge
+                                                                            variant="outline"
+                                                                            className={cn("text-[9px] font-bold",
+                                                                                inv.status === 'paid' ? 'border-emerald-200 text-emerald-700 bg-emerald-50' :
                                                                                 inv.status === 'overdue' ? 'border-red-200 text-red-700 bg-red-50' :
                                                                                     'border-amber-200 text-amber-700 bg-amber-50'
-                                                                        )}
-                                                                    >
-                                                                        {inv.status}
-                                                                    </Badge>
-                                                                </div>
-                                                            </CardContent>
-                                                        </Card>
-                                                    ))
-                                                )}
+                                                                            )}
+                                                                        >
+                                                                            {inv.status}
+                                                                        </Badge>
+                                                                    </div>
+                                                                </CardContent>
+                                                            </Card>
+                                                        ))
+                                                    )}
+                                                </div>
+
+                                                {/* Payments */}
+                                                <div className="space-y-3">
+                                                    <h4 className="text-xs font-bold text-foreground uppercase">Payments ({data.payments.length})</h4>
+                                                    {data.payments.length === 0 ? (
+                                                        <div className="py-6 text-center text-muted-foreground">
+                                                            <CreditCard className="h-6 w-6 mx-auto mb-2 opacity-40" />
+                                                            <p className="text-xs">No payments</p>
+                                                        </div>
+                                                    ) : (
+                                                        data.payments.map((pay: any) => (
+                                                            <Card key={pay.id} className="border-border shadow-sm">
+                                                                <CardContent className="p-3 flex items-center justify-between">
+                                                                    <div className="flex items-center gap-3">
+                                                                        <div className="h-8 w-8 rounded bg-emerald-100 flex items-center justify-center">
+                                                                            <CreditCard size={14} className="text-emerald-600" />
+                                                                        </div>
+                                                                        <div>
+                                                                            <p className="text-xs font-bold text-foreground">{pay.invoice_number || pay.reference || 'Payment'}</p>
+                                                                            <p className="text-[10px] text-muted-foreground">{new Date(pay.date || pay.payment_date).toLocaleDateString()}</p>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="text-right">
+                                                                        <p className="text-xs font-black text-emerald-600">-{fmt(Number(pay.amount || pay.total || 0))}</p>
+                                                                        <Badge variant="outline" className="text-[9px] font-bold border-emerald-200 text-emerald-700 bg-emerald-50">
+                                                                            {pay.method || 'Paid'}
+                                                                        </Badge>
+                                                                    </div>
+                                                                </CardContent>
+                                                            </Card>
+                                                        ))
+                                                    )}
+                                                </div>
+
+                                                {/* Sales Orders */}
+                                                <div className="space-y-3">
+                                                    <h4 className="text-xs font-bold text-foreground uppercase">Sales Orders ({data.salesOrders.length})</h4>
+                                                    {data.salesOrders.length === 0 ? (
+                                                        <div className="py-6 text-center text-muted-foreground">
+                                                            <FileText className="h-6 w-6 mx-auto mb-2 opacity-40" />
+                                                            <p className="text-xs">No sales orders</p>
+                                                        </div>
+                                                    ) : (
+                                                        data.salesOrders.map((so: any) => (
+                                                            <Card key={so.id} className="border-border shadow-sm">
+                                                                <CardContent className="p-3 flex items-center justify-between">
+                                                                    <div className="flex items-center gap-3">
+                                                                        <div className="h-8 w-8 rounded bg-purple-100 flex items-center justify-center">
+                                                                            <FileText size={14} className="text-purple-600" />
+                                                                        </div>
+                                                                        <div>
+                                                                            <p className="text-xs font-bold text-foreground">{so.number || so.order_number}</p>
+                                                                            <p className="text-[10px] text-muted-foreground">{new Date(so.date).toLocaleDateString()}</p>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="text-right">
+                                                                        <p className="text-xs font-black text-foreground">{fmt(Number(so.total || so.amount || 0))}</p>
+                                                                        <Badge variant="outline" className="text-[9px] font-bold">
+                                                                            {so.status || 'Active'}
+                                                                        </Badge>
+                                                                    </div>
+                                                                </CardContent>
+                                                            </Card>
+                                                        ))
+                                                    )}
+                                                </div>
+                                            </TabsContent>
+
+                                            {/* Statement Tab */}
+                                            <TabsContent value="statement" className="p-6 space-y-4 mt-0">
+                                                {/* Statement Summary */}
+                                                <div className="bg-muted/30 rounded-lg p-4 space-y-3">
+                                                    <div className="flex justify-between items-center">
+                                                        <h4 className="text-xs font-bold text-foreground">Account Statement</h4>
+                                                        <div className="flex gap-1">
+                                                            <Button variant="outline" size="icon" className="h-7 w-7">
+                                                                <Printer size={12} />
+                                                            </Button>
+                                                            <Button variant="outline" size="icon" className="h-7 w-7">
+                                                                <Download size={12} />
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                    <div className="grid grid-cols-3 gap-3 text-center">
+                                                        <div className="bg-background rounded p-2">
+                                                            <p className="text-[9px] font-bold text-muted-foreground uppercase">Total Invoiced</p>
+                                                            <p className="text-sm font-black text-foreground">{fmt(data.totalInvoiced)}</p>
+                                                        </div>
+                                                        <div className="bg-background rounded p-2">
+                                                            <p className="text-[9px] font-bold text-muted-foreground uppercase">Total Paid</p>
+                                                            <p className="text-sm font-black text-emerald-600">{fmt(data.totalPaid)}</p>
+                                                        </div>
+                                                        <div className="bg-background rounded p-2">
+                                                            <p className="text-[9px] font-bold text-muted-foreground uppercase">Balance Due</p>
+                                                            <p className="text-sm font-black text-amber-600">{fmt(data.balance)}</p>
+                                                        </div>
+                                                    </div>
+                                                    <p className="text-[9px] text-muted-foreground text-center">
+                                                        As of {new Date().toLocaleDateString()}
+                                                    </p>
+                                                </div>
+
+                                                {/* Transaction History Table */}
+                                                <div className="space-y-2">
+                                                    <h4 className="text-xs font-bold text-foreground uppercase border-b border-border pb-2">Transaction History</h4>
+                                                    <div className="border rounded-lg overflow-hidden">
+                                                        <table className="w-full text-xs">
+                                                            <thead className="bg-muted/50">
+                                                                <tr>
+                                                                    <th className="text-left p-2 font-bold">Date</th>
+                                                                    <th className="text-left p-2 font-bold">Reference</th>
+                                                                    <th className="text-right p-2 font-bold">Debit</th>
+                                                                    <th className="text-right p-2 font-bold">Credit</th>
+                                                                    <th className="text-right p-2 font-bold">Balance</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {/* Generate statement rows from invoices and payments */}
+                                                                {(() => {
+                                                                    const rows: any[] = [];
+                                                                    let runningBalance = 0;
+
+                                                                    // Add invoices (debit)
+                                                                    data.invoices.forEach(inv => {
+                                                                        runningBalance += Number(inv.amount || 0);
+                                                                        rows.push({
+                                                                            date: inv.date,
+                                                                            reference: inv.invoice_number,
+                                                                            type: 'invoice',
+                                                                            debit: Number(inv.amount || 0),
+                                                                            credit: 0,
+                                                                            balance: runningBalance
+                                                                        });
+                                                                    });
+
+                                                                    // Add payments (credit)
+                                                                    data.payments.forEach(pay => {
+                                                                        runningBalance -= Number(pay.amount || pay.total || 0);
+                                                                        rows.push({
+                                                                            date: pay.date || pay.payment_date,
+                                                                            reference: pay.reference || 'Payment',
+                                                                            type: 'payment',
+                                                                            debit: 0,
+                                                                            credit: Number(pay.amount || pay.total || 0),
+                                                                            balance: runningBalance
+                                                                        });
+                                                                    });
+
+                                                                    // Sort by date
+                                                                    rows.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+                                                                    if (rows.length === 0) {
+                                                                        return (
+                                                                            <tr>
+                                                                                <td colSpan={5} className="p-6 text-center text-muted-foreground">
+                                                                                    No transactions
+                                                                                </td>
+                                                                            </tr>
+                                                                        );
+                                                                    }
+
+                                                                    return rows.map((row, idx) => (
+                                                                        <tr key={idx} className="border-t">
+                                                                            <td className="p-2">{new Date(row.date).toLocaleDateString()}</td>
+                                                                            <td className="p-2 font-medium">{row.reference}</td>
+                                                                            <td className="p-2 text-right">{row.debit > 0 ? fmt(row.debit) : '-'}</td>
+                                                                            <td className="p-2 text-right text-emerald-600">{row.credit > 0 ? fmt(row.credit) : '-'}</td>
+                                                                            <td className="p-2 text-right font-bold">{fmt(row.balance)}</td>
+                                                                        </tr>
+                                                                    ));
+                                                                })()}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
                                             </TabsContent>
                                         </Tabs>
                                     </div>

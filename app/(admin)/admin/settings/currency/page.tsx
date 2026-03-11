@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Save, Loader2, CheckCircle2, Globe, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { settingsApi } from '@/lib/settings-api';
 
 // ============= TYPES =============
 
@@ -134,36 +135,36 @@ export default function CurrencySettingsPage() {
     const [saving, setSaving] = useState(false);
     const [finance, setFinance] = useState<FinanceConfig>(DEFAULT_FINANCE);
     const [companyCountry, setCompanyCountry] = useState<string>('AE');
+    const uniqueCurrencies = Array.from(
+        new Map(ALL_COUNTRIES_CURRENCIES.map((c) => [c.currency.code, c.currency])).values()
+    );
 
     useEffect(() => {
-        loadSettings();
+        void loadSettings();
     }, []);
 
-    const loadSettings = () => {
-        // Load from company settings first
-        const saved = localStorage.getItem('company_settings');
-        if (saved) {
-            const company = JSON.parse(saved);
-            const countryCode = company.country || 'AE';
+    const loadSettings = async () => {
+        try {
+            const [company, financeConfig] = await Promise.all([
+                settingsApi.getCompany(),
+                settingsApi.getFinance()
+            ]);
+
+            const countryCode = financeConfig?.selectedCountry || company?.country || 'AE';
+            const countryData = ALL_COUNTRIES_CURRENCIES.find(c => c.code === countryCode);
             setCompanyCountry(countryCode);
 
-            // Find country data
-            const countryData = ALL_COUNTRIES_CURRENCIES.find(c => c.code === countryCode);
-
             setFinance({
-                baseCurrency: company.baseCurrency || countryData?.currency.code || 'AED',
-                fiscalYearStart: company.fiscalYearStart || countryData?.fiscalYearStart.toString() || '1',
-                accountingMethod: company.accountingMethod || 'accrual',
+                baseCurrency: financeConfig?.baseCurrency || company?.baseCurrency || countryData?.currency.code || 'AED',
+                fiscalYearStart: String(financeConfig?.fiscalYearStart || company?.fiscalYearStart || countryData?.fiscalYearStart || 1),
+                accountingMethod: financeConfig?.accountingMethod || 'accrual',
                 selectedCountry: countryCode,
             });
-        } else {
-            // Default to UAE
-            setFinance({
-                ...DEFAULT_FINANCE,
-                selectedCountry: 'AE',
-            });
+        } catch (error: any) {
+            toast.error(error?.message || 'Failed to load currency settings');
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
     const handleCountryChange = (countryCode: string) => {
@@ -182,32 +183,26 @@ export default function CurrencySettingsPage() {
 
     const handleSave = async () => {
         setSaving(true);
-        await new Promise(r => setTimeout(r, 1000));
-
-        // Save to company settings
-        const saved = localStorage.getItem('company_settings');
-        const company = saved ? JSON.parse(saved) : {};
-
-        // Also sync with tax settings
-        const taxSaved = localStorage.getItem('tax_settings');
-        const taxConfig = taxSaved ? JSON.parse(taxSaved) : {};
-
-        localStorage.setItem('company_settings', JSON.stringify({
-            ...company,
-            baseCurrency: finance.baseCurrency,
-            fiscalYearStart: finance.fiscalYearStart,
-            accountingMethod: finance.accountingMethod,
-            country: finance.selectedCountry,
-        }));
-
-        // Update tax settings country too
-        localStorage.setItem('tax_settings', JSON.stringify({
-            ...taxConfig,
-            selectedCountry: finance.selectedCountry,
-        }));
-
-        toast.success('Currency & Fiscal settings saved');
-        setSaving(false);
+        try {
+            await Promise.all([
+                settingsApi.saveFinance({
+                    baseCurrency: finance.baseCurrency,
+                    fiscalYearStart: String(finance.fiscalYearStart),
+                    accountingMethod: finance.accountingMethod,
+                    selectedCountry: finance.selectedCountry,
+                }),
+                settingsApi.saveCompany({
+                    country: finance.selectedCountry,
+                    baseCurrency: finance.baseCurrency,
+                    fiscalYearStart: String(finance.fiscalYearStart),
+                }),
+            ]);
+            toast.success('Currency & Fiscal settings saved');
+        } catch (error: any) {
+            toast.error(error?.message || 'Failed to save currency settings');
+        } finally {
+            setSaving(false);
+        }
     };
 
     const currentCountryData = ALL_COUNTRIES_CURRENCIES.find(c => c.code === finance.selectedCountry);
@@ -276,12 +271,12 @@ export default function CurrencySettingsPage() {
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                                {ALL_COUNTRIES_CURRENCIES.map((c) => (
-                                    <SelectItem key={c.currency.code} value={c.currency.code}>
+                                {uniqueCurrencies.map((currency) => (
+                                    <SelectItem key={currency.code} value={currency.code}>
                                         <div className="flex items-center gap-2">
-                                            <span>{c.currency.flag}</span>
-                                            <span>{c.currency.code}</span>
-                                            <span className="text-muted-foreground">- {c.currency.name}</span>
+                                            <span>{currency.flag}</span>
+                                            <span>{currency.code}</span>
+                                            <span className="text-muted-foreground">- {currency.name}</span>
                                         </div>
                                     </SelectItem>
                                 ))}

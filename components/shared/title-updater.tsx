@@ -1,39 +1,40 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import { settingsApi } from '@/lib/settings-api';
 
 export function TitleUpdater() {
-    const [companyName, setCompanyName] = useState('BridgeBreak');
+    const applyFavicon = (favicon?: string | null) => {
+        if (!favicon) return;
+        const existing = document.querySelector("link[rel~='icon']") as HTMLLinkElement | null;
+        const link = existing || document.createElement('link');
+        link.rel = 'icon';
+        link.href = favicon;
+        if (!existing) {
+            document.head.appendChild(link);
+        }
+    };
 
     useEffect(() => {
-        // Load company name from localStorage
-        const loadCompanyName = () => {
-            const companySaved = localStorage.getItem('company_settings');
-            if (companySaved) {
-                const company = JSON.parse(companySaved);
-                const name = company.companyName || 'BridgeBreak';
-                setCompanyName(name);
+        const loadCompanyName = async () => {
+            try {
+                const [company, branding] = await Promise.all([
+                    settingsApi.getCompany(),
+                    settingsApi.getBranding(),
+                ]);
+                const name = company?.companyName || 'BridgeBreak';
                 document.title = `${name} - ERP`;
-            } else {
-                // Check app_company_name set by theme provider
-                const appName = localStorage.getItem('app_company_name');
-                if (appName) {
-                    setCompanyName(appName);
-                    document.title = `${appName} - ERP`;
-                }
+                applyFavicon(branding?.favicon || null);
+            } catch {
+                document.title = 'BridgeBreak - ERP';
             }
         };
 
         loadCompanyName();
 
-        // Listen for storage changes
-        window.addEventListener('storage', loadCompanyName);
-
-        // Also poll for changes since localStorage changes in same tab won't trigger event
-        const interval = setInterval(loadCompanyName, 1000);
+        const interval = setInterval(loadCompanyName, 30000);
 
         return () => {
-            window.removeEventListener('storage', loadCompanyName);
             clearInterval(interval);
         };
     }, []);

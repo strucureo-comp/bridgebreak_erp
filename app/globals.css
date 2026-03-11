@@ -151,3 +151,39 @@
     page-break-inside: avoid;
   }
 }
+
+/* Print Styles */
+@media print {
+  body {
+    background: white !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  
+  /* Hide non-essential elements */
+  nav, header, footer, .sidebar, .no-print, button, [class*="sidebar"] {
+    display: none !important;
+  }
+  
+  /* Show only print content */
+  .print-only, #invoice-print {
+    display: block !important;
+  }
+  
+  /* Page settings */
+  @page {
+    size: A4;
+    margin: 0.5cm;
+  }
+  
+  /* Ensure tables print properly */
+  table {
+    page-break-inside: avoid;
+  }
+  
+  /* Prevent content from being cut */
+  .break-inside-avoid {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+}

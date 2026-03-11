@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Save, Loader2, Plus, Trash2, Shield, Users, ChevronRight, Edit2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { settingsApi } from '@/lib/settings-api';
 
 interface Permission {
     module: string;
@@ -28,6 +29,19 @@ interface Role {
     isDefault?: boolean;
     isCustom?: boolean;
 }
+
+function mapRoleFromApi(role: any): Role {
+    return {
+        id: role._id,
+        name: role.name,
+        description: role.description,
+        permissions: role.permissions || [],
+        isDefault: role.isDefault,
+        isCustom: role.isCustom,
+    };
+}
+
+const isObjectId = (id: string) => /^[a-f\d]{24}$/i.test(id);
 
 const DEFAULT_ROLES: Role[] = [
     {
@@ -135,12 +149,24 @@ export default function RolesSettingsPage() {
     const [newRoleDescription, setNewRoleDescription] = useState('');
 
     useEffect(() => {
-        const saved = localStorage.getItem('roles_settings');
-        if (saved) {
-            setRoles(JSON.parse(saved));
-            setSelectedRole(JSON.parse(saved)[0]);
-        }
-        setLoading(false);
+        const loadRoles = async () => {
+            try {
+                const data = await settingsApi.getRoles();
+                const mapped = (data || []).map(mapRoleFromApi);
+                if (mapped.length) {
+                    setRoles(mapped);
+                    setSelectedRole(mapped[0]);
+                } else {
+                    setRoles(DEFAULT_ROLES);
+                    setSelectedRole(DEFAULT_ROLES[0]);
+                }
+            } catch (error: any) {
+                toast.error(error?.message || 'Failed to load roles');
+            } finally {
+                setLoading(false);
+            }
+        };
+        loadRoles();
     }, []);
 
     const handlePermissionChange = (moduleIndex: number, permission: keyof Permission, value: boolean) => {
@@ -156,7 +182,7 @@ export default function RolesSettingsPage() {
         setSelectedRole(updatedRoles.find(r => r.id === selectedRole.id)!);
     };
 
-    const handleCreateRole = () => {
+    const handleCreateRole = async () => {
         if (!newRoleName) {
             toast.error('Role name is required');
             return;
@@ -176,32 +202,78 @@ export default function RolesSettingsPage() {
             }))
         };
 
-        setRoles([...roles, newRole]);
-        setSelectedRole(newRole);
-        setCreateRoleDialogOpen(false);
-        setNewRoleName('');
-        setNewRoleDescription('');
-        toast.success(`Role "${newRoleName}" created`);
+        try {
+            const created = await settingsApi.createRole({
+                name: newRole.name,
+                description: newRole.description,
+                permissions: newRole.permissions,
+            });
+            const mapped = mapRoleFromApi(created);
+            setRoles([...roles, mapped]);
+            setSelectedRole(mapped);
+            setCreateRoleDialogOpen(false);
+            setNewRoleName('');
+            setNewRoleDescription('');
+            toast.success(`Role "${newRoleName}" created`);
+        } catch (error: any) {
+            toast.error(error?.message || 'Failed to create role');
+        }
     };
 
-    const handleDeleteRole = (id: string) => {
+    const handleDeleteRole = async (id: string) => {
         if (roles.find(r => r.id === id)?.isDefault) {
             toast.error('Cannot delete default roles');
             return;
         }
-        setRoles(roles.filter(r => r.id !== id));
-        if (selectedRole.id === id) {
-            setSelectedRole(roles[0]);
+        try {
+            await settingsApi.deleteRole(id);
+            const filtered = roles.filter(r => r.id !== id);
+            setRoles(filtered);
+            if (selectedRole.id === id && filtered.length) {
+                setSelectedRole(filtered[0]);
+            }
+            toast.success('Role deleted');
+        } catch (error: any) {
+            toast.error(error?.message || 'Failed to delete role');
         }
-        toast.success('Role deleted');
     };
 
     const handleSave = async () => {
         setSaving(true);
-        await new Promise(r => setTimeout(r, 1000));
-        localStorage.setItem('roles_settings', JSON.stringify(roles));
-        toast.success('Roles saved');
-        setSaving(false);
+        try {
+            const existingRoles = await settingsApi.getRoles();
+            const existingByName = new Map(
+                (existingRoles || []).map((r: any) => [String(r.name || '').toLowerCase(), r])
+            );
+
+            await Promise.all(
+                roles.map((role) => {
+                    const payload = {
+                        name: role.name,
+                        description: role.description,
+                        permissions: role.permissions,
+                        isDefault: role.isDefault,
+                        isCustom: role.isCustom,
+                    };
+
+                    if (isObjectId(role.id)) {
+                        return settingsApi.updateRole(role.id, payload);
+                    }
+
+                    const existing = existingByName.get(role.name.toLowerCase());
+                    if (existing?._id) {
+                        return settingsApi.updateRole(existing._id, payload);
+                    }
+
+                    return settingsApi.createRole(payload);
+                })
+            );
+            toast.success('Roles saved');
+        } catch (error: any) {
+            toast.error(error?.message || 'Failed to save roles');
+        } finally {
+            setSaving(false);
+        }
     };
 
     if (loading) {

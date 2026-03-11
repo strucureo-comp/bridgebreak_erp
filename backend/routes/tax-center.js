@@ -221,6 +221,143 @@ router.delete('/adjustments/:id', async (req, res) => {
 });
 
 // ======================================================
+// VAT RETURNS
+// ======================================================
+router.get('/vat-returns', async (req, res) => {
+    try {
+        const { status, year } = req.query;
+        const query = {};
+        if (status) query.status = status;
+        if (year) {
+            query.periodStart = { $gte: `${year}-01-01` };
+            query.periodEnd = { $lte: `${year}-12-31` };
+        }
+        const vatReturns = await VATReturn.find(query).sort({ periodEnd: -1 }).lean();
+        res.json(vatReturns.map(r => ({ ...r, id: r._id })));
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch VAT returns' });
+    }
+});
+
+router.post('/vat-returns', async (req, res) => {
+    try {
+        const vatReturn = new VATReturn(req.body);
+        await vatReturn.save();
+        res.status(201).json({ ...vatReturn.toObject(), id: vatReturn._id });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to create VAT return' });
+    }
+});
+
+router.put('/vat-returns/:id', async (req, res) => {
+    try {
+        const vatReturn = await VATReturn.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        if (!vatReturn) return res.status(404).json({ error: 'VAT return not found' });
+        res.json({ ...vatReturn.toObject(), id: vatReturn._id });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to update VAT return' });
+    }
+});
+
+router.patch('/vat-returns/:id/file', async (req, res) => {
+    try {
+        const vatReturn = await VATReturn.findByIdAndUpdate(
+            req.params.id,
+            { status: 'filed', filedAt: new Date(), ...req.body },
+            { new: true }
+        );
+        if (!vatReturn) return res.status(404).json({ error: 'VAT return not found' });
+        res.json({ ...vatReturn.toObject(), id: vatReturn._id });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to file VAT return' });
+    }
+});
+
+router.delete('/vat-returns/:id', async (req, res) => {
+    try {
+        const vatReturn = await VATReturn.findByIdAndDelete(req.params.id);
+        if (!vatReturn) return res.status(404).json({ error: 'VAT return not found' });
+        res.json({ message: 'VAT return deleted' });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to delete VAT return' });
+    }
+});
+
+// ======================================================
+// CORPORATE TAX FILINGS
+// ======================================================
+router.get('/corporate-tax', async (req, res) => {
+    try {
+        const { status, year } = req.query;
+        const query = {};
+        if (status) query.status = status;
+        if (year) query.taxYear = year;
+        const corpTaxFilings = await CorporateTaxFiling.find(query).sort({ taxYear: -1, periodEnd: -1 }).lean();
+        res.json(corpTaxFilings.map(c => ({ ...c, id: c._id })));
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch corporate tax filings' });
+    }
+});
+
+router.post('/corporate-tax', async (req, res) => {
+    try {
+        const filing = new CorporateTaxFiling(req.body);
+        await filing.save();
+        res.status(201).json({ ...filing.toObject(), id: filing._id });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to create corporate tax filing' });
+    }
+});
+
+router.put('/corporate-tax/:id', async (req, res) => {
+    try {
+        const filing = await CorporateTaxFiling.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        if (!filing) return res.status(404).json({ error: 'Corporate tax filing not found' });
+        res.json({ ...filing.toObject(), id: filing._id });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to update corporate tax filing' });
+    }
+});
+
+router.patch('/corporate-tax/:id/file', async (req, res) => {
+    try {
+        const filing = await CorporateTaxFiling.findByIdAndUpdate(
+            req.params.id,
+            { status: 'filed', filedAt: new Date(), ...req.body },
+            { new: true }
+        );
+        if (!filing) return res.status(404).json({ error: 'Corporate tax filing not found' });
+        res.json({ ...filing.toObject(), id: filing._id });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to file corporate tax' });
+    }
+});
+
+router.patch('/corporate-tax/:id/assess', async (req, res) => {
+    try {
+        const filing = await CorporateTaxFiling.findByIdAndUpdate(
+            req.params.id,
+            { status: 'assessed', assessedAt: new Date(), ...req.body },
+            { new: true }
+        );
+        if (!filing) return res.status(404).json({ error: 'Corporate tax filing not found' });
+        res.json({ ...filing.toObject(), id: filing._id });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to process assessment' });
+    }
+});
+
+router.delete('/corporate-tax/:id', async (req, res) => {
+    try {
+        const filing = await CorporateTaxFiling.findByIdAndDelete(req.params.id);
+        if (!filing) return res.status(404).json({ error: 'Corporate tax filing not found' });
+        res.json({ message: 'Corporate tax filing deleted' });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to delete corporate tax filing' });
+    }
+});
+
+// ======================================================
 // TAX CENTER SUMMARY (for Finance Hub KPIs)
 // ======================================================
 router.get('/center-summary', async (req, res) => {
@@ -241,6 +378,156 @@ router.get('/center-summary', async (req, res) => {
         });
     } catch (err) {
         res.status(500).json({ error: 'Failed to fetch tax summary' });
+    }
+});
+
+// ======================================================
+// VAT RETURNS
+// ======================================================
+
+// In-memory storage for VAT Returns (would be a database collection in production)
+let vatReturns = [];
+
+// Get all VAT returns
+router.get('/vat-returns', async (req, res) => {
+    try {
+        res.json(vatReturns);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch VAT returns' });
+    }
+});
+
+// Create a new VAT return
+router.post('/vat-returns', async (req, res) => {
+    try {
+        const newReturn = {
+            id: `VAT-${Date.now()}`,
+            ...req.body,
+            status: 'draft',
+            createdAt: new Date().toISOString()
+        };
+        vatReturns.push(newReturn);
+        res.status(201).json(newReturn);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to create VAT return' });
+    }
+});
+
+// Update VAT return (file it)
+router.put('/vat-returns/:id', async (req, res) => {
+    try {
+        const index = vatReturns.findIndex(v => v.id === req.params.id);
+        if (index === -1) return res.status(404).json({ error: 'VAT return not found' });
+
+        vatReturns[index] = { ...vatReturns[index], ...req.body };
+        res.json(vatReturns[index]);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to update VAT return' });
+    }
+});
+
+// File VAT return
+router.post('/vat-returns/:id/file', async (req, res) => {
+    try {
+        const index = vatReturns.findIndex(v => v.id === req.params.id);
+        if (index === -1) return res.status(404).json({ error: 'VAT return not found' });
+
+        vatReturns[index] = {
+            ...vatReturns[index],
+            status: 'filed',
+            filedAt: new Date().toISOString(),
+            filedBy: req.body.filedBy || 'System',
+            referenceNumber: req.body.referenceNumber || `VAT-REF-${Date.now()}`
+        };
+        res.json(vatReturns[index]);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to file VAT return' });
+    }
+});
+
+// ======================================================
+// CORPORATE TAX FILINGS
+// ======================================================
+
+// In-memory storage for Corporate Tax Filings
+let corpTaxFilings = [];
+
+// Get all corporate tax filings
+router.get('/corporate-tax', async (req, res) => {
+    try {
+        const { year } = req.query;
+        if (year) {
+            const filtered = corpTaxFilings.filter(c => c.taxYear === year);
+            return res.json(filtered);
+        }
+        res.json(corpTaxFilings);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch corporate tax filings' });
+    }
+});
+
+// Create a new corporate tax filing
+router.post('/corporate-tax', async (req, res) => {
+    try {
+        const newFiling = {
+            id: `CT-${Date.now()}`,
+            ...req.body,
+            status: 'draft',
+            createdAt: new Date().toISOString()
+        };
+        corpTaxFilings.push(newFiling);
+        res.status(201).json(newFiling);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to create corporate tax filing' });
+    }
+});
+
+// Update corporate tax filing
+router.put('/corporate-tax/:id', async (req, res) => {
+    try {
+        const index = corpTaxFilings.findIndex(c => c.id === req.params.id);
+        if (index === -1) return res.status(404).json({ error: 'Corporate tax filing not found' });
+
+        corpTaxFilings[index] = { ...corpTaxFilings[index], ...req.body };
+        res.json(corpTaxFilings[index]);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to update corporate tax filing' });
+    }
+});
+
+// File corporate tax return
+router.post('/corporate-tax/:id/file', async (req, res) => {
+    try {
+        const index = corpTaxFilings.findIndex(c => c.id === req.params.id);
+        if (index === -1) return res.status(404).json({ error: 'Corporate tax filing not found' });
+
+        corpTaxFilings[index] = {
+            ...corpTaxFilings[index],
+            status: 'filed',
+            filedAt: new Date().toISOString(),
+            filedBy: req.body.filedBy || 'System',
+            referenceNumber: req.body.referenceNumber || `CT-REF-${Date.now()}`
+        };
+        res.json(corpTaxFilings[index]);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to file corporate tax return' });
+    }
+});
+
+// Request assessment for corporate tax
+router.post('/corporate-tax/:id/request-assessment', async (req, res) => {
+    try {
+        const index = corpTaxFilings.findIndex(c => c.id === req.params.id);
+        if (index === -1) return res.status(404).json({ error: 'Corporate tax filing not found' });
+
+        corpTaxFilings[index] = {
+            ...corpTaxFilings[index],
+            status: 'pending',
+            assessmentRequestedAt: new Date().toISOString()
+        };
+        res.json(corpTaxFilings[index]);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to request assessment' });
     }
 });
 

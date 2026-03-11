@@ -706,6 +706,35 @@ const Separation = mongoose.models.Separation || mongoose.model('Separation', se
 const FinalSettlement = mongoose.models.FinalSettlement || mongoose.model('FinalSettlement', finalSettlementSchema);
 const PayrollDeletionAudit = mongoose.models.PayrollDeletionAudit || mongoose.model('PayrollDeletionAudit', payrollDeletionAuditSchema);
 const OvertimeLog = mongoose.models.OvertimeLog || mongoose.model('OvertimeLog', overtimeLogSchema);
+
+// ── TIMESHEET ENTRY ────────────────────────────────────────────────────────────
+const timesheetEntrySchema = new mongoose.Schema({
+    employee_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee', required: true },
+    date: { type: Date, required: true },
+    project_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Project' },
+    task_description: String,
+    hours_worked: { type: Number, required: true },
+    break_hours: { type: Number, default: 0 },
+    start_time: String, // HH:mm format
+    end_time: String, // HH:mm format
+    work_type: { type: String, enum: ['regular', 'overtime', 'holiday', 'leave'], default: 'regular' },
+    status: { type: String, enum: ['draft', 'submitted', 'approved', 'rejected'], default: 'draft' },
+    approved_by: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    approved_at: Date,
+    rejection_reason: String,
+    notes: String,
+    // Link to payroll for payroll processing
+    payroll_cycle_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Payroll' },
+    // Billable tracking
+    billable: { type: Boolean, default: true },
+    hourly_rate: Number,
+}, { timestamps: true });
+
+timesheetEntrySchema.index({ employee_id: 1, date: 1 }, { unique: true });
+timesheetEntrySchema.index({ employee_id: 1, project_id: 1, date: 1 });
+
+const TimesheetEntry = mongoose.models.TimesheetEntry || mongoose.model('TimesheetEntry', timesheetEntrySchema);
+
 const PaymentDetails = mongoose.models.PaymentDetails || mongoose.model('PaymentDetails', paymentDetailsSchema);
 const BiometricDevice = mongoose.models.BiometricDevice || mongoose.model('BiometricDevice', biometricDeviceSchema);
 const AttendanceLog = mongoose.models.AttendanceLog || mongoose.model('AttendanceLog', attendanceLogSchema);
@@ -733,6 +762,7 @@ module.exports = {
     FinalSettlement,
     PayrollDeletionAudit,
     OvertimeLog,
+    TimesheetEntry,
     PaymentDetails,
     BiometricDevice,
     AttendanceLog

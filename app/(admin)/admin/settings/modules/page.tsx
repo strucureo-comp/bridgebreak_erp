@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTenant } from '@/lib/tenant-context';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Save, Loader2, CheckCircle2, Package, ShoppingCart, Users, DollarSign, Briefcase, Factory, Shield, BarChart3, Settings2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { settingsApi } from '@/lib/settings-api';
 
 interface Module {
     id: string;
@@ -54,13 +56,24 @@ export default function ModulesSettingsPage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [modulesConfig, setModulesConfig] = useState<ModulesConfig>(DEFAULT_MODULES);
+    const { refreshTenantStatus } = useTenant();
 
     useEffect(() => {
-        const saved = localStorage.getItem('modules_settings');
-        if (saved) {
-            setModulesConfig(JSON.parse(saved));
-        }
-        setLoading(false);
+        const loadModules = async () => {
+            try {
+                const data = await settingsApi.getModules();
+                if (data?.modules) {
+                    setModulesConfig({
+                        modules: DEFAULT_MODULES.modules.map((m) => ({ ...m, enabled: Boolean(data.modules[m.id]) })),
+                    });
+                }
+            } catch (error: any) {
+                toast.error(error?.message || 'Failed to load module settings');
+            } finally {
+                setLoading(false);
+            }
+        };
+        loadModules();
     }, []);
 
     const handleToggle = (moduleId: string) => {
@@ -73,20 +86,19 @@ export default function ModulesSettingsPage() {
 
     const handleSave = async () => {
         setSaving(true);
-        await new Promise(r => setTimeout(r, 1000));
-        localStorage.setItem('modules_settings', JSON.stringify(modulesConfig));
-
-        // Also save to company_profile for tenant context compatibility
-        const companySaved = localStorage.getItem('company_settings');
-        const company = companySaved ? JSON.parse(companySaved) : {};
-        company.activeModules = modulesConfig.modules.reduce((acc, m) => {
-            acc[m.id] = m.enabled;
-            return acc;
-        }, {} as Record<string, boolean>);
-        localStorage.setItem('company_settings', JSON.stringify(company));
-
-        toast.success('Modules saved - Sidebar will update on next page load');
-        setSaving(false);
+        try {
+            const payload = modulesConfig.modules.reduce((acc, m) => {
+                acc[m.id] = m.enabled;
+                return acc;
+            }, {} as Record<string, boolean>);
+            await settingsApi.saveModules(payload);
+            await refreshTenantStatus();
+            toast.success('Modules saved successfully');
+        } catch (error: any) {
+            toast.error(error?.message || 'Failed to save module settings');
+        } finally {
+            setSaving(false);
+        }
     };
 
     if (loading) {

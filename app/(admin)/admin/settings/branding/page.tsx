@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Save, Loader2, Upload, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { settingsApi } from '@/lib/settings-api';
 
 interface BrandingConfig {
     logo: string | null;
@@ -93,18 +94,24 @@ export default function BrandingSettingsPage() {
     const faviconInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
-        const saved = localStorage.getItem('branding_settings');
-        if (saved) {
-            const parsed = JSON.parse(saved);
-            setBranding({ ...DEFAULT_BRANDING, ...parsed });
-            if (parsed.primaryColor && parsed.accentColor) {
-                applyBrandingColors(parsed.primaryColor, parsed.accentColor);
+        const loadBranding = async () => {
+            try {
+                const parsed = await settingsApi.getBranding();
+                const next = { ...DEFAULT_BRANDING, ...parsed };
+                setBranding(next);
+                if (next.primaryColor && next.accentColor) {
+                    applyBrandingColors(next.primaryColor, next.accentColor);
+                }
+                if (next.favicon) {
+                    applyFavicon(next.favicon);
+                }
+            } catch (error: any) {
+                toast.error(error?.message || 'Failed to load branding');
+            } finally {
+                setLoading(false);
             }
-            if (parsed.favicon) {
-                applyFavicon(parsed.favicon);
-            }
-        }
-        setLoading(false);
+        };
+        loadBranding();
     }, []);
 
     const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -139,17 +146,15 @@ export default function BrandingSettingsPage() {
 
     const handleSave = async () => {
         setSaving(true);
-        await new Promise(r => setTimeout(r, 1000));
-        localStorage.setItem('branding_settings', JSON.stringify(branding));
-        localStorage.setItem('branding_config', JSON.stringify({ logo: branding.logo, primaryColor: branding.primaryColor, accentColor: branding.accentColor }));
-        applyBrandingColors(branding.primaryColor, branding.accentColor);
-        const companySaved = localStorage.getItem('company_settings');
-        if (companySaved) {
-            const company = JSON.parse(companySaved);
-            document.title = `${company.companyName || 'BridgeBreak'} - ERP`;
+        try {
+            await settingsApi.saveBranding(branding);
+            applyBrandingColors(branding.primaryColor, branding.accentColor);
+            toast.success('Branding saved');
+        } catch (error: any) {
+            toast.error(error?.message || 'Failed to save branding');
+        } finally {
+            setSaving(false);
         }
-        toast.success('Branding saved');
-        setSaving(false);
     };
 
     if (loading) return <div className="flex items-center justify-center min-h-[400px]"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;

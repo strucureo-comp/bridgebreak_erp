@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Save, Loader2, Plus, Trash2, Search, Mail, UserCheck, UserX, Send, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { settingsApi } from '@/lib/settings-api';
 
 interface User {
     id: string;
@@ -22,11 +23,7 @@ interface User {
     lastLogin?: string;
 }
 
-const DEFAULT_USERS: User[] = [
-    { id: '1', name: 'Ahmed Khalid', email: 'cfo@systemsteel.ae', role: 'Administrator', status: 'active', lastLogin: '2026-03-08' },
-    { id: '2', name: 'Sarah Connor', email: 'sales@systemsteel.ae', role: 'Sales Manager', status: 'active', lastLogin: '2026-03-07' },
-    { id: '3', name: 'John Doe', email: 'john@systemsteel.ae', role: 'Finance Manager', status: 'active', lastLogin: '2026-03-06' },
-];
+const DEFAULT_USERS: User[] = [];
 
 const ROLES = [
     'Administrator',
@@ -51,11 +48,26 @@ export default function UsersSettingsPage() {
     const [inviteRole, setInviteRole] = useState('Employee');
 
     useEffect(() => {
-        const saved = localStorage.getItem('users_settings');
-        if (saved) {
-            setUsers(JSON.parse(saved));
-        }
-        setLoading(false);
+        const loadUsers = async () => {
+            try {
+                const data = await settingsApi.getUsers();
+                const mapped: User[] = (data || []).map((u: any) => ({
+                    id: u._id,
+                    name: u.full_name || '',
+                    email: u.email,
+                    role: u.role,
+                    status: u.status || 'active',
+                    invitedAt: u.invited_at,
+                    lastLogin: u.last_login ? new Date(u.last_login).toISOString().slice(0, 10) : undefined,
+                }));
+                setUsers(mapped);
+            } catch (error: any) {
+                toast.error(error?.message || 'Failed to load users');
+            } finally {
+                setLoading(false);
+            }
+        };
+        loadUsers();
     }, []);
 
     const filteredUsers = users.filter(u =>
@@ -75,47 +87,83 @@ export default function UsersSettingsPage() {
             return;
         }
 
-        const newUser: User = {
-            id: Date.now().toString(),
-            name: '',
-            email: inviteEmail,
-            role: inviteRole,
-            status: 'pending',
-            invitedBy: 'Admin',
-            invitedAt: new Date().toISOString(),
-        };
-
-        setUsers([...users, newUser]);
-        setInviteDialogOpen(false);
-        setInviteEmail('');
-        setInviteRole('Employee');
-
-        // Simulate sending invite
-        toast.success(`Invitation sent to ${inviteEmail}`);
+        try {
+            const created = await settingsApi.inviteUser(inviteEmail, inviteRole);
+            setUsers([
+                ...users,
+                {
+                    id: created._id,
+                    name: created.full_name || '',
+                    email: created.email,
+                    role: created.role,
+                    status: created.status || 'pending',
+                    invitedAt: created.invited_at,
+                },
+            ]);
+            setInviteDialogOpen(false);
+            setInviteEmail('');
+            setInviteRole('Employee');
+            toast.success(`Invitation sent to ${inviteEmail}`);
+        } catch (error: any) {
+            toast.error(error?.message || 'Failed to invite user');
+        }
     };
 
-    const handleDeleteUser = (id: string) => {
-        setUsers(users.filter(u => u.id !== id));
+    const handleDeleteUser = async (id: string) => {
+        try {
+            await settingsApi.deleteUser(id);
+            setUsers(users.filter(u => u.id !== id));
+        } catch (error: any) {
+            toast.error(error?.message || 'Failed to delete user');
+        }
     };
 
-    const handleUpdateUser = (id: string, field: keyof User, value: string) => {
-        setUsers(users.map(u =>
-            u.id === id ? { ...u, [field]: value } : u
-        ));
+    const handleUpdateUser = async (id: string, field: keyof User, value: string) => {
+        const nextUsers = users.map(u => u.id === id ? { ...u, [field]: value } : u);
+        setUsers(nextUsers);
+        const target = nextUsers.find(u => u.id === id);
+        if (!target) return;
+        try {
+            await settingsApi.updateUser(id, {
+                full_name: target.name,
+                email: target.email,
+                role: target.role,
+                status: target.status,
+            });
+        } catch (error: any) {
+            toast.error(error?.message || 'Failed to update user');
+        }
     };
 
-    const handleToggleStatus = (id: string) => {
-        setUsers(users.map(u =>
-            u.id === id ? { ...u, status: u.status === 'active' ? 'disabled' : 'active' } : u
-        ));
+    const handleToggleStatus = async (id: string) => {
+        const user = users.find((u) => u.id === id);
+        if (!user) return;
+        const nextStatus = user.status === 'active' ? 'disabled' : 'active';
+        try {
+            await settingsApi.toggleUserStatus(id, nextStatus);
+            setUsers(users.map(u => u.id === id ? { ...u, status: nextStatus } : u));
+        } catch (error: any) {
+            toast.error(error?.message || 'Failed to update status');
+        }
     };
 
     const handleSave = async () => {
         setSaving(true);
-        await new Promise(r => setTimeout(r, 1000));
-        localStorage.setItem('users_settings', JSON.stringify(users));
-        toast.success('Users saved');
-        setSaving(false);
+        try {
+            await Promise.all(
+                users.map((u) => settingsApi.updateUser(u.id, {
+                    full_name: u.name,
+                    email: u.email,
+                    role: u.role,
+                    status: u.status,
+                }))
+            );
+            toast.success('Users saved');
+        } catch (error: any) {
+            toast.error(error?.message || 'Failed to save users');
+        } finally {
+            setSaving(false);
+        }
     };
 
     if (loading) {

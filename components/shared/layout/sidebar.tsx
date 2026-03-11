@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { PanelLeftClose, PanelLeftOpen, Cpu } from 'lucide-react';
 import Link from 'next/link';
+import { settingsApi } from '@/lib/settings-api';
 
 interface SidebarProps {
   isCollapsed: boolean;
@@ -66,45 +67,26 @@ export function Sidebar({ isCollapsed, toggleCollapse }: SidebarProps) {
   const [companyName, setCompanyName] = useState('BridgeBreak');
 
   useEffect(() => {
-    // Load branding and company settings
-    const loadSettings = () => {
-      // Load branding - check both new and old keys
-      let brandingSaved = localStorage.getItem('branding_settings');
-      if (!brandingSaved) {
-        brandingSaved = localStorage.getItem('branding_config');
-      }
+    const loadSettings = async () => {
+      try {
+        const [branding, company] = await Promise.all([
+          settingsApi.getBranding(),
+          settingsApi.getCompany(),
+        ]);
 
-      if (brandingSaved) {
-        const branding = JSON.parse(brandingSaved);
-        setLogo(branding.logo || null);
-
-        // Apply branding colors
-        if (branding.primaryColor && branding.accentColor) {
+        setLogo(branding?.logo || null);
+        if (branding?.primaryColor && branding?.accentColor) {
           applyBrandingColors(branding.primaryColor, branding.accentColor);
         }
-      }
-
-      // Load company name
-      const companySaved = localStorage.getItem('company_settings');
-      if (companySaved) {
-        const company = JSON.parse(companySaved);
-        setCompanyName(company.companyName || 'BridgeBreak');
-      } else {
-        const appName = localStorage.getItem('app_company_name');
-        if (appName) setCompanyName(appName);
+        setCompanyName(company?.companyName || 'BridgeBreak');
+      } catch {
+        // Keep defaults when backend is unavailable.
       }
     };
 
     loadSettings();
-
-    // Listen for storage changes
-    window.addEventListener('storage', loadSettings);
-    const interval = setInterval(loadSettings, 1000);
-
-    return () => {
-      window.removeEventListener('storage', loadSettings);
-      clearInterval(interval);
-    };
+    const interval = setInterval(loadSettings, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   return (

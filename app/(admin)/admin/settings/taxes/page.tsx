@@ -10,6 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { AlertTriangle, Save, Loader2, Plus, Trash2, CheckCircle, Globe, RefreshCw, Info, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { settingsApi } from '@/lib/settings-api';
 
 // ============= TYPES =============
 
@@ -663,38 +664,38 @@ export default function TaxesSettingsPage() {
         loadSettings();
     }, []);
 
-    const loadSettings = () => {
-        // Load company settings first to get country
-        const companySaved = localStorage.getItem('company_settings');
-        let companyCountry = 'AE';
-
-        if (companySaved) {
-            const companyData = JSON.parse(companySaved);
-            companyCountry = companyData.country || 'AE';
-        }
-
-        // Load saved tax config
-        const saved = localStorage.getItem('tax_settings');
-
-        if (saved) {
-            const parsed = JSON.parse(saved);
-            setTaxConfig(parsed);
-            // Set country name
-            const country = COUNTRY_TAX_MODELS.find(c => c.code === parsed.selectedCountry);
+    const loadSettings = async () => {
+        try {
+            const [company, taxes] = await Promise.all([
+                settingsApi.getCompany(),
+                settingsApi.getTaxes(),
+            ]);
+            const selectedCountry = company?.country || 'AE';
+            const country = COUNTRY_TAX_MODELS.find(c => c.code === selectedCountry);
             if (country) {
                 setSelectedCountryName(country.countryName);
             }
-        } else {
-            // Default to company country
-            setTaxConfig(prev => ({ ...prev, selectedCountry: companyCountry }));
-            const country = COUNTRY_TAX_MODELS.find(c => c.code === companyCountry);
-            if (country) {
-                setSelectedCountryName(country.countryName);
-            }
+            setTaxConfig({
+                selectedCountry,
+                customTaxes: (taxes || []).map((t: any) => ({
+                    id: t._id,
+                    name: t.name,
+                    rate: t.rate,
+                    type: t.type,
+                    enabled: t.enabled,
+                    isDefault: t.isDefault,
+                    isCompound: t.isCompound,
+                    description: t.description,
+                }))
+            });
+        } catch (error: any) {
+            toast.error(error?.message || 'Failed to load tax settings');
+        } finally {
+            setLoading(false);
         }
-
-        setLoading(false);
     };
+
+    const isObjectId = (id: string) => /^[a-f\d]{24}$/i.test(id);
 
     const getCountryTaxModel = (countryCode: string): CountryTaxModel | undefined => {
         return COUNTRY_TAX_MODELS.find(c => c.code === countryCode);
@@ -735,12 +736,19 @@ export default function TaxesSettingsPage() {
         }));
     };
 
-    const handleDeleteTax = (taxId: string) => {
-        setTaxConfig(prev => ({
-            ...prev,
-            customTaxes: prev.customTaxes.filter(t => t.id !== taxId)
-        }));
-        toast.success('Tax removed');
+    const handleDeleteTax = async (taxId: string) => {
+        try {
+            if (isObjectId(taxId)) {
+                await settingsApi.deleteTax(taxId);
+            }
+            setTaxConfig(prev => ({
+                ...prev,
+                customTaxes: prev.customTaxes.filter(t => t.id !== taxId)
+            }));
+            toast.success('Tax removed');
+        } catch (error: any) {
+            toast.error(error?.message || 'Failed to remove tax');
+        }
     };
 
     const handleAddCustomTax = () => {
@@ -790,10 +798,34 @@ export default function TaxesSettingsPage() {
 
     const handleSave = async () => {
         setSaving(true);
-        await new Promise(r => setTimeout(r, 1000));
-        localStorage.setItem('tax_settings', JSON.stringify(taxConfig));
-        toast.success('Tax settings saved');
-        setSaving(false);
+        try {
+            await settingsApi.saveCompany({ country: taxConfig.selectedCountry });
+            await Promise.all(
+                taxConfig.customTaxes.map((tax) => {
+                    const payload = {
+                        name: tax.name,
+                        rate: Number(tax.rate) || 0,
+                        type: tax.type,
+                        enabled: tax.enabled,
+                        isDefault: !!tax.isDefault,
+                        isCompound: !!tax.isCompound,
+                        description: tax.description || '',
+                        countryCode: taxConfig.selectedCountry,
+                        isCustom: tax.id.startsWith('custom-') || !isObjectId(tax.id),
+                        taxId: tax.id,
+                    };
+                    return isObjectId(tax.id)
+                        ? settingsApi.updateTax(tax.id, payload)
+                        : settingsApi.createTax(payload);
+                })
+            );
+            toast.success('Tax settings saved');
+            await loadSettings();
+        } catch (error: any) {
+            toast.error(error?.message || 'Failed to save tax settings');
+        } finally {
+            setSaving(false);
+        }
     };
 
     const currentCountryTaxModel = getCountryTaxModel(taxConfig.selectedCountry);

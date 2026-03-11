@@ -2059,6 +2059,270 @@ router.patch('/overtime/:id/status', auth, async (req, res) => {
     }
 });
 
+// ── TIMESHEET ENTRIES ─────────────────────────────────────────────────────────
+
+// Get timesheet entries
+router.get('/timesheets', auth, async (req, res) => {
+    try {
+        const { employee_id, month, year, status, project_id } = req.query;
+        const query = {};
+
+        if (employee_id) query.employee_id = employee_id;
+        if (status) query.status = status;
+        if (project_id) query.project_id = project_id;
+
+        // Filter by month/year if provided
+        if (month && year) {
+            const startDate = new Date(year, month - 1, 1);
+            const endDate = new Date(year, month, 0);
+            query.date = { $gte: startDate, $lte: endDate };
+        }
+
+        const { TimesheetEntry } = require('../models/HRMS');
+        const entries = await TimesheetEntry.find(query)
+            .populate('employee_id', 'name employee_id')
+            .populate('project_id', 'name')
+            .sort({ date: -1 });
+
+        res.json(transformArray(entries));
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch timesheet entries', detail: err.message });
+    }
+});
+
+// Get timesheet entry by ID
+router.get('/timesheets/:id', auth, async (req, res) => {
+    try {
+        const { TimesheetEntry } = require('../models/HRMS');
+        const entry = await TimesheetEntry.findById(req.params.id)
+            .populate('employee_id', 'name employee_id')
+            .populate('project_id', 'name');
+
+        if (!entry) return res.status(404).json({ error: 'Timesheet entry not found' });
+
+        res.json(transformDoc(entry));
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch timesheet entry', detail: err.message });
+    }
+});
+
+// Create timesheet entry
+router.post('/timesheets', auth, async (req, res) => {
+    try {
+        const { TimesheetEntry } = require('../models/HRMS');
+
+        // Check for duplicate entry on same date
+        const existing = await TimesheetEntry.findOne({
+            employee_id: req.body.employee_id,
+            date: new Date(req.body.date).toISOString().split('T')[0]
+        });
+
+        if (existing) {
+            return res.status(400).json({ error: 'Timesheet entry already exists for this date' });
+        }
+
+        const entry = new TimesheetEntry(req.body);
+        await entry.save();
+        await entry.populate('employee_id', 'name employee_id');
+
+        res.status(201).json(transformDoc(entry));
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to create timesheet entry', detail: err.message });
+    }
+});
+
+// Bulk create timesheet entries (for importing or batch entry)
+router.post('/timesheets/bulk', auth, async (req, res) => {
+    try {
+        const { TimesheetEntry } = require('../models/HRMS');
+        const { entries } = req.body;
+
+        if (!Array.isArray(entries) || entries.length === 0) {
+            return res.status(400).json({ error: 'No entries provided' });
+        }
+
+        const created = [];
+        const errors = [];
+
+        for (const entryData of entries) {
+            try {
+                const existing = await TimesheetEntry.findOne({
+                    employee_id: entryData.employee_id,
+                    date: new Date(entryData.date).toISOString().split('T')[0]
+                });
+
+                if (existing) {
+                    errors.push({ date: entryData.date, error: 'Entry already exists' });
+                    continue;
+                }
+
+                const entry = new TimesheetEntry(entryData);
+                await entry.save();
+                created.push(entry);
+            } catch (e) {
+                errors.push({ date: entryData.date, error: e.message });
+            }
+        }
+
+        await Promise.all(created.map(e => e.populate('employee_id', 'name employee_id')));
+
+        res.status(201).json({
+            created: transformArray(created),
+            errors
+        });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to create bulk timesheet entries', detail: err.message });
+    }
+});
+
+// Update timesheet entry
+router.put('/timesheets/:id', auth, async (req, res) => {
+    try {
+        const { TimesheetEntry } = require('../models/HRMS');
+        const entry = await TimesheetEntry.findByIdAndUpdate(
+            req.params.id,
+            req.body,
+            { new: true }
+        ).populate('employee_id', 'name employee_id');
+
+        if (!entry) return res.status(404).json({ error: 'Timesheet entry not found' });
+
+        res.json(transformDoc(entry));
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to update timesheet entry', detail: err.message });
+    }
+});
+
+// Submit timesheet for approval
+router.patch('/timesheets/:id/submit', auth, async (req, res) => {
+    try {
+        const { TimesheetEntry } = require('../models/HRMS');
+        const entry = await TimesheetEntry.findByIdAndUpdate(
+            req.params.id,
+            {
+                status: 'submitted',
+                submitted_by: req.user._id,
+                submitted_at: new Date()
+            },
+            { new: true }
+        ).populate('employee_id', 'name employee_id');
+
+        if (!entry) return res.status(404).json({ error: 'Timesheet entry not found' });
+
+        res.json(transformDoc(entry));
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to submit timesheet entry', detail: err.message });
+    }
+});
+
+// Approve/reject timesheet entry
+router.patch('/timesheets/:id/status', auth, async (req, res) => {
+    try {
+        const { status, rejection_reason, adjustment_notes } = req.body;
+        const { TimesheetEntry } = require('../models/HRMS');
+
+        const updateData = { status };
+
+        if (status === 'approved') {
+            updateData.approved_by = req.user._id;
+            updateData.approved_at = new Date();
+        } else if (status === 'rejected') {
+            updateData.rejection_reason = rejection_reason;
+        } else if (status === 'adjusted') {
+            updateData.adjustment_notes = adjustment_notes;
+            updateData.approved_by = req.user._id;
+            updateData.approved_at = new Date();
+        }
+
+        const entry = await TimesheetEntry.findByIdAndUpdate(
+            req.params.id,
+            updateData,
+            { new: true }
+        ).populate('employee_id', 'name employee_id');
+
+        if (!entry) return res.status(404).json({ error: 'Timesheet entry not found' });
+
+        res.json(transformDoc(entry));
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to update timesheet status', detail: err.message });
+    }
+});
+
+// Delete timesheet entry
+router.delete('/timesheets/:id', auth, async (req, res) => {
+    try {
+        const { TimesheetEntry } = require('../models/HRMS');
+        const entry = await TimesheetEntry.findByIdAndDelete(req.params.id);
+
+        if (!entry) return res.status(404).json({ error: 'Timesheet entry not found' });
+
+        res.json({ message: 'Timesheet entry deleted' });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to delete timesheet entry', detail: err.message });
+    }
+});
+
+// Get timesheet summary (by employee or by project)
+router.get('/timesheets/summary', auth, async (req, res) => {
+    try {
+        const { employee_id, project_id, month, year, group_by } = req.query;
+        const match = {};
+
+        if (employee_id) match.employee_id = employee_id;
+        if (project_id) match.project_id = project_id;
+
+        if (month && year) {
+            const startDate = new Date(String(year), parseInt(String(month), 10) - 1, 1);
+            const endDate = new Date(String(year), parseInt(String(month), 10), 0);
+            match.date = { $gte: startDate, $lte: endDate };
+        }
+
+        const { TimesheetEntry } = require('../models/HRMS');
+
+        let groupStage;
+        if (group_by === 'project') {
+            groupStage = {
+                _id: '$project_id',
+                total_hours: { $sum: '$hours_worked' },
+                regular_hours: { $sum: { $cond: [{ $eq: ['$work_type', 'regular'] }, '$hours_worked', 0] } },
+                overtime_hours: { $sum: { $cond: [{ $eq: ['$work_type', 'overtime'] }, '$hours_worked', 0] } },
+                entries: { $sum: 1 }
+            };
+        } else {
+            // Default: group by employee
+            groupStage = {
+                _id: '$employee_id',
+                total_hours: { $sum: '$hours_worked' },
+                regular_hours: { $sum: { $cond: [{ $eq: ['$work_type', 'regular'] }, '$hours_worked', 0] } },
+                overtime_hours: { $sum: { $cond: [{ $eq: ['$work_type', 'overtime'] }, '$hours_worked', 0] } },
+                entries: { $sum: 1 }
+            };
+        }
+
+        const summary = await TimesheetEntry.aggregate([
+            { $match: match },
+            { $group: groupStage },
+            { $lookup: { from: 'employees', localField: '_id', foreignField: '_id', as: 'employee' } },
+            { $unwind: { path: '$employee', preserveNullAndEmptyArrays: true } },
+            {
+                $project: {
+                    _id: 1,
+                    name: { $ifNull: ['$employee.name', 'Unknown'] },
+                    employee_id: { $ifNull: ['$employee.employee_id', ''] },
+                    total_hours: 1,
+                    regular_hours: 1,
+                    overtime_hours: 1,
+                    entries: 1
+                }
+            }
+        ]);
+
+        res.json(summary);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch timesheet summary', detail: err.message });
+    }
+});
+
 // ── PAYMENT DETAILS ──────────────────────────────────────────────────────────
 
 // Get employee payment details

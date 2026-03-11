@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState, useEffect, useMemo } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,9 +9,11 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Trash2, Save, Send, Check, X, FileText, Download, Eye, Edit, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Save, Send, Check, X, FileText, Download, Edit, Loader2, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { generateProformaInvoicePDF } from '@/lib/pdf-generator';
+import { LiveDocumentPreview } from '@/components/shared/layout/live-document-preview';
 import { SalesDocumentType, DocumentStatus, isApprovalRequired, getApproverRole, canApproveDocument, getStatusInfo } from '@/lib/sales-approval';
 
 interface InvoiceItem {
@@ -38,11 +40,6 @@ interface ProformaInvoice {
     status: DocumentStatus;
     createdBy: string;
     createdAt: string;
-    approvedBy?: string;
-    approvedAt?: string;
-    rejectedBy?: string;
-    rejectedAt?: string;
-    rejectedReason?: string;
 }
 
 const DEFAULT_INVOICE: Partial<ProformaInvoice> = {
@@ -60,16 +57,10 @@ export default function ProformaInvoicesPage() {
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editingInvoice, setEditingInvoice] = useState<Partial<ProformaInvoice>>(DEFAULT_INVOICE);
     const [customers, setCustomers] = useState<{ id: string; name: string }[]>([]);
-    const [viewDialogOpen, setViewDialogOpen] = useState(false);
-    const [viewingInvoice, setViewingInvoice] = useState<ProformaInvoice | null>(null);
-    const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
-    const [rejectReason, setRejectReason] = useState('');
+    const [searchQuery, setSearchQuery] = useState('');
 
     const documentType: SalesDocumentType = 'proformaInvoice';
     const approvalRequired = isApprovalRequired(documentType);
-    const approverRole = getApproverRole(documentType);
-    const currentUserRole = localStorage.getItem('user_role') || 'Employee';
-    const canApprove = canApproveDocument(documentType);
 
     useEffect(() => {
         loadInvoices();
@@ -85,8 +76,15 @@ export default function ProformaInvoicesPage() {
     const loadCustomers = () => {
         const saved = localStorage.getItem('sales_customers');
         if (saved) setCustomers(JSON.parse(saved));
-        else setCustomers([{ id: '1', name: 'ABC Corporation' }, { id: '2', name: 'XYZ Industries' }, { id: '3', name: 'Global Trading LLC' }]);
+        else setCustomers([{ id: '1', name: 'ABC Corporation' }, { id: '2', name: 'XYZ Industries' }]);
     };
+
+    const filteredInvoices = useMemo(() => {
+        return invoices.filter(i =>
+            i.number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            i.customerName?.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+    }, [invoices, searchQuery]);
 
     const generateInvoiceNumber = () => {
         const year = new Date().getFullYear();
@@ -115,12 +113,20 @@ export default function ProformaInvoicesPage() {
             }
             return item;
         });
-        setEditingInvoice(prev => ({ ...prev, items: updatedItems, ...calculateTotals({ ...prev, items: updatedItems }) }));
+        setEditingInvoice(prev => ({
+            ...prev,
+            items: updatedItems,
+            ...calculateTotals({ ...prev, items: updatedItems }),
+        }));
     };
 
     const handleRemoveItem = (id: string) => {
         const updatedItems = editingInvoice.items?.filter(item => item.id !== id);
-        setEditingInvoice(prev => ({ ...prev, items: updatedItems, ...calculateTotals({ ...prev, items: updatedItems }) }));
+        setEditingInvoice(prev => ({
+            ...prev,
+            items: updatedItems,
+            ...calculateTotals({ ...prev, items: updatedItems }),
+        }));
     };
 
     const handleSave = () => {
@@ -155,48 +161,6 @@ export default function ProformaInvoicesPage() {
         setEditingInvoice(DEFAULT_INVOICE);
     };
 
-    const handleSubmitForApproval = (invoice: ProformaInvoice) => {
-        const updated = { ...invoice, status: 'pending_approval' as DocumentStatus };
-        const updatedList = invoices.map(i => i.id === invoice.id ? updated : i);
-        setInvoices(updatedList);
-        localStorage.setItem('sales_proformaInvoices', JSON.stringify(updatedList));
-        toast.success('Submitted for approval');
-    };
-
-    const handleApprove = (invoice: ProformaInvoice) => {
-        const updated = { ...invoice, status: 'approved' as DocumentStatus, approvedBy: currentUserRole, approvedAt: new Date().toISOString() };
-        const updatedList = invoices.map(i => i.id === invoice.id ? updated : i);
-        setInvoices(updatedList);
-        localStorage.setItem('sales_proformaInvoices', JSON.stringify(updatedList));
-        toast.success('Approved');
-    };
-
-    const handleReject = (invoice: ProformaInvoice) => {
-        const updated = { ...invoice, status: 'rejected' as DocumentStatus, rejectedBy: currentUserRole, rejectedAt: new Date().toISOString(), rejectedReason: rejectReason };
-        const updatedList = invoices.map(i => i.id === invoice.id ? updated : i);
-        setInvoices(updatedList);
-        localStorage.setItem('sales_proformaInvoices', JSON.stringify(updatedList));
-        toast.success('Rejected');
-        setRejectDialogOpen(false);
-        setRejectReason('');
-    };
-
-    const handleResubmit = (invoice: ProformaInvoice) => {
-        const updated = { ...invoice, status: 'pending_approval' as DocumentStatus };
-        const updatedList = invoices.map(i => i.id === invoice.id ? updated : i);
-        setInvoices(updatedList);
-        localStorage.setItem('sales_proformaInvoices', JSON.stringify(updatedList));
-        toast.success('Resubmitted for approval');
-    };
-
-    const handleComplete = (invoice: ProformaInvoice) => {
-        const updated = { ...invoice, status: 'completed' as DocumentStatus };
-        const updatedList = invoices.map(i => i.id === invoice.id ? updated : i);
-        setInvoices(updatedList);
-        localStorage.setItem('sales_proformaInvoices', JSON.stringify(updatedList));
-        toast.success('Marked as completed');
-    };
-
     const handleDelete = (invoice: ProformaInvoice) => {
         const updatedList = invoices.filter(i => i.id !== invoice.id);
         setInvoices(updatedList);
@@ -211,165 +175,130 @@ export default function ProformaInvoicesPage() {
 
     const getStatusBadge = (status: DocumentStatus) => {
         const info = getStatusInfo(status);
-        return <Badge className={cn(info.color)}>{info.label}</Badge>;
+        return (
+            <Badge variant="outline" className={cn(
+                "text-[10px]",
+                status === 'draft' ? "bg-gray-50 text-gray-600 border-none" :
+                status === 'pending_approval' ? "bg-blue-50 text-blue-600 border-none" :
+                status === 'approved' ? "bg-emerald-50 text-emerald-600 border-none" :
+                "bg-amber-50 text-amber-600 border-none"
+            )}>
+                {info.label}
+            </Badge>
+        );
     };
-
-    const canEdit = (invoice: ProformaInvoice) => invoice.status === 'draft' || invoice.status === 'rejected';
-    const canSubmit = (invoice: ProformaInvoice) => invoice.status === 'draft';
-    const canApproveAction = (invoice: ProformaInvoice) => approvalRequired && invoice.status === 'pending_approval' && canApprove;
-    const canResubmit = (invoice: ProformaInvoice) => invoice.status === 'rejected';
-    const canComplete = (invoice: ProformaInvoice) => invoice.status === 'approved';
 
     if (loading) return <div className="flex items-center justify-center min-h-[400px]"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
+        <div className="space-y-6 max-w-7xl mx-auto pb-12">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
                 <div>
-                    <h1 className="text-2xl font-semibold">Proforma Invoices</h1>
-                    <p className="text-muted-foreground">Manage proforma invoices with approval workflow</p>
+                    <h1 className="text-3xl font-black tracking-tight text-foreground">Proforma Invoices</h1>
+                    <p className="text-muted-foreground mt-1">Manage proforma invoices</p>
                 </div>
-                <Button onClick={() => openEditDialog()} className="gap-1"><Plus className="h-4 w-4" /> Create Proforma Invoice</Button>
+                <div className="flex items-center gap-4">
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input placeholder="Search..." className="pl-9 h-10 w-64" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+                    </div>
+                    <Button onClick={() => openEditDialog()} size="sm" className="h-10 gap-2 font-bold">
+                        <Plus className="h-4 w-4" /> New Proforma
+                    </Button>
+                </div>
             </div>
 
-            {approvalRequired && (
-                <Card className="bg-blue-50 border-blue-200">
-                    <CardContent className="p-3">
-                        <p className="text-sm text-blue-800">
-                            <strong>Approval Required:</strong> Approver Role = {approverRole || 'Not configured'}
-                            {canApprove && <Badge className="ml-2 bg-blue-600">You can approve</Badge>}
-                        </p>
-                    </CardContent>
-                </Card>
-            )}
-
-            <Card>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>PI Number</TableHead>
-                            <TableHead>Customer</TableHead>
-                            <TableHead>Date</TableHead>
-                            <TableHead>Total</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {invoices.length === 0 ? (
-                            <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">No proforma invoices yet.</TableCell></TableRow>
-                        ) : invoices.map(invoice => (
-                            <TableRow key={invoice.id}>
-                                <TableCell className="font-medium">{invoice.number}</TableCell>
-                                <TableCell>{invoice.customerName}</TableCell>
-                                <TableCell>{invoice.date}</TableCell>
-                                <TableCell className="font-semibold">AED {invoice.total.toFixed(2)}</TableCell>
-                                <TableCell>{getStatusBadge(invoice.status)}</TableCell>
-                                <TableCell>
-                                    <div className="flex items-center gap-1">
-                                        <Button variant="ghost" size="icon" onClick={() => { setViewingInvoice(invoice); setViewDialogOpen(true); }}><Eye className="h-4 w-4" /></Button>
-                                        {canEdit(invoice) && <Button variant="ghost" size="icon" onClick={() => openEditDialog(invoice)}><Edit className="h-4 w-4" /></Button>}
-                                        {canSubmit(invoice) && <Button variant="ghost" size="icon" onClick={() => handleSubmitForApproval(invoice)}><Send className="h-4 w-4 text-blue-600" /></Button>}
-                                        {canApproveAction(invoice) && (
-                                            <>
-                                                <Button variant="ghost" size="icon" onClick={() => handleApprove(invoice)}><Check className="h-4 w-4 text-green-600" /></Button>
-                                                <Button variant="ghost" size="icon" onClick={() => { setViewingInvoice(invoice); setRejectDialogOpen(true); }}><X className="h-4 w-4 text-red-600" /></Button>
-                                            </>
-                                        )}
-                                        {canResubmit(invoice) && <Button variant="ghost" size="sm" onClick={() => handleResubmit(invoice)}>Resubmit</Button>}
-                                        {canComplete(invoice) && <Button variant="ghost" size="sm" onClick={() => handleComplete(invoice)}>Complete</Button>}
-                                        {canEdit(invoice) && <Button variant="ghost" size="icon" onClick={() => handleDelete(invoice)}><Trash2 className="h-4 w-4 text-red-500" /></Button>}
-                                    </div>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </Card>
-
-            {/* Create/Edit Dialog */}
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                <DialogContent className="max-w-3xl">
-                    <DialogHeader><DialogTitle>{editingInvoice.id ? 'Edit' : 'Create'} Proforma Invoice</DialogTitle></DialogHeader>
-                    <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2"><Label>PI Number</Label><Input value={editingInvoice.number || ''} onChange={e => setEditingInvoice({ ...editingInvoice, number: e.target.value })} /></div>
-                            <div className="space-y-2">
-                                <Label>Customer</Label>
-                                <Select value={editingInvoice.customerId} onValueChange={v => { const c = customers.find(c => c.id === v); setEditingInvoice({ ...editingInvoice, customerId: v, customerName: c?.name || '' }); }}>
-                                    <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
-                                    <SelectContent>{customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
-                                </Select>
-                            </div>
-                            <div className="space-y-2"><Label>Date</Label><Input type="date" value={editingInvoice.date || ''} onChange={e => setEditingInvoice({ ...editingInvoice, date: e.target.value })} /></div>
-                            <div className="space-y-2"><Label>Valid Until</Label><Input type="date" value={editingInvoice.validUntil || ''} onChange={e => setEditingInvoice({ ...editingInvoice, validUntil: e.target.value })} /></div>
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Items</Label>
-                            {editingInvoice.items?.map(item => (
-                                <div key={item.id} className="flex items-center gap-2">
-                                    <Input className="flex-1" placeholder="Description" value={item.description} onChange={e => handleUpdateItem(item.id, 'description', e.target.value)} />
-                                    <Input className="w-20" type="number" placeholder="Qty" value={item.quantity} onChange={e => handleUpdateItem(item.id, 'quantity', parseFloat(e.target.value) || 0)} />
-                                    <Input className="w-24" type="number" placeholder="Price" value={item.unitPrice} onChange={e => handleUpdateItem(item.id, 'unitPrice', parseFloat(e.target.value) || 0)} />
-                                    <Input className="w-24" value={item.total.toFixed(2)} disabled />
-                                    <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)}><Trash2 className="h-4 w-4 text-red-500" /></Button>
+            <div className="bg-card border border-border rounded-lg shadow-sm divide-y divide-border">
+                {filteredInvoices.length === 0 ? (
+                    <div className="py-16 text-center">
+                        <FileText size={32} className="mx-auto text-muted-foreground mb-3" />
+                        <p className="text-sm font-bold">No proforma invoices found</p>
+                    </div>
+                ) : (
+                    filteredInvoices.map(invoice => (
+                        <div key={invoice.id} className="p-4 flex items-center justify-between hover:bg-muted/50">
+                            <div className="flex items-center gap-6">
+                                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                                    <FileText size={20} />
                                 </div>
-                            ))}
-                            <Button variant="outline" size="sm" onClick={handleAddItem}><Plus className="h-4 w-4 mr-1" /> Add Item</Button>
+                                <div>
+                                    <div className="flex items-center gap-3">
+                                        <h3 className="text-sm font-bold">{invoice.number}</h3>
+                                        {getStatusBadge(invoice.status)}
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mt-1">{invoice.customerName} • {invoice.date}</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-6">
+                                <div className="text-right">
+                                    <p className="text-sm font-bold">AED {invoice.total.toFixed(2)}</p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => generateProformaInvoicePDF(invoice)}>
+                                        <Download size={16} />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => openEditDialog(invoice)}>
+                                        <Edit size={16} />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-rose-600" onClick={() => handleDelete(invoice)}>
+                                        <Trash2 size={16} />
+                                    </Button>
+                                </div>
+                            </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2"><Label>Tax Rate (%)</Label><Input type="number" value={editingInvoice.taxRate || 5} onChange={e => { const rate = parseFloat(e.target.value) || 0; setEditingInvoice(prev => ({ ...prev, taxRate: rate, ...calculateTotals({ ...prev, taxRate: rate }) })); }} /></div>
-                            <div className="space-y-2"><Label>Notes</Label><Input value={editingInvoice.notes || ''} onChange={e => setEditingInvoice({ ...editingInvoice, notes: e.target.value })} /></div>
+                    ))
+                )}
+            </div>
+
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                <DialogContent className="max-w-6xl max-h-[90vh] overflow-auto">
+                    <DialogHeader>
+                        <DialogTitle>{editingInvoice.id ? 'Edit' : 'Create'} Proforma Invoice</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid grid-cols-2 gap-6">
+                        <div className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2"><Label>PI Number</Label><Input value={editingInvoice.number || ''} onChange={e => setEditingInvoice({ ...editingInvoice, number: e.target.value })} /></div>
+                                <div className="space-y-2">
+                                    <Label>Customer</Label>
+                                    <Select value={editingInvoice.customerId} onValueChange={v => { const c = customers.find(c => c.id === v); setEditingInvoice({ ...editingInvoice, customerId: v, customerName: c?.name || '' }); }}>
+                                        <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
+                                        <SelectContent>{customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2"><Label>Date</Label><Input type="date" value={editingInvoice.date || ''} onChange={e => setEditingInvoice({ ...editingInvoice, date: e.target.value })} /></div>
+                                <div className="space-y-2"><Label>Valid Until</Label><Input type="date" value={editingInvoice.validUntil || ''} onChange={e => setEditingInvoice({ ...editingInvoice, validUntil: e.target.value })} /></div>
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Items</Label>
+                                {editingInvoice.items?.map(item => (
+                                    <div key={item.id} className="flex items-center gap-2">
+                                        <Input className="flex-1" placeholder="Description" value={item.description} onChange={e => handleUpdateItem(item.id, 'description', e.target.value)} />
+                                        <Input className="w-16" type="number" placeholder="Qty" value={item.quantity} onChange={e => handleUpdateItem(item.id, 'quantity', parseFloat(e.target.value) || 0)} />
+                                        <Input className="w-20" type="number" placeholder="Price" value={item.unitPrice} onChange={e => handleUpdateItem(item.id, 'unitPrice', parseFloat(e.target.value) || 0)} />
+                                        <Input className="w-20" value={item.total.toFixed(2)} disabled />
+                                        <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)}><Trash2 className="h-4 w-4 text-red-500" /></Button>
+                                    </div>
+                                ))}
+                                <Button variant="outline" size="sm" onClick={handleAddItem}><Plus className="h-4 w-4 mr-1" /> Add Item</Button>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2"><Label>Tax Rate (%)</Label><Input type="number" value={editingInvoice.taxRate || 5} onChange={e => { const rate = parseFloat(e.target.value) || 0; setEditingInvoice(prev => ({ ...prev, taxRate: rate, ...calculateTotals({ ...prev, taxRate: rate }) })); }} /></div>
+                                <div className="space-y-2"><Label>Notes</Label><Input value={editingInvoice.notes || ''} onChange={e => setEditingInvoice({ ...editingInvoice, notes: e.target.value })} /></div>
+                            </div>
+                            <div className="border-t pt-4 space-y-2">
+                                <div className="flex justify-between"><span>Subtotal:</span><span>AED {(editingInvoice.subtotal || 0).toFixed(2)}</span></div>
+                                <div className="flex justify-between"><span>Tax:</span><span>AED {(editingInvoice.taxAmount || 0).toFixed(2)}</span></div>
+                                <div className="flex justify-between font-bold text-lg"><span>Total:</span><span>AED {(editingInvoice.total || 0).toFixed(2)}</span></div>
+                            </div>
                         </div>
-                        <div className="border-t pt-4 space-y-2">
-                            <div className="flex justify-between"><span>Subtotal:</span><span>AED {(editingInvoice.subtotal || 0).toFixed(2)}</span></div>
-                            <div className="flex justify-between"><span>Tax:</span><span>AED {(editingInvoice.taxAmount || 0).toFixed(2)}</span></div>
-                            <div className="flex justify-between font-bold text-lg"><span>Total:</span><span>AED {(editingInvoice.total || 0).toFixed(2)}</span></div>
+                        <div className="border rounded-lg overflow-hidden bg-gray-50">
+                            <LiveDocumentPreview data={editingInvoice as any} type="proforma" />
                         </div>
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
                         <Button onClick={handleSave}><Save className="h-4 w-4 mr-1" /> Save</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
-            {/* View Dialog */}
-            <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-                <DialogContent className="max-w-2xl">
-                    <DialogHeader><DialogTitle>Proforma Invoice {viewingInvoice?.number}</DialogTitle></DialogHeader>
-                    {viewingInvoice && (
-                        <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div><Label>Customer:</Label><p>{viewingInvoice.customerName}</p></div>
-                                <div><Label>Date:</Label><p>{viewingInvoice.date}</p></div>
-                                <div><Label>Status:</Label>{getStatusBadge(viewingInvoice.status)}</div>
-                                <div><Label>Total:</Label><p className="font-bold">AED {viewingInvoice.total.toFixed(2)}</p></div>
-                            </div>
-                            <Table>
-                                <TableHeader><TableRow><TableHead>Description</TableHead><TableHead>Qty</TableHead><TableHead>Price</TableHead><TableHead>Total</TableHead></TableRow></TableHeader>
-                                <TableBody>
-                                    {viewingInvoice.items?.map(item => (
-                                        <TableRow key={item.id}><TableCell>{item.description}</TableCell><TableCell>{item.quantity}</TableCell><TableCell>{item.unitPrice}</TableCell><TableCell>{item.total.toFixed(2)}</TableCell></TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    )}
-                </DialogContent>
-            </Dialog>
-
-            {/* Reject Dialog */}
-            <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
-                <DialogContent>
-                    <DialogHeader><DialogTitle>Reject Proforma Invoice</DialogTitle></DialogHeader>
-                    <div className="space-y-4 py-4">
-                        <Label>Reason for rejection</Label>
-                        <Input value={rejectReason} onChange={e => setRejectReason(e.target.value)} placeholder="Enter rejection reason" />
-                    </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setRejectDialogOpen(false)}>Cancel</Button>
-                        <Button variant="destructive" onClick={() => viewingInvoice && handleReject(viewingInvoice)}>Reject</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

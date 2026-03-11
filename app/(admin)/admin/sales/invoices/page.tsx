@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState, useEffect, useMemo } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,26 +9,18 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Trash2, Save, Send, Check, X, FileText, Download, Eye, Edit, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Save, Send, Check, X, FileText, Download, Edit, Loader2, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { generateSalesInvoicePDF } from '@/lib/pdf-generator';
+import { LiveDocumentPreview } from '@/components/shared/layout/live-document-preview';
 import {
-    SalesDocument,
     SalesDocumentType,
     DocumentStatus,
     isApprovalRequired,
     getApproverRole,
     canApproveDocument,
     getStatusInfo,
-    submitForApproval,
-    approveDocument,
-    rejectDocument,
-    resubmitDocument,
-    completeDocument,
-    getDocuments,
-    saveDocument,
-    deleteDocument,
-    getCurrentUserRole,
 } from '@/lib/sales-approval';
 
 interface InvoiceItem {
@@ -77,16 +69,15 @@ export default function SalesInvoicesPage() {
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editingInvoice, setEditingInvoice] = useState<Partial<SalesInvoice>>(DEFAULT_INVOICE);
     const [customers, setCustomers] = useState<{ id: string; name: string }[]>([]);
-    const [viewDialogOpen, setViewDialogOpen] = useState(false);
-    const [viewingInvoice, setViewingInvoice] = useState<SalesInvoice | null>(null);
     const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
     const [rejectReason, setRejectReason] = useState('');
-    const [actionLoading, setActionLoading] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [invoiceForReject, setInvoiceForReject] = useState<SalesInvoice | null>(null);
 
     const documentType: SalesDocumentType = 'salesInvoice';
     const approvalRequired = isApprovalRequired(documentType);
     const approverRole = getApproverRole(documentType);
-    const currentUserRole = getCurrentUserRole();
+    const currentUserRole = localStorage.getItem('user_role') || 'Employee';
     const canApprove = canApproveDocument(documentType);
 
     useEffect(() => {
@@ -107,7 +98,6 @@ export default function SalesInvoicesPage() {
         if (saved) {
             setCustomers(JSON.parse(saved));
         } else {
-            // Default customers
             setCustomers([
                 { id: '1', name: 'ABC Corporation' },
                 { id: '2', name: 'XYZ Industries' },
@@ -115,6 +105,13 @@ export default function SalesInvoicesPage() {
             ]);
         }
     };
+
+    const filteredInvoices = useMemo(() => {
+        return invoices.filter(i =>
+            i.number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            i.customerName?.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+    }, [invoices, searchQuery]);
 
     const generateInvoiceNumber = () => {
         const year = new Date().getFullYear();
@@ -227,14 +224,16 @@ export default function SalesInvoicesPage() {
         toast.success('Invoice approved');
     };
 
-    const handleReject = (invoice: SalesInvoice) => {
-        const updated = { ...invoice, status: 'rejected' as DocumentStatus, rejectedBy: currentUserRole, rejectedAt: new Date().toISOString(), rejectedReason: rejectReason };
-        const updatedList = invoices.map(i => i.id === invoice.id ? updated : i);
+    const handleReject = () => {
+        if (!invoiceForReject) return;
+        const updated = { ...invoiceForReject, status: 'rejected' as DocumentStatus, rejectedBy: currentUserRole, rejectedAt: new Date().toISOString(), rejectedReason: rejectReason };
+        const updatedList = invoices.map(i => i.id === invoiceForReject.id ? updated : i);
         setInvoices(updatedList);
         localStorage.setItem('sales_invoices', JSON.stringify(updatedList));
         toast.success('Invoice rejected');
         setRejectDialogOpen(false);
         setRejectReason('');
+        setInvoiceForReject(null);
     };
 
     const handleResubmit = (invoice: SalesInvoice) => {
@@ -269,14 +268,20 @@ export default function SalesInvoicesPage() {
         setDialogOpen(true);
     };
 
-    const openViewDialog = (invoice: SalesInvoice) => {
-        setViewingInvoice(invoice);
-        setViewDialogOpen(true);
-    };
-
     const getStatusBadge = (status: DocumentStatus) => {
         const info = getStatusInfo(status);
-        return <Badge className={cn(info.color)}>{info.label}</Badge>;
+        return (
+            <Badge variant="outline" className={cn(
+                "text-[10px]",
+                status === 'draft' ? "bg-gray-50 text-gray-600 border-none" :
+                status === 'pending_approval' ? "bg-blue-50 text-blue-600 border-none" :
+                status === 'approved' ? "bg-emerald-50 text-emerald-600 border-none" :
+                status === 'rejected' ? "bg-rose-50 text-rose-600 border-none" :
+                    "bg-amber-50 text-amber-600 border-none"
+            )}>
+                {info.label}
+            </Badge>
+        );
     };
 
     const canEdit = (invoice: SalesInvoice) => invoice.status === 'draft' || invoice.status === 'rejected';
@@ -291,14 +296,29 @@ export default function SalesInvoicesPage() {
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            {/* Header */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
                 <div>
-                    <h1 className="text-2xl font-semibold">Sales Invoices</h1>
-                    <p className="text-muted-foreground">Manage sales invoices with approval workflow</p>
+                    <h1 className="text-3xl font-black tracking-tight text-foreground">Sales Invoices</h1>
+                    <p className="text-muted-foreground mt-1">Manage sales invoices with approval workflow</p>
                 </div>
-                <Button onClick={() => openEditDialog()} className="gap-1">
-                    <Plus className="h-4 w-4" /> Create Invoice
-                </Button>
+
+                <div className="flex items-center gap-4">
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Search invoices..."
+                            className="pl-9 h-10 w-64 border-border bg-background"
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+
+                    <Button onClick={() => openEditDialog()} size="sm" className="h-10 gap-2 font-bold shadow-sm">
+                        <Plus className="h-4 w-4" />
+                        New Invoice
+                    </Button>
+                </div>
             </div>
 
             {approvalRequired && (
@@ -312,145 +332,153 @@ export default function SalesInvoicesPage() {
                 </Card>
             )}
 
-            <Card>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Invoice #</TableHead>
-                            <TableHead>Customer</TableHead>
-                            <TableHead>Date</TableHead>
-                            <TableHead>Total</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {invoices.length === 0 ? (
-                            <TableRow>
-                                <TableCell colSpan={6} className="text-center text-muted-foreground">No invoices yet. Create your first invoice.</TableCell>
-                            </TableRow>
-                        ) : invoices.map(invoice => (
-                            <TableRow key={invoice.id}>
-                                <TableCell className="font-medium">{invoice.number}</TableCell>
-                                <TableCell>{invoice.customerName}</TableCell>
-                                <TableCell>{invoice.date}</TableCell>
-                                <TableCell className="font-semibold">AED {invoice.total.toFixed(2)}</TableCell>
-                                <TableCell>{getStatusBadge(invoice.status)}</TableCell>
-                                <TableCell>
-                                    <div className="flex items-center gap-1">
-                                        <Button variant="ghost" size="icon" onClick={() => openViewDialog(invoice)}><Eye className="h-4 w-4" /></Button>
-                                        {canEdit(invoice) && <Button variant="ghost" size="icon" onClick={() => openEditDialog(invoice)}><Edit className="h-4 w-4" /></Button>}
-                                        {canSubmit(invoice) && <Button variant="ghost" size="icon" onClick={() => handleSubmitForApproval(invoice)}><Send className="h-4 w-4 text-blue-600" />Submit</Button>}
-                                        {canApproveAction(invoice) && (
-                                            <>
-                                                <Button variant="ghost" size="icon" onClick={() => handleApprove(invoice)}><Check className="h-4 w-4 text-green-600" /></Button>
-                                                <Button variant="ghost" size="icon" onClick={() => { setViewingInvoice(invoice); setRejectDialogOpen(true); }}><X className="h-4 w-4 text-red-600" /></Button>
-                                            </>
-                                        )}
-                                        {canResubmit(invoice) && <Button variant="ghost" size="sm" onClick={() => handleResubmit(invoice)}>Resubmit</Button>}
-                                        {canComplete(invoice) && <Button variant="ghost" size="sm" onClick={() => handleComplete(invoice)}>Complete</Button>}
-                                        {canEdit(invoice) && <Button variant="ghost" size="icon" onClick={() => handleDelete(invoice)}><Trash2 className="h-4 w-4 text-red-500" /></Button>}
+            {/* Invoice List */}
+            <div className="bg-card border border-border rounded-lg shadow-sm divide-y divide-border">
+                {filteredInvoices.length === 0 ? (
+                    <div className="py-16 text-center">
+                        <FileText size={32} className="mx-auto text-muted-foreground mb-3" />
+                        <p className="text-sm font-bold text-foreground">No invoices found</p>
+                        <p className="text-xs text-muted-foreground mt-1">Create a new invoice to get started.</p>
+                    </div>
+                ) : (
+                    filteredInvoices.map(invoice => (
+                        <div key={invoice.id} className="p-4 flex items-center justify-between hover:bg-muted/50 transition-colors group">
+                            <div className="flex items-center gap-6">
+                                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                                    <FileText size={20} />
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-3">
+                                        <h3 className="text-sm font-bold text-foreground">{invoice.number}</h3>
+                                        {getStatusBadge(invoice.status)}
                                     </div>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </Card>
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                        {invoice.customerName || 'Customer'} • Due {invoice.dueDate || 'N/A'}
+                                    </p>
+                                </div>
+                            </div>
 
-            {/* Create/Edit Dialog */}
+                            <div className="flex items-center gap-6">
+                                <div className="text-right">
+                                    <p className="text-sm font-bold text-foreground">AED {invoice.total.toFixed(2)}</p>
+                                    <p className="text-[10px] text-muted-foreground">Total</p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => generateInvoicePDF(invoice, null, null)} title="Download PDF">
+                                        <Download size={16} />
+                                    </Button>
+                                    {canEdit(invoice) && (
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => openEditDialog(invoice)}>
+                                            <Edit size={16} />
+                                        </Button>
+                                    )}
+                                    {canSubmit(invoice) && (
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-blue-600" onClick={() => handleSubmitForApproval(invoice)} title="Submit for approval">
+                                            <Send size={16} />
+                                        </Button>
+                                    )}
+                                    {canApproveAction(invoice) && (
+                                        <>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-green-600" onClick={() => handleApprove(invoice)} title="Approve">
+                                                <Check size={16} />
+                                            </Button>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-red-600" onClick={() => { setInvoiceForReject(invoice); setRejectDialogOpen(true); }} title="Reject">
+                                                <X size={16} />
+                                            </Button>
+                                        </>
+                                    )}
+                                    {canResubmit(invoice) && (
+                                        <Button variant="ghost" size="sm" className="h-8" onClick={() => handleResubmit(invoice)}>Resubmit</Button>
+                                    )}
+                                    {canComplete(invoice) && (
+                                        <Button variant="ghost" size="sm" className="h-8" onClick={() => handleComplete(invoice)}>Complete</Button>
+                                    )}
+                                    {canEdit(invoice) && (
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-rose-600 hover:bg-rose-50" onClick={() => handleDelete(invoice)}>
+                                            <Trash2 size={16} />
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    ))
+                )}
+            </div>
+
+            {/* Create/Edit Dialog with Live Preview */}
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                <DialogContent className="max-w-3xl">
+                <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>{editingInvoice.id ? 'Edit Invoice' : 'Create Invoice'}</DialogTitle>
                     </DialogHeader>
-                    <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label>Invoice Number</Label>
-                                <Input value={editingInvoice.number || ''} onChange={e => setEditingInvoice({ ...editingInvoice, number: e.target.value })} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Customer</Label>
-                                <Select value={editingInvoice.customerId} onValueChange={v => { const c = customers.find(c => c.id === v); setEditingInvoice({ ...editingInvoice, customerId: v, customerName: c?.name || '' }); }}>
-                                    <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
-                                    <SelectContent>
-                                        {customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Date</Label>
-                                <Input type="date" value={editingInvoice.date || ''} onChange={e => setEditingInvoice({ ...editingInvoice, date: e.target.value })} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Due Date</Label>
-                                <Input type="date" value={editingInvoice.dueDate || ''} onChange={e => setEditingInvoice({ ...editingInvoice, dueDate: e.target.value })} />
-                            </div>
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label>Items</Label>
-                            {editingInvoice.items?.map(item => (
-                                <div key={item.id} className="flex items-center gap-2">
-                                    <Input className="flex-1" placeholder="Description" value={item.description} onChange={e => handleUpdateItem(item.id, 'description', e.target.value)} />
-                                    <Input className="w-20" type="number" placeholder="Qty" value={item.quantity} onChange={e => handleUpdateItem(item.id, 'quantity', parseFloat(e.target.value) || 0)} />
-                                    <Input className="w-24" type="number" placeholder="Price" value={item.unitPrice} onChange={e => handleUpdateItem(item.id, 'unitPrice', parseFloat(e.target.value) || 0)} />
-                                    <Input className="w-24" value={item.total.toFixed(2)} disabled />
-                                    <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)}><Trash2 className="h-4 w-4 text-red-500" /></Button>
+                    <div className="grid grid-cols-2 gap-6">
+                        {/* Form */}
+                        <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label>Invoice Number</Label>
+                                    <Input value={editingInvoice.number || ''} onChange={e => setEditingInvoice({ ...editingInvoice, number: e.target.value })} />
                                 </div>
-                            ))}
-                            <Button variant="outline" size="sm" onClick={handleAddItem}><Plus className="h-4 w-4 mr-1" /> Add Item</Button>
+                                <div className="space-y-2">
+                                    <Label>Customer</Label>
+                                    <Select value={editingInvoice.customerId} onValueChange={v => { const c = customers.find(c => c.id === v); setEditingInvoice({ ...editingInvoice, customerId: v, customerName: c?.name || '' }); }}>
+                                        <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
+                                        <SelectContent>
+                                            {customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Date</Label>
+                                    <Input type="date" value={editingInvoice.date || ''} onChange={e => setEditingInvoice({ ...editingInvoice, date: e.target.value })} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Due Date</Label>
+                                    <Input type="date" value={editingInvoice.dueDate || ''} onChange={e => setEditingInvoice({ ...editingInvoice, dueDate: e.target.value })} />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label>Items</Label>
+                                {editingInvoice.items?.map(item => (
+                                    <div key={item.id} className="flex items-center gap-2">
+                                        <Input className="flex-1" placeholder="Description" value={item.description} onChange={e => handleUpdateItem(item.id, 'description', e.target.value)} />
+                                        <Input className="w-20" type="number" placeholder="Qty" value={item.quantity} onChange={e => handleUpdateItem(item.id, 'quantity', parseFloat(e.target.value) || 0)} />
+                                        <Input className="w-24" type="number" placeholder="Price" value={item.unitPrice} onChange={e => handleUpdateItem(item.id, 'unitPrice', parseFloat(e.target.value) || 0)} />
+                                        <Input className="w-24" value={item.total.toFixed(2)} disabled />
+                                        <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)}><Trash2 className="h-4 w-4 text-red-500" /></Button>
+                                    </div>
+                                ))}
+                                <Button variant="outline" size="sm" onClick={handleAddItem}><Plus className="h-4 w-4 mr-1" /> Add Item</Button>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label>Tax Rate (%)</Label>
+                                    <Input type="number" value={editingInvoice.taxRate || 5} onChange={e => { const rate = parseFloat(e.target.value) || 0; setEditingInvoice(prev => ({ ...prev, taxRate: rate, ...calculateTotals({ ...prev, taxRate: rate }) })); }} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Notes</Label>
+                                    <Input value={editingInvoice.notes || ''} onChange={e => setEditingInvoice({ ...editingInvoice, notes: e.target.value })} />
+                                </div>
+                            </div>
+
+                            <div className="border-t pt-4 space-y-2">
+                                <div className="flex justify-between"><span>Subtotal:</span><span>AED {(editingInvoice.subtotal || 0).toFixed(2)}</span></div>
+                                <div className="flex justify-between"><span>Tax:</span><span>AED {(editingInvoice.taxAmount || 0).toFixed(2)}</span></div>
+                                <div className="flex justify-between font-bold text-lg"><span>Total:</span><span>AED {(editingInvoice.total || 0).toFixed(2)}</span></div>
+                            </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label>Tax Rate (%)</Label>
-                                <Input type="number" value={editingInvoice.taxRate || 5} onChange={e => { const rate = parseFloat(e.target.value) || 0; setEditingInvoice(prev => ({ ...prev, taxRate: rate, ...calculateTotals({ ...prev, taxRate: rate }) })); }} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Notes</Label>
-                                <Input value={editingInvoice.notes || ''} onChange={e => setEditingInvoice({ ...editingInvoice, notes: e.target.value })} />
-                            </div>
-                        </div>
-
-                        <div className="border-t pt-4 space-y-2">
-                            <div className="flex justify-between"><span>Subtotal:</span><span>AED {(editingInvoice.subtotal || 0).toFixed(2)}</span></div>
-                            <div className="flex justify-between"><span>Tax:</span><span>AED {(editingInvoice.taxAmount || 0).toFixed(2)}</span></div>
-                            <div className="flex justify-between font-bold text-lg"><span>Total:</span><span>AED {(editingInvoice.total || 0).toFixed(2)}</span></div>
+                        {/* Live Preview */}
+                        <div className="border rounded-lg overflow-hidden">
+                            <LiveDocumentPreview data={editingInvoice as any} type="invoice" />
                         </div>
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
                         <Button onClick={handleSave}><Save className="h-4 w-4 mr-1" /> Save</Button>
                     </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
-            {/* View Dialog */}
-            <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-                <DialogContent className="max-w-2xl">
-                    <DialogHeader>
-                        <DialogTitle>Invoice {viewingInvoice?.number}</DialogTitle>
-                    </DialogHeader>
-                    {viewingInvoice && (
-                        <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div><Label>Customer:</Label><p>{viewingInvoice.customerName}</p></div>
-                                <div><Label>Date:</Label><p>{viewingInvoice.date}</p></div>
-                                <div><Label>Status:</Label>{getStatusBadge(viewingInvoice.status)}</div>
-                                <div><Label>Total:</Label><p className="font-bold">AED {viewingInvoice.total.toFixed(2)}</p></div>
-                            </div>
-                            <Table>
-                                <TableHeader><TableRow><TableHead>Description</TableHead><TableHead>Qty</TableHead><TableHead>Price</TableHead><TableHead>Total</TableHead></TableRow></TableHeader>
-                                <TableBody>
-                                    {viewingInvoice.items?.map(item => (
-                                        <TableRow key={item.id}><TableCell>{item.description}</TableCell><TableCell>{item.quantity}</TableCell><TableCell>{item.unitPrice}</TableCell><TableCell>{item.total.toFixed(2)}</TableCell></TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    )}
                 </DialogContent>
             </Dialog>
 
@@ -463,8 +491,8 @@ export default function SalesInvoicesPage() {
                         <Input value={rejectReason} onChange={e => setRejectReason(e.target.value)} placeholder="Enter rejection reason" />
                     </div>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setRejectDialogOpen(false)}>Cancel</Button>
-                        <Button variant="destructive" onClick={() => viewingInvoice && handleReject(viewingInvoice)}>Reject</Button>
+                        <Button variant="outline" onClick={() => { setRejectDialogOpen(false); setInvoiceForReject(null); }}>Cancel</Button>
+                        <Button variant="destructive" onClick={handleReject}>Reject</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { DashboardShell } from "@/components/shared/layout/dashboard-shell";
+
 
 import { ROLES } from "./_lib/data";
 import { useInventory } from "./_hooks/inventory";
@@ -58,8 +58,7 @@ export default function InventoryControlPage() {
   );
 
   return (
-    <DashboardShell requireAdmin>
-      <div className="space-y-8 max-w-7xl mx-auto pb-12 w-full">
+    <div className="space-y-8 max-w-7xl mx-auto pb-12 w-full">
         {/* Header Area */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
           <div className="flex items-center gap-4">
@@ -252,6 +251,5 @@ export default function InventoryControlPage() {
           isSettingsOpen={isSettingsOpen} setIsSettingsOpen={setIsSettingsOpen} settingsForm={settingsForm} setSettingsForm={setSettingsForm} handleSaveSettings={handleSaveSettings}
         />
       </div>
-    </DashboardShell>
   );
 }
