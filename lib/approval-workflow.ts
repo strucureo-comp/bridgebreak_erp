@@ -1,7 +1,18 @@
 import { getSettings } from '@/lib/api';
-import type { DocumentApprovalConfig } from '@/app/(admin)/admin/settings/_components/document-approval-config';
 
 export type DocumentType = 'quotation' | 'invoice';
+
+export interface DocumentApprovalSettings {
+    enabled: boolean;
+    requiredRole: string;
+    threshold?: number;
+    allowSelfApproval: boolean;
+}
+
+export interface DocumentApprovalConfig {
+    quotationApproval: DocumentApprovalSettings;
+    invoiceApproval: DocumentApprovalSettings;
+}
 
 export interface ApprovalRequirement {
     requiresApproval: boolean;

@@ -29,6 +29,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Skeleton } from '@/components/ui/skeleton';
+import { useCompanySettings } from '@/lib/hooks/use-company-settings';
+import { formatCurrency } from '@/lib/utils/currency';
 
 interface Separation {
   id: string;
@@ -58,15 +61,17 @@ interface FinalSettlement {
 
 export default function SeparationModule() {
   const { toast } = useToast();
+  const { baseCurrency } = useCompanySettings();
   const [activeTab, setActiveTab] = useState('separations');
   const [separations, setSeparations] = useState<Separation[]>([]);
   const [settlements, setSettlements] = useState<FinalSettlement[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const fetchSeparations = async () => {
     try {
       const data = await getSeparations();
-      setSeparations(data);
+      setSeparations(data || []);
     } catch (err) {
       toast({ title: 'Error', description: 'Failed to fetch separations', variant: 'destructive' });
     }
@@ -75,7 +80,7 @@ export default function SeparationModule() {
   const fetchSettlements = async () => {
     try {
       const data = await getFinalSettlements();
-      setSettlements(data);
+      setSettlements(data || []);
     } catch (err) {
       toast({ title: 'Error', description: 'Failed to fetch final settlements', variant: 'destructive' });
     }
@@ -84,16 +89,23 @@ export default function SeparationModule() {
   const fetchEmployees = async () => {
     try {
       const data = await getEmployees();
-      setEmployees(data);
+      setEmployees(data || []);
     } catch (err) {
       console.error('Failed to fetch employees');
     }
   };
 
   useEffect(() => {
-    fetchSeparations();
-    fetchSettlements();
-    fetchEmployees();
+    const loadAll = async () => {
+      setLoading(true);
+      await Promise.all([
+        fetchSeparations(),
+        fetchSettlements(),
+        fetchEmployees()
+      ]);
+      setLoading(false);
+    };
+    loadAll();
   }, []);
 
   const getStatusBadge = (status: string) => {
@@ -156,82 +168,95 @@ export default function SeparationModule() {
               <CardTitle>Employee Separations</CardTitle>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Employee</TableHead>
-                    <TableHead>Employee Status</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Last Working Date</TableHead>
-                    <TableHead>Notice Period</TableHead>
-                    <TableHead>Clearance</TableHead>
-                    <TableHead>Settlement</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {separations.map((sep) => {
-                    const emp = sep.employee as { name?: string; employee_id?: string; status?: string } | undefined;
-                    const empId = typeof sep.employee_id === 'object' ? sep.employee_id as { name?: string; employee_id?: string; status?: string } : undefined;
-                    return (
-                    <TableRow key={sep.id}>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{(emp as any)?.name ?? (empId as any)?.name ?? <span className="text-muted">Unknown Employee</span>}</p>
-                          <p className="text-sm text-muted-foreground">{(emp as any)?.employee_id ?? (empId as any)?.employee_id ?? ''}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {(emp as any)?.status ? getEmployeeStatusBadge((emp as any).status) : (empId as any)?.status ? getEmployeeStatusBadge((empId as any).status) : <Badge variant="outline">Unknown</Badge>}
-                      </TableCell>
-                      <TableCell>{sep.separation_type}</TableCell>
-                      <TableCell>{new Date(sep.last_working_date).toLocaleDateString()}</TableCell>
-                      <TableCell>{sep.notice_period_days} days</TableCell>
-                      <TableCell>{sep.status === 'cancelled' ? getStatusBadge('cancelled') : getStatusBadge(sep.clearance_status)}</TableCell>
-                      <TableCell>{sep.status === 'cancelled' ? getStatusBadge('cancelled') : getStatusBadge(sep.final_settlement_status)}</TableCell>
-                      <TableCell>
-                        <Select 
-                          value={sep.status} 
-                          onValueChange={async (newStatus) => {
-                            const result = await updateSeparationStatus(sep.id, newStatus);
-                            if (result) {
-                              toast({ 
-                                title: 'Success', 
-                                description: `Separation status updated. Employee status synced to: ${result.employeeStatus}` 
-                              });
-                              fetchSeparations();
-                            } else {
-                              toast({ title: 'Error', description: 'Failed to update status', variant: 'destructive' });
-                            }
-                          }}
-                        >
-                          <SelectTrigger className="h-8 w-[140px]">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="initiated">🟡 Initiated</SelectItem>
-                            <SelectItem value="in-progress">🔵 In Progress</SelectItem>
-                            <SelectItem value="completed">✅ Completed</SelectItem>
-                            <SelectItem value="cancelled">⚫ Cancelled</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell>
-                        {sep.status === 'in-progress' && sep.final_settlement_status === 'pending' && (
-                          <Button size="sm" onClick={() => {
-                            // Navigate to create final settlement
-                            toast({ title: 'Info', description: 'Create final settlement for this employee' });
-                          }}>
-                            Calculate Settlement
-                          </Button>
-                        )}
-                      </TableCell>
+              {loading ? (
+                <div className="space-y-3">
+                  {[...Array(5)].map((_, i) => (
+                    <Skeleton key={i} className="h-12 w-full rounded-md" />
+                  ))}
+                </div>
+              ) : separations.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                  <p className="text-lg font-medium">No separations found</p>
+                  <p className="text-sm mt-1">Employee separations will appear here</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Employee</TableHead>
+                      <TableHead>Employee Status</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Last Working Date</TableHead>
+                      <TableHead>Notice Period</TableHead>
+                      <TableHead>Clearance</TableHead>
+                      <TableHead>Settlement</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
-                  );
-                  })}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {separations.map((sep) => {
+                      const emp = sep.employee as { name?: string; employee_id?: string; status?: string } | undefined;
+                      const empId = typeof sep.employee_id === 'object' ? sep.employee_id as { name?: string; employee_id?: string; status?: string } : undefined;
+                      return (
+                      <TableRow key={sep.id}>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">{(emp as any)?.name ?? (empId as any)?.name ?? <span className="text-muted">Unknown Employee</span>}</p>
+                            <p className="text-sm text-muted-foreground">{(emp as any)?.employee_id ?? (empId as any)?.employee_id ?? ''}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {(emp as any)?.status ? getEmployeeStatusBadge((emp as any).status) : (empId as any)?.status ? getEmployeeStatusBadge((empId as any).status) : <Badge variant="outline">Unknown</Badge>}
+                        </TableCell>
+                        <TableCell>{sep.separation_type}</TableCell>
+                        <TableCell>{new Date(sep.last_working_date).toLocaleDateString()}</TableCell>
+                        <TableCell>{sep.notice_period_days} days</TableCell>
+                        <TableCell>{sep.status === 'cancelled' ? getStatusBadge('cancelled') : getStatusBadge(sep.clearance_status)}</TableCell>
+                        <TableCell>{sep.status === 'cancelled' ? getStatusBadge('cancelled') : getStatusBadge(sep.final_settlement_status)}</TableCell>
+                        <TableCell>
+                          <Select
+                            value={sep.status}
+                            onValueChange={async (newStatus) => {
+                              const result = await updateSeparationStatus(sep.id, newStatus);
+                              if (result) {
+                                toast({
+                                  title: 'Success',
+                                  description: `Separation status updated. Employee status synced to: ${result.employeeStatus}`
+                                });
+                                fetchSeparations();
+                              } else {
+                                toast({ title: 'Error', description: 'Failed to update status', variant: 'destructive' });
+                              }
+                            }}
+                          >
+                            <SelectTrigger className="h-8 w-[140px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="initiated">🟡 Initiated</SelectItem>
+                              <SelectItem value="in-progress">🔵 In Progress</SelectItem>
+                              <SelectItem value="completed">✅ Completed</SelectItem>
+                              <SelectItem value="cancelled">⚫ Cancelled</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>
+                          {sep.status === 'in-progress' && sep.final_settlement_status === 'pending' && (
+                            <Button size="sm" onClick={() => {
+                              // Navigate to create final settlement
+                              toast({ title: 'Info', description: 'Create final settlement for this employee' });
+                            }}>
+                              Calculate Settlement
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                    })}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -246,60 +271,73 @@ export default function SeparationModule() {
               <CardTitle>Final Settlement Calculations</CardTitle>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Employee</TableHead>
-                    <TableHead>Employee Status</TableHead>
-                    <TableHead>Calculation Date</TableHead>
-                    <TableHead>Payables</TableHead>
-                    <TableHead>Deductions</TableHead>
-                    <TableHead>Net Amount</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {settlements.map((settlement) => {
-                    const sEmp = settlement.employee_id as any;
-                    return (
-                    <TableRow key={settlement.id}>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{sEmp?.name || '—'}</p>
-                          <p className="text-sm text-muted-foreground">{sEmp?.employee_id || ''}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {sEmp?.status ? getEmployeeStatusBadge(sEmp.status) : <Badge variant="outline">Unknown</Badge>}
-                      </TableCell>
-                      <TableCell>{new Date(settlement.calculation_date).toLocaleDateString()}</TableCell>
-                      <TableCell className="text-green-600">AED {settlement.total_payable.toLocaleString()}</TableCell>
-                      <TableCell className="text-red-600">AED {settlement.total_deductions.toLocaleString()}</TableCell>
-                      <TableCell className="font-bold">AED {settlement.net_settlement_amount.toLocaleString()}</TableCell>
-                      <TableCell>{getStatusBadge(settlement.payment_status)}</TableCell>
-                      <TableCell>
-                        {settlement.payment_status === 'pending' && (
-                          <Button size="sm" onClick={async () => {
-                            try {
-                              const approved = await approveFinalSettlement(settlement.id);
-                              if (approved) {
-                                toast({ title: 'Success', description: 'Settlement approved' });
-                                fetchSettlements();
-                              }
-                            } catch (err) {
-                              toast({ title: 'Error', description: 'Failed to approve', variant: 'destructive' });
-                            }
-                          }}>
-                            <CheckCircle className="w-4 h-4 mr-1" /> Approve
-                          </Button>
-                        )}
-                      </TableCell>
+              {loading ? (
+                <div className="space-y-3">
+                  {[...Array(5)].map((_, i) => (
+                    <Skeleton key={i} className="h-12 w-full rounded-md" />
+                  ))}
+                </div>
+              ) : settlements.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                  <p className="text-lg font-medium">No records found</p>
+                  <p className="text-sm mt-1">Records will appear here once added</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Employee</TableHead>
+                      <TableHead>Employee Status</TableHead>
+                      <TableHead>Calculation Date</TableHead>
+                      <TableHead>Payables</TableHead>
+                      <TableHead>Deductions</TableHead>
+                      <TableHead>Net Amount</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
-                  );
-                  })}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {settlements.map((settlement) => {
+                      const sEmp = settlement.employee_id as any;
+                      return (
+                      <TableRow key={settlement.id}>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">{sEmp?.name || '—'}</p>
+                            <p className="text-sm text-muted-foreground">{sEmp?.employee_id || ''}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {sEmp?.status ? getEmployeeStatusBadge(sEmp.status) : <Badge variant="outline">Unknown</Badge>}
+                        </TableCell>
+                        <TableCell>{new Date(settlement.calculation_date).toLocaleDateString()}</TableCell>
+                        <TableCell className="text-green-600">{formatCurrency(settlement.total_payable, baseCurrency)}</TableCell>
+                        <TableCell className="text-red-600">{formatCurrency(settlement.total_deductions, baseCurrency)}</TableCell>
+                        <TableCell className="font-bold">{formatCurrency(settlement.net_settlement_amount, baseCurrency)}</TableCell>
+                        <TableCell>{getStatusBadge(settlement.payment_status)}</TableCell>
+                        <TableCell>
+                          {settlement.payment_status === 'pending' && (
+                            <Button size="sm" onClick={async () => {
+                              try {
+                                const approved = await approveFinalSettlement(settlement.id);
+                                if (approved) {
+                                  toast({ title: 'Success', description: 'Settlement approved' });
+                                  fetchSettlements();
+                                }
+                              } catch (err) {
+                                toast({ title: 'Error', description: 'Failed to approve', variant: 'destructive' });
+                              }
+                            }}>
+                              <CheckCircle className="w-4 h-4 mr-1" /> Approve
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                    })}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

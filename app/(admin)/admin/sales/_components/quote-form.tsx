@@ -9,12 +9,15 @@ import { toast } from 'sonner';
 import { FileText, Save, RefreshCcw, Building2, Calendar, DollarSign, User } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CustomerAccount } from '@/lib/db/types';
+import { useCompanySettings } from '@/lib/hooks/use-company-settings';
+import { formatCurrency } from '@/lib/utils/currency';
 
 interface QuoteFormProps {
     onSuccess: () => void;
 }
 
 export function QuoteForm({ onSuccess }: QuoteFormProps) {
+    const { baseCurrency } = useCompanySettings();
     const [loading, setLoading] = useState(false);
     const [customers, setCustomers] = useState<CustomerAccount[]>([]);
 
@@ -33,7 +36,7 @@ export function QuoteForm({ onSuccess }: QuoteFormProps) {
                 total_amount: Number(fd.get('total_amount')),
                 valid_until: fd.get('valid_until') as string,
                 status: 'draft',
-                currency: 'AED' // Defaulting for now, could be dynamic
+                currency: baseCurrency
             });
             toast.success('Quote created successfully');
             onSuccess();
@@ -86,7 +89,7 @@ export function QuoteForm({ onSuccess }: QuoteFormProps) {
 
                 <div className="space-y-4">
                     <div className="space-y-1.5">
-                        <Label className="text-xs font-bold text-foreground">Estimated Total (AED)</Label>
+                        <Label className="text-xs font-bold text-foreground">Estimated Total ({baseCurrency})</Label>
                         <div className="relative">
                             <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input name="total_amount" type="number" required className="h-10 pl-9 border-border bg-background font-bold" placeholder="0.00" />

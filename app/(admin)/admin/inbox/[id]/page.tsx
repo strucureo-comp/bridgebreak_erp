@@ -15,6 +15,10 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { Skeleton } from '@/components/ui/skeleton';
+
+const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4000';
+const API_BASE = BASE_URL.endsWith('/api') ? BASE_URL : `${BASE_URL}/api`;
 
 export default function ApprovalDetailedView({ params }: { params: { id: string } }) {
     const router = useRouter();
@@ -32,7 +36,7 @@ export default function ApprovalDetailedView({ params }: { params: { id: string 
                 const token = localStorage.getItem('token');
                 if (!token) return;
 
-                const response = await fetch(`http://localhost:4000/api/approval-engine/requests/${reqId}`, {
+                const response = await fetch(`${API_BASE}/approval-engine/requests/${reqId}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
 
@@ -57,7 +61,7 @@ export default function ApprovalDetailedView({ params }: { params: { id: string 
         setIsProcessing(true);
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`http://localhost:4000/api/approval-engine/requests/${reqId}/action`, {
+            const response = await fetch(`${API_BASE}/approval-engine/requests/${reqId}/action`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -86,8 +90,30 @@ export default function ApprovalDetailedView({ params }: { params: { id: string 
     if (isLoading) {
         return (
             <DashboardShell>
-                <div className="flex h-[60vh] items-center justify-center">
-                    <div className="animate-spin h-8 w-8 rounded-full border-4 border-slate-200 border-t-red-600"></div>
+                <div className="space-y-6 pb-12 animate-pulse">
+                    <div className="flex items-center justify-between border-b border-border pb-5">
+                        <div className="flex items-center gap-4">
+                            <Skeleton className="h-9 w-9 rounded-xl" />
+                            <div className="space-y-2">
+                                <Skeleton className="h-6 w-32" />
+                                <Skeleton className="h-3 w-48" />
+                            </div>
+                        </div>
+                        <div className="flex gap-3">
+                            <Skeleton className="h-10 w-24 rounded-lg" />
+                            <Skeleton className="h-10 w-40 rounded-lg" />
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 pt-2">
+                        <div className="xl:col-span-2 space-y-6">
+                            <Skeleton className="h-48 w-full rounded-xl" />
+                            <Skeleton className="h-48 w-full rounded-xl" />
+                        </div>
+                        <div className="space-y-6">
+                            <Skeleton className="h-64 w-full rounded-xl" />
+                            <Skeleton className="h-96 w-full rounded-xl" />
+                        </div>
+                    </div>
                 </div>
             </DashboardShell>
         );

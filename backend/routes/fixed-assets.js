@@ -23,4 +23,16 @@ router.post('/', auth, async (req, res) => {
     }
 });
 
+router.delete('/:id', auth, async (req, res) => {
+    try {
+        const deleted = await FixedAsset.findByIdAndDelete(req.params.id);
+        if (!deleted) {
+            return res.status(404).json({ error: 'Fixed asset not found' });
+        }
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to delete fixed asset' });
+    }
+});
+
 module.exports = router;

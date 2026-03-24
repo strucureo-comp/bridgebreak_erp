@@ -123,24 +123,24 @@ export function ModuleGuard({ module, children }: ModuleGuardProps) {
                                         key={step.key}
                                         className={cn(
                                             "flex items-center gap-4 p-4 rounded-2xl transition-all",
-                                            isComplete ? "bg-emerald-50/50" : isCurrent ? "bg-primary/5 border border-primary/20" : "bg-muted/20 opacity-50"
+                                            isComplete ? "bg-primary/5" : isCurrent ? "bg-primary/5 border border-primary/20" : "bg-muted/20 opacity-50"
                                         )}
                                     >
                                         <div className={cn(
                                             "h-10 w-10 rounded-xl flex items-center justify-center shrink-0",
-                                            isComplete ? "bg-emerald-100 text-emerald-600" :
+                                            isComplete ? "bg-primary/10 text-primary" :
                                                 isCurrent ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
                                         )}>
                                             {isComplete ? <CheckCircle2 className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className={cn("text-sm font-semibold", isComplete && "text-emerald-700")}>
+                                            <p className={cn("text-sm font-semibold", isComplete && "text-primary")}>
                                                 {step.label}
                                             </p>
                                             <p className="text-xs text-muted-foreground">{step.description}</p>
                                         </div>
                                         {isComplete && (
-                                            <Badge className="bg-emerald-100 text-emerald-600 border-none rounded-full text-[10px] font-bold">
+                                            <Badge className="bg-primary/10 text-primary border-none rounded-full text-[10px] font-bold">
                                                 Done
                                             </Badge>
                                         )}

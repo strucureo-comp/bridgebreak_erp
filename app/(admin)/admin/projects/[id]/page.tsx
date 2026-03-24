@@ -33,6 +33,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import type { Project } from '@/lib/db/types';
+import { useCompanySettings } from '@/lib/hooks/use-company-settings';
+import { formatCurrency as formatCurrencyUtil } from '@/lib/utils/currency';
 
 // --- INITIAL STATE ---
 const INITIAL_DATA = {
@@ -89,7 +91,7 @@ const INITIAL_DATA = {
     { id: 2, title: 'Design clash in structural node C2', severity: 'Medium', owner: 'Engineering', status: 'Open' }
   ],
   logs: [
-    { id: 'l1', user: 'Ahmed Mansoor', action: 'Approved Variation Order #3', entity: 'VO-003', time: '2 hours ago', impact: '+$45,000' },
+    { id: 'l1', user: 'Ahmed Mansoor', action: 'Approved Variation Order #3', entity: 'VO-003', time: '2 hours ago', impact: '+45,000' },
     { id: 'l2', user: 'Sarah Ali', action: 'Requested Material Delivery', entity: 'Steel Batch 4', time: '5 hours ago', impact: '' },
     { id: 'l3', user: 'Rajesh Kumar', action: 'Logged Daily Site Report', entity: 'DSR-Feb21', time: '1 day ago', impact: '' }
   ],
@@ -104,15 +106,23 @@ const INITIAL_DATA = {
   ]
 };
 
-const formatCurrency = (val: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val);
-
 export default function AdminProjectDetailPage({ params }: { params: { id: string } }) {
   const { user } = useAuth();
+  const { baseCurrency } = useCompanySettings();
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
+  const [assignOpen, setAssignOpen] = useState(false);
 
   const [data, setData] = useState(INITIAL_DATA);
   const [userRole, setUserRole] = useState<'Site Engineer' | 'Project Manager' | 'Finance'>('Project Manager');
+
+  const formatCurrency = (val: number) => formatCurrencyUtil(val, baseCurrency);
+
+  useEffect(() => {
+    const handler = () => window.location.reload();
+    window.addEventListener('erp_company_settings_changed', handler);
+    return () => window.removeEventListener('erp_company_settings_changed', handler);
+  }, []);
 
   useEffect(() => {
     const fetchProject = async () => {
@@ -173,7 +183,7 @@ export default function AdminProjectDetailPage({ params }: { params: { id: strin
 
   const handleLogExpense = (e: React.FormEvent) => {
     e.preventDefault();
-    logAudit('Logged Expense', 'Finance Ledger Updated', '-$5,000');
+    logAudit('Logged Expense', 'Finance Ledger Updated', '-' + formatCurrency(5000));
     setData(prev => ({
       ...prev,
       finances: {
@@ -191,6 +201,13 @@ export default function AdminProjectDetailPage({ params }: { params: { id: strin
       counters: { ...prev.counters, pendingApprovals: Math.max(0, prev.counters.pendingApprovals - 1) }
     }));
     logAudit('Approved Request', id);
+  };
+
+  const handleSaveAssignments = async () => {
+    // Mock API call to PATCH /api/projects/${id}/assignments
+    toast.success('Project assignments updated successfully');
+    setAssignOpen(false);
+    logAudit('Modified Assignments', 'Team updated');
   };
 
   const getHealthColor = (h: string) => h === 'Good' ? 'bg-emerald-100 text-emerald-800' : h === 'Risk' ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800';
@@ -537,7 +554,7 @@ export default function AdminProjectDetailPage({ params }: { params: { id: strin
                 <div className="p-4 border-b border-border flex items-center justify-between">
                   <div>
                     <h3 className="text-sm font-bold flex items-center gap-2"><Package className="h-4 w-4 text-muted-foreground" /> Materials & Procurement Hub</h3>
-                    <p className="text-xs text-muted-foreground font-medium mt-1">Connects to global procurement queue. Approval triggers automatically if &gt; $10k.</p>
+                    <p className="text-xs text-muted-foreground font-medium mt-1">Connects to global procurement queue. Approval triggers automatically if &gt; {formatCurrency(10000)}.</p>
                   </div>
                   {canRequestMaterial && (
                     <Dialog>
@@ -559,7 +576,7 @@ export default function AdminProjectDetailPage({ params }: { params: { id: strin
                               <Input type="number" placeholder="0" required />
                             </div>
                             <div className="space-y-1.5">
-                              <Label className="text-xs font-bold">Est Unit Cost ($)</Label>
+                              <Label className="text-xs font-bold">Est Unit Cost ({baseCurrency})</Label>
                               <Input type="number" placeholder="0" required />
                             </div>
                           </div>
@@ -611,7 +628,50 @@ export default function AdminProjectDetailPage({ params }: { params: { id: strin
                     <p className="text-xs text-muted-foreground font-medium mt-1">Syncs live records with Central HR matrix.</p>
                   </div>
                   {userRole === 'Project Manager' && (
-                    <Button size="sm" variant="outline" className="h-8 text-xs font-bold">Modify Assignments</Button>
+                    <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
+                      <DialogTrigger asChild>
+                        <Button size="sm" variant="outline" className="h-8 text-xs font-bold">Modify Assignments</Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-md p-6">
+                        <DialogHeader className="mb-4">
+                          <DialogTitle>Modify Project Team</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label className="text-xs font-bold">Assigned Members</Label>
+                            <ScrollArea className="h-[200px] border rounded-md p-2">
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between p-2 hover:bg-muted rounded-md transition-colors">
+                                  <div className="flex items-center gap-2">
+                                    <Avatar className="h-6 w-6"><AvatarFallback className="text-[10px]">AM</AvatarFallback></Avatar>
+                                    <span className="text-sm font-medium">Ahmed Mansoor</span>
+                                  </div>
+                                  <Button size="icon" variant="ghost" className="h-6 w-6 text-rose-500"><AlertCircle className="h-3 w-3" /></Button>
+                                </div>
+                                <div className="flex items-center justify-between p-2 hover:bg-muted rounded-md transition-colors">
+                                  <div className="flex items-center gap-2">
+                                    <Avatar className="h-6 w-6"><AvatarFallback className="text-[10px]">SA</AvatarFallback></Avatar>
+                                    <span className="text-sm font-medium">Sarah Ali</span>
+                                  </div>
+                                  <Button size="icon" variant="ghost" className="h-6 w-6 text-rose-500"><AlertCircle className="h-3 w-3" /></Button>
+                                </div>
+                              </div>
+                            </ScrollArea>
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-xs font-bold">Add Member</Label>
+                            <div className="flex gap-2">
+                              <Input placeholder="Enter name or email..." className="text-xs h-9" />
+                              <Button size="sm" className="h-9 px-3">Add</Button>
+                            </div>
+                          </div>
+                        </div>
+                        <DialogFooter className="mt-6">
+                          <Button variant="outline" onClick={() => setAssignOpen(false)} className="text-xs font-bold">Cancel</Button>
+                          <Button onClick={handleSaveAssignments} className="text-xs font-bold">Save Changes</Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
                   )}
                 </div>
                 <CardContent className="p-6">
@@ -656,7 +716,7 @@ export default function AdminProjectDetailPage({ params }: { params: { id: strin
                         </DialogHeader>
                         <form onSubmit={handleLogExpense} className="space-y-4">
                           <div className="space-y-1.5">
-                            <Label className="text-xs font-bold">Amount ($)</Label>
+                            <Label className="text-xs font-bold">Amount ({baseCurrency})</Label>
                             <Input type="number" required placeholder="0.00" />
                           </div>
                           <div className="space-y-1.5">

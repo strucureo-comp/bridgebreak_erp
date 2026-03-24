@@ -35,16 +35,20 @@ import {
 import { toast } from 'sonner';
 import { createSalaryStructure, generatePayroll, postPayrollToFinance, previewPayroll, submitPayrollForApproval, approvePayroll, rejectPayroll, finalizePayroll, auditFebruaryPayroll2026, getDeletedPayrolls, restorePayroll } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { useSettings } from '@/lib/settings-context';
 import type { Employee, SalaryStructure, Payroll } from '@/lib/db/types';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface PayrollContentProps {
   employees: Employee[];
   salaryStructures: SalaryStructure[];
   payrolls: Payroll[];
   onRefresh: () => void;
+  isLoading?: boolean;
 }
 
-export function PayrollContent({ employees, salaryStructures, payrolls, onRefresh }: PayrollContentProps) {
+export function PayrollContent({ employees, salaryStructures, payrolls, onRefresh, isLoading }: PayrollContentProps) {
+  const { settings } = useSettings();
   const [salaryOpen, setSalaryOpen] = useState(false);
   const [generateOpen, setGenerateOpen] = useState(false);
   const [posting, setPosting] = useState<string | null>(null);
@@ -146,7 +150,6 @@ export function PayrollContent({ employees, salaryStructures, payrolls, onRefres
   useEffect(() => {
     auditFebruaryPayroll2026().then((data) => setFebAudit(data)).catch(() => setFebAudit(null));
     getDeletedPayrolls().then((data) => setDeletedPayrolls(data || [])).catch(() => setDeletedPayrolls([]));
-    getDeletedPayrolls().then(setDeletedPayrolls).catch(() => setDeletedPayrolls([]));
   }, [payrolls.length]);
 
   const handlePost = async (payrollId: string) => {
@@ -215,7 +218,7 @@ export function PayrollContent({ employees, salaryStructures, payrolls, onRefres
     setApproving(payrollId);
     try {
       await finalizePayroll(payrollId);
-      toast.success('Payroll finalized and payslips generated');
+      toast.success('Payroll processed and payslips generated');
       onRefresh();
     } catch (err) {
       toast.error('Failed to finalize payroll');
@@ -283,7 +286,7 @@ export function PayrollContent({ employees, salaryStructures, payrolls, onRefres
                   </h4>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-medium text-foreground">Basic Salary (AED)</Label>
+                      <Label className="text-xs font-medium text-foreground">Basic Salary ({settings.currency})</Label>
                       <Input 
                         name="basic" 
                         type="number" 
@@ -294,7 +297,7 @@ export function PayrollContent({ employees, salaryStructures, payrolls, onRefres
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-medium text-muted-foreground">Housing Allowance (AED)</Label>
+                      <Label className="text-xs font-medium text-muted-foreground">Housing Allowance ({settings.currency})</Label>
                       <Input 
                         name="hra" 
                         type="number" 
@@ -305,7 +308,7 @@ export function PayrollContent({ employees, salaryStructures, payrolls, onRefres
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-medium text-muted-foreground">Transport Allowance (AED)</Label>
+                      <Label className="text-xs font-medium text-muted-foreground">Transport Allowance ({settings.currency})</Label>
                       <Input 
                         name="ta" 
                         type="number" 
@@ -316,7 +319,7 @@ export function PayrollContent({ employees, salaryStructures, payrolls, onRefres
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-medium text-muted-foreground">Other Allowances (AED)</Label>
+                      <Label className="text-xs font-medium text-muted-foreground">Other Allowances ({settings.currency})</Label>
                       <Input 
                         name="other_allowances" 
                         type="number" 
@@ -333,15 +336,15 @@ export function PayrollContent({ employees, salaryStructures, payrolls, onRefres
                   <h4 className="text-sm font-semibold text-foreground">Deductions</h4>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-medium text-muted-foreground">PF Employee (AED)</Label>
+                      <Label className="text-xs font-medium text-muted-foreground">PF Employee ({settings.currency})</Label>
                       <Input name="pf_employee" type="number" step="0.01" placeholder="0.00" defaultValue="0" />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-medium text-muted-foreground">PF Employer (AED)</Label>
+                      <Label className="text-xs font-medium text-muted-foreground">PF Employer ({settings.currency})</Label>
                       <Input name="pf_employer" type="number" step="0.01" placeholder="0.00" defaultValue="0" />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-medium text-muted-foreground">ESI Employee (AED)</Label>
+                      <Label className="text-xs font-medium text-muted-foreground">ESI Employee ({settings.currency})</Label>
                       <Input 
                         name="esi_employee" 
                         type="number" 
@@ -352,15 +355,15 @@ export function PayrollContent({ employees, salaryStructures, payrolls, onRefres
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-medium text-muted-foreground">ESI Employer (AED)</Label>
+                      <Label className="text-xs font-medium text-muted-foreground">ESI Employer ({settings.currency})</Label>
                       <Input name="esi_employer" type="number" step="0.01" placeholder="0.00" defaultValue="0" />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-medium text-muted-foreground">Professional Tax (AED)</Label>
+                      <Label className="text-xs font-medium text-muted-foreground">Professional Tax ({settings.currency})</Label>
                       <Input name="professional_tax" type="number" step="0.01" placeholder="0.00" defaultValue="0" />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-medium text-muted-foreground">TDS (AED)</Label>
+                      <Label className="text-xs font-medium text-muted-foreground">TDS ({settings.currency})</Label>
                       <Input name="tds" type="number" step="0.01" placeholder="0.00" defaultValue="0" />
                     </div>
                   </div>
@@ -369,15 +372,15 @@ export function PayrollContent({ employees, salaryStructures, payrolls, onRefres
                 <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground font-medium">Gross Salary:</span>
-                    <span className="font-semibold text-foreground">AED {calculatedGross.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span className="font-semibold text-foreground">{settings.currency} {calculatedGross.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground font-medium">Total Deductions:</span>
-                    <span className="font-semibold text-red-600">- AED {salaryFields.deductions.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span className="font-semibold text-red-600">- {settings.currency} {salaryFields.deductions.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                   <div className="border-t border-primary/20 pt-2 flex justify-between">
                     <span className="text-foreground font-semibold">Net Pay:</span>
-                    <span className="text-lg font-bold text-primary">AED {calculatedNet.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span className="text-lg font-bold text-primary">{settings.currency} {calculatedNet.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                 </div>
                 
@@ -450,22 +453,22 @@ export function PayrollContent({ employees, salaryStructures, payrolls, onRefres
                       </div>
                       <div className="space-y-1 text-right">
                         <p className="text-xs font-medium text-muted-foreground">Batch Value</p>
-                        <p className="text-2xl font-bold text-primary">AED {Number(payrollPreview.total_net || 0).toLocaleString()}</p>
+                        <p className="text-2xl font-bold text-primary">{settings.currency} {Number(payrollPreview.total_net || 0).toLocaleString()}</p>
                       </div>
                     </div>
                     
                     <div className="bg-card border rounded-md p-3 space-y-2 text-xs">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Gross Salary</span>
-                        <span className="font-medium">AED {Number(payrollPreview.total_gross || 0).toLocaleString()}</span>
+                        <span className="font-medium">{settings.currency} {Number(payrollPreview.total_gross || 0).toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Deductions</span>
-                        <span className="font-medium text-red-600">- AED {Number(payrollPreview.total_deductions || 0).toLocaleString()}</span>
+                        <span className="font-medium text-red-600">- {settings.currency} {Number(payrollPreview.total_deductions || 0).toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between border-t pt-2">
                         <span className="font-semibold">Net Payable</span>
-                        <span className="font-semibold text-primary">AED {Number(payrollPreview.total_net || 0).toLocaleString()}</span>
+                        <span className="font-semibold text-primary">{settings.currency} {Number(payrollPreview.total_net || 0).toLocaleString()}</span>
                       </div>
                     </div>
                   </div>
@@ -570,7 +573,25 @@ export function PayrollContent({ employees, salaryStructures, payrolls, onRefres
             </div>
           </CardHeader>
           <div className="divide-y">
-            {filteredStructures.length === 0 ? (
+            {isLoading ? (
+              <div className="p-4 space-y-4 animate-pulse">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="flex justify-between items-center">
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="h-8 w-8 rounded-md bg-muted" />
+                      <div className="space-y-2">
+                        <Skeleton className="h-3 w-32 bg-muted" />
+                        <Skeleton className="h-2 w-24 bg-muted" />
+                      </div>
+                    </div>
+                    <div className="space-y-2 text-right">
+                      <Skeleton className="h-3 w-20 bg-muted ml-auto" />
+                      <Skeleton className="h-2 w-16 bg-muted ml-auto" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : filteredStructures.length === 0 ? (
               <div className="p-12 text-center space-y-4">
                 <div className="mx-auto h-12 w-12 rounded-full bg-muted flex items-center justify-center">
                   <Briefcase className="h-6 w-6 text-muted-foreground" />
@@ -611,7 +632,7 @@ export function PayrollContent({ employees, salaryStructures, payrolls, onRefres
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="text-right">
-                      <p className="text-xs font-semibold text-foreground">AED {Number(s.net_salary).toLocaleString()}</p>
+                      <p className="text-xs font-semibold text-foreground">{settings.currency} {Number(s.net_salary).toLocaleString()}</p>
                       <p className="text-xs font-medium text-emerald-600">Current Net</p>
                     </div>
                     <Eye className="h-4 w-4 text-muted-foreground" />
@@ -647,27 +668,27 @@ export function PayrollContent({ employees, salaryStructures, payrolls, onRefres
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between py-2 border-b">
                       <span className="text-muted-foreground">Basic Salary</span>
-                      <span className="font-medium">AED {Number(selectedEmployee.basic).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                      <span className="font-medium">{settings.currency} {Number(selectedEmployee.basic).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                     </div>
                     <div className="flex justify-between py-2 border-b">
                       <span className="text-muted-foreground">Housing Allowance (HRA)</span>
-                      <span className="font-medium">AED {Number(selectedEmployee.hra).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                      <span className="font-medium">{settings.currency} {Number(selectedEmployee.hra).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                     </div>
                     <div className="flex justify-between py-2 border-b">
                       <span className="text-muted-foreground">Transport Allowance (TA)</span>
-                      <span className="font-medium">AED {Number(selectedEmployee.ta).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                      <span className="font-medium">{settings.currency} {Number(selectedEmployee.ta).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                     </div>
                     <div className="flex justify-between py-2 border-b">
                       <span className="text-muted-foreground">Dearness Allowance (DA)</span>
-                      <span className="font-medium">AED {Number(selectedEmployee.da).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                      <span className="font-medium">{settings.currency} {Number(selectedEmployee.da).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                     </div>
                     <div className="flex justify-between py-2 border-b">
                       <span className="text-muted-foreground">Special Allowance</span>
-                      <span className="font-medium">AED {Number(selectedEmployee.special_allowance).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                      <span className="font-medium">{settings.currency} {Number(selectedEmployee.special_allowance).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                     </div>
                     <div className="flex justify-between py-3 bg-emerald-50 dark:bg-emerald-950/20 px-3 rounded-md font-semibold">
                       <span className="text-emerald-900 dark:text-emerald-100">Gross Salary</span>
-                      <span className="text-emerald-700 dark:text-emerald-400">AED {Number(selectedEmployee.gross_salary).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                      <span className="text-emerald-700 dark:text-emerald-400">{settings.currency} {Number(selectedEmployee.gross_salary).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                     </div>
                   </div>
                 </div>
@@ -677,19 +698,19 @@ export function PayrollContent({ employees, salaryStructures, payrolls, onRefres
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between py-2 border-b">
                       <span className="text-muted-foreground">PF (Employee)</span>
-                      <span className="font-medium text-red-600">- AED {Number(selectedEmployee.pf_employee).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                      <span className="font-medium text-red-600">- {settings.currency} {Number(selectedEmployee.pf_employee).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                     </div>
                     <div className="flex justify-between py-2 border-b">
                       <span className="text-muted-foreground">ESI (Employee)</span>
-                      <span className="font-medium text-red-600">- AED {Number(selectedEmployee.esi_employee).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                      <span className="font-medium text-red-600">- {settings.currency} {Number(selectedEmployee.esi_employee).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                     </div>
                     <div className="flex justify-between py-2 border-b">
                       <span className="text-muted-foreground">Professional Tax</span>
-                      <span className="font-medium text-red-600">- AED {Number(selectedEmployee.professional_tax).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                      <span className="font-medium text-red-600">- {settings.currency} {Number(selectedEmployee.professional_tax).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                     </div>
                     <div className="flex justify-between py-2 border-b">
                       <span className="text-muted-foreground">TDS</span>
-                      <span className="font-medium text-red-600">- AED {Number(selectedEmployee.tds).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                      <span className="font-medium text-red-600">- {settings.currency} {Number(selectedEmployee.tds).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                     </div>
                   </div>
                 </div>
@@ -697,7 +718,7 @@ export function PayrollContent({ employees, salaryStructures, payrolls, onRefres
                 <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-semibold text-foreground">Net Salary</span>
-                    <span className="text-2xl font-bold text-primary">AED {Number(selectedEmployee.net_salary).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    <span className="text-2xl font-bold text-primary">{settings.currency} {Number(selectedEmployee.net_salary).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                   </div>
                 </div>
                 
@@ -746,7 +767,26 @@ export function PayrollContent({ employees, salaryStructures, payrolls, onRefres
             </div>
           )}
           <div className="divide-y max-h-[600px] overflow-y-auto">
-            {payrolls.length === 0 ? (
+            {isLoading ? (
+              <div className="p-4 space-y-6 animate-pulse">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="space-y-4">
+                    <div className="flex justify-between">
+                      <Skeleton className="h-3 w-24 bg-muted" />
+                      <Skeleton className="h-4 w-16 bg-muted" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Skeleton className="h-12 w-full rounded bg-muted" />
+                      <Skeleton className="h-12 w-full rounded bg-muted" />
+                    </div>
+                    <div className="flex gap-2">
+                      <Skeleton className="h-8 w-20 rounded bg-muted" />
+                      <Skeleton className="h-8 w-24 rounded bg-muted" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : payrolls.length === 0 ? (
               <div className="p-8 text-center space-y-3">
                 <div className="mx-auto h-10 w-10 rounded-full bg-muted flex items-center justify-center">
                   <Receipt className="h-5 w-5 text-muted-foreground" />
@@ -772,7 +812,7 @@ export function PayrollContent({ employees, salaryStructures, payrolls, onRefres
                   <div className="grid grid-cols-2 gap-2">
                     <div className="p-2 bg-muted rounded border border-border">
                       <p className="text-xs font-medium text-muted-foreground">Batch Value</p>
-                      <p className="text-sm font-semibold text-foreground">AED {Number(p.total_amount).toLocaleString()}</p>
+                      <p className="text-sm font-semibold text-foreground">{settings.currency} {Number(p.total_amount).toLocaleString()}</p>
                     </div>
                     <div className="p-2 bg-muted rounded border border-border">
                       <p className="text-xs font-medium text-muted-foreground">Headcount</p>
@@ -834,7 +874,7 @@ export function PayrollContent({ employees, salaryStructures, payrolls, onRefres
                       </>
                     )}
 
-                    {/* Approved → Finalize (Generate Payslips) */}
+                    {/* Approved → Generate Payslips */}
                     {p.status === 'approved' && (
                       <Button 
                         size="sm" 
@@ -843,12 +883,12 @@ export function PayrollContent({ employees, salaryStructures, payrolls, onRefres
                         disabled={approving === p.id}
                       >
                         <ThumbsUp className="h-3 w-3 mr-1" />
-                        {approving === p.id ? 'Finalizing...' : 'Finalize & Generate Payslips'}
+                        {approving === p.id ? 'Processing...' : 'Generate Payslips'}
                       </Button>
                     )}
                     
-                    {/* Finalized → Post to Finance */}
-                    {p.status === 'finalized' && !p.posted_to_finance ? (
+                    {/* Processed/Finalized → Post to Finance */}
+                    {['processed', 'finalized'].includes(p.status) && !p.posted_to_finance ? (
                       <Button 
                         size="sm" 
                         className="h-8 text-xs font-medium bg-primary hover:bg-primary/90"
@@ -884,6 +924,7 @@ export function PayrollContent({ employees, salaryStructures, payrolls, onRefres
 }
 
 export function PayslipBrowser({ payroll }: { payroll: Payroll }) {
+  const { settings } = useSettings();
   const [selectedLine, setSelectedLine] = useState(payroll.lines?.[0] || null);
   const [paymentDetails, setPaymentDetails] = useState<Map<string, any>>(new Map());
 
@@ -957,7 +998,7 @@ export function PayslipBrowser({ payroll }: { payroll: Payroll }) {
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-medium text-foreground truncate">{line.employee?.name || 'Staff Member'}</p>
-                    <p className="text-xs font-medium text-muted-foreground mt-0.5">AED {Number(line.net_pay || 0).toLocaleString()}</p>
+                    <p className="text-xs font-medium text-muted-foreground mt-0.5">{settings.currency} {Number(line.net_pay || 0).toLocaleString()}</p>
                   </div>
                   <PaymentIcon className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
                 </div>
@@ -978,9 +1019,9 @@ export function PayslipBrowser({ payroll }: { payroll: Payroll }) {
               {/* Header */}
               <div className="flex justify-between items-start border-b-2 border-zinc-900 pb-6 mb-8">
                 <div className="space-y-1">
-                  <h4 className="text-lg font-semibold text-foreground leading-none">SYSTEM STEEL</h4>
+                  <h4 className="text-lg font-semibold text-foreground leading-none">{settings.companyName}</h4>
                   <p className="text-xs font-medium text-muted-foreground">Engineering ERP Infrastructure</p>
-                  <p className="text-[7px] text-muted-foreground mt-2">Warehouse 4, Al Quoz, Dubai</p>
+                  <p className="text-[7px] text-muted-foreground mt-2">{settings.companyAddress}</p>
                 </div>
                 <div className="text-right">
                   <h2 className="text-2xl font-semibold text-foreground">PAYSLIP</h2>
@@ -1032,7 +1073,7 @@ export function PayslipBrowser({ payroll }: { payroll: Payroll }) {
                   <div className="space-y-4">
                     <div className="flex justify-between border-b border-border pb-1.5">
                       <span className="text-xs font-semibold text-muted-foreground">Earnings</span>
-                      <span className="text-xs font-semibold text-muted-foreground">Amount</span>
+                      <span className="text-xs font-semibold text-muted-foreground">Amount ({settings.currency})</span>
                     </div>
                     <div className="space-y-2">
                       <div className="flex justify-between text-xs">
@@ -1048,7 +1089,7 @@ export function PayslipBrowser({ payroll }: { payroll: Payroll }) {
                   <div className="space-y-4">
                     <div className="flex justify-between border-b border-border pb-1.5">
                       <span className="text-xs font-semibold text-muted-foreground">Deductions</span>
-                      <span className="text-xs font-semibold text-muted-foreground">Amount</span>
+                      <span className="text-xs font-semibold text-muted-foreground">Amount ({settings.currency})</span>
                     </div>
                     <div className="space-y-2">
                       <div className="flex justify-between text-xs">
@@ -1065,7 +1106,7 @@ export function PayslipBrowser({ payroll }: { payroll: Payroll }) {
                 <div className="flex justify-between items-center bg-primary/10 text-primary p-6 rounded-md">
                   <div className="space-y-1">
                     <p className="text-xs font-medium text-muted-foreground">Net Payable Amount</p>
-                    <p className="text-2xl font-semibold">AED {Number(selectedLine.net_pay || 0).toLocaleString()}</p>
+                    <p className="text-2xl font-semibold">{settings.currency} {Number(selectedLine.net_pay || 0).toLocaleString()}</p>
                   </div>
                   <div className="text-right">
                     <ShieldCheck className="h-8 w-8 text-primary opacity-50 ml-auto mb-1" />

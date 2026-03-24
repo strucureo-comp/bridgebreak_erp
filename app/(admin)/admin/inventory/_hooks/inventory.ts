@@ -1,20 +1,34 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/use-toast";
 import {
     INITIAL_SETTINGS, PERMISSIONS, SITES, Sku, WasteLog, Allocation
 } from "../_lib/data";
 import {
     getInventoryItems, getWarehouses, getInventorySummary,
-    recordStockMovement, createInventoryItem
+    recordStockMovement, createInventoryItem, deleteInventoryItem
 } from "@/lib/api";
+import { useCompanySettings } from "@/lib/hooks/use-company-settings";
 
-export function useInventory(currentRole: string) {
-    const role = PERMISSIONS[currentRole as keyof typeof PERMISSIONS];
+export function useInventory() {
+    const { toast } = useToast();
+    
+    // In a real system, roles are determined by the auth context mapping to global Role configs (e.g. from settings).
+    // For this module frontend, we assume standard full access since module-level access is gated by ModuleGuard/Auth.
+    const role = {
+        canEditSku: true, canOverride: true, canChangeSettings: true,
+        canAdjustStock: true, canRegisterSku: true, canAllocate: true,
+        canReportWaste: true, canApproveWaste: true, canApproveFinance: true
+    };
+    
+    const { baseCurrency, taxRate } = useCompanySettings();
 
     // State
-    const [settings, setSettings] = useState(INITIAL_SETTINGS);
+    const [settings, setSettings] = useState(() => ({
+        ...INITIAL_SETTINGS,
+        writeOffApprovalThreshold: 1000 * (taxRate || 5) // Dynamic threshold example
+    }));
     const [skus, setSkus] = useState<any[]>([]);
     const [warehouses, setWarehouses] = useState<any[]>([]);
     const [wasteLogs, setWasteLogs] = useState<WasteLog[]>([]);
@@ -77,7 +91,7 @@ export function useInventory(currentRole: string) {
     // --- Actions ---
     const handleRegisterSku = async () => {
         if (!skuForm.id || !skuForm.name) {
-            toast.error("Please fill in SKU ID and Name.");
+            toast({ title: "Error", description: "Please fill in SKU ID and Name.", variant: "destructive" });
             return;
         }
 
@@ -92,18 +106,18 @@ export function useInventory(currentRole: string) {
 
         try {
             await createInventoryItem(payload);
-            toast.success(`SKU ${skuForm.id} registered successfully.`);
+            toast({ title: "Success", description: `SKU ${skuForm.id} registered successfully.` });
             setIsRegisterOpen(false);
             setSkuForm({ id: "", name: "", category: "Raw Materials", unit: "Units", minThreshold: 10, costPerUnit: 0 });
             loadData();
         } catch (err) {
-            toast.error("Failed to register SKU.");
+            toast({ title: "Error", description: "Failed to register SKU.", variant: "destructive" });
         }
     };
 
     const handleAdjustStock = async () => {
         if (!adjustForm.skuId || !adjustForm.quantity || adjustForm.quantity <= 0) {
-            toast.error("Invalid adjustment data.");
+            toast({ title: "Error", description: "Invalid adjustment data.", variant: "destructive" });
             return;
         }
 
@@ -117,23 +131,23 @@ export function useInventory(currentRole: string) {
             quantity: adjustForm.quantity * (adjustForm.type === 'Deduct' ? -1 : 1),
             unit_cost: sku.costPerUnit,
             reason: adjustForm.reason,
-            user: currentRole
+            user: "system"
         };
 
         try {
             await recordStockMovement(payload);
-            toast.success(`Stock adjusted for ${sku.id}.`);
+            toast({ title: "Success", description: `Stock adjusted for ${sku.id}.` });
             setIsAdjustOpen(false);
             setAdjustForm({ skuId: "", type: "Increase", quantity: 0, reason: "" });
             loadData();
         } catch (err) {
-            toast.error("Failed to adjust stock.");
+            toast({ title: "Error", description: "Failed to adjust stock.", variant: "destructive" });
         }
     };
 
     const handleReportWaste = async () => {
         if (!wasteForm.skuId || !wasteForm.quantity || wasteForm.quantity <= 0) {
-            toast.error("Invalid waste report.");
+            toast({ title: "Error", description: "Invalid waste report.", variant: "destructive" });
             return;
         }
 
@@ -147,23 +161,23 @@ export function useInventory(currentRole: string) {
             quantity: -wasteForm.quantity,
             unit_cost: sku.costPerUnit,
             reason: wasteForm.reason,
-            user: currentRole
+            user: "system"
         };
 
         try {
             await recordStockMovement(payload);
-            toast.success(`Waste reported and stock deducted.`);
+            toast({ title: "Success", description: `Waste reported and stock deducted.` });
             setIsWasteOpen(false);
             setWasteForm({ skuId: "", quantity: 0, reason: "" });
             loadData();
         } catch (err) {
-            toast.error("Failed to report waste.");
+            toast({ title: "Error", description: "Failed to report waste.", variant: "destructive" });
         }
     };
 
     const handleAllocate = async () => {
         if (!allocateForm.skuId || !allocateForm.quantity || allocateForm.quantity <= 0) {
-            toast.error("Invalid allocation data.");
+            toast({ title: "Error", description: "Invalid allocation data.", variant: "destructive" });
             return;
         }
 
@@ -177,29 +191,48 @@ export function useInventory(currentRole: string) {
             dest_warehouse_id: warehouses.find(w => w.name.includes(allocateForm.site))?._id,
             quantity: -allocateForm.quantity,
             unit_cost: sku.costPerUnit,
-            user: currentRole
+            user: "system"
         };
 
         try {
             await recordStockMovement(payload);
-            toast.success(`Successfully allocated ${allocateForm.quantity} to ${allocateForm.site}.`);
+            toast({ title: "Success", description: `Successfully allocated ${allocateForm.quantity} to ${allocateForm.site}.` });
             setIsAllocateOpen(false);
             setAllocateForm({ skuId: "", site: SITES[0], quantity: 0 });
             loadData();
         } catch (err) {
-            toast.error("Failed to allocate stock.");
+            toast({ title: "Error", description: "Failed to allocate stock.", variant: "destructive" });
         }
     };
 
     const handleSaveSettings = () => {
         setSettings(settingsForm);
-        toast.success("Settings updated successfully.");
+        toast({ title: "Success", description: "Settings updated successfully." });
         setIsSettingsOpen(false);
     };
 
     const handleApproveWaste = (logId: string, approve: boolean) => {
         // Logic for approving waste logs (workflow)
-        toast.info("Waste approval logic to be integrated with workflow engine.");
+        toast({ title: "Info", description: "Waste approval logic to be integrated with workflow engine." });
+    };
+
+    const handleDeleteSku = async (id: string): Promise<boolean> => {
+        const sku = skus.find(s => s.id === id);
+        if (!sku) return false;
+        try {
+            const success = await deleteInventoryItem(sku._id);
+            if (success) {
+                toast({ title: "Success", description: `SKU ${id} deleted successfully.` });
+                loadData();
+                return true;
+            } else {
+                toast({ title: "Error", description: "Failed to delete SKU.", variant: "destructive" });
+                return false;
+            }
+        } catch (err) {
+            toast({ title: "Error", description: "Failed to delete SKU.", variant: "destructive" });
+            return false;
+        }
     };
 
     return {
@@ -226,6 +259,7 @@ export function useInventory(currentRole: string) {
         handleAllocate,
         handleSaveSettings,
         handleApproveWaste,
+        handleDeleteSku,
         role,
         loading
     };

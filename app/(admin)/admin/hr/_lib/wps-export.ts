@@ -27,13 +27,28 @@ export interface WPSFileHeader {
 /**
  * Generates a .SIF file content
  */
+function getWPSCurrency(): string {
+  if (typeof window === 'undefined') {
+    return 'AED';
+  }
+
+  try {
+    const settings = JSON.parse(localStorage.getItem('pdf-settings') || '{}');
+    return settings.currency || 'AED';
+  } catch {
+    return 'AED';
+  }
+}
+
 export function generateSIFContent(header: WPSFileHeader, records: WPSRecord[]): string {
+  const currency = getWPSCurrency();
+
   // Format Header: EDR,EmployerID,BankCode,FileCreationDate,FileCreationTime,SalaryMonth,TotalSalary,TotalRecords,Currency
-  const headerLine = `EDR,${header.employer_id},${header.bank_code},${header.file_creation_date},${header.file_creation_time},${header.salary_month},${header.total_salary.toFixed(2)},${header.total_records},${header.currency}`;
+  const headerLine = `EDR,${header.employer_id},${header.bank_code},${header.file_creation_date},${header.file_creation_time},${header.salary_month},${currency} ${header.total_salary.toFixed(2)},${header.total_records},${currency}`;
 
   // Format Records: SCR,EmployeeID,EmployeeName,IBAN,AgentID,FixedSalary,VariableSalary,DaysOff
   const recordLines = records.map(rec => {
-    return `SCR,${rec.employee_id},${rec.employee_name},${rec.iban},${rec.agent_id},${rec.fixed_salary.toFixed(2)},${rec.variable_salary.toFixed(2)},${rec.days_off}`;
+    return `SCR,${rec.employee_id},${rec.employee_name},${rec.iban},${rec.agent_id},${currency} ${rec.fixed_salary.toFixed(2)},${currency} ${rec.variable_salary.toFixed(2)},${rec.days_off}`;
   });
 
   return [headerLine, ...recordLines].join('\n');

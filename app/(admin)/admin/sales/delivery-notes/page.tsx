@@ -15,6 +15,22 @@ import { cn } from '@/lib/utils';
 import { generateDeliveryNotePDF } from '@/lib/pdf-generator';
 import { LiveDocumentPreview } from '@/components/shared/layout/live-document-preview';
 import { SalesDocumentType, DocumentStatus, isApprovalRequired, getApproverRole, canApproveDocument, getStatusInfo } from '@/lib/sales-approval';
+import {
+    getDeliveryNotes,
+    createDeliveryNote,
+    updateDeliveryNote,
+    deleteDeliveryNote,
+} from '@/lib/services/business-documents-api';
+import { getCustomers } from '@/lib/api';
+import { Skeleton } from '@/components/ui/skeleton';
+import { DashboardShell } from '@/components/shared/layout/dashboard-shell';
+import { ModuleGuard } from '@/components/shared/layout/module-guard';
+
+const generateRef = (prefix: string) => {
+    const date = new Date();
+    const seq = String(date.getTime()).slice(-5);
+    return `${prefix}-${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}-${seq}`;
+};
 
 interface DeliveryItem {
     id: string;
@@ -63,13 +79,23 @@ export default function DeliveryNotesPage() {
     const [searchQuery, setSearchQuery] = useState('');
 
     const documentType: SalesDocumentType = 'deliveryNote';
-    const approvalRequired = isApprovalRequired(documentType);
-    const approverRole = getApproverRole(documentType);
-    const currentUserRole = localStorage.getItem('user_role') || 'Employee';
-    const canApprove = canApproveDocument(documentType);
+    const approvalRequired = isApprovalRequired('sales', documentType);
+    const approverRole = getApproverRole('sales', documentType);
+    const [currentUserRole, setCurrentUserRole] = useState<string>('Employee');
 
     useEffect(() => {
-        loadNotes();
+        setCurrentUserRole(typeof window !== 'undefined' ? (localStorage.getItem('user_role') || 'Employee') : 'Employee');
+    }, []);
+
+    const canApprove = canApproveDocument('sales', documentType);
+
+    const normalizeNote = (doc: any): DeliveryNote => ({
+        ...doc,
+        id: doc.id || doc._id,
+    });
+
+    useEffect(() => {
+        void loadNotes();
         loadCustomers();
     }, []);
 
@@ -80,22 +106,32 @@ export default function DeliveryNotesPage() {
         );
     }, [notes, searchQuery]);
 
-    const loadNotes = () => {
-        const saved = localStorage.getItem('sales_deliveryNotes');
-        if (saved) setNotes(JSON.parse(saved));
-        setLoading(false);
+    const loadNotes = async () => {
+        try {
+            const data = await getDeliveryNotes();
+            setNotes(Array.isArray(data) ? data.map(normalizeNote) : []);
+        } catch (error: any) {
+            toast.error(error?.message || 'Failed to load delivery notes');
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const loadCustomers = () => {
-        const saved = localStorage.getItem('sales_customers');
-        if (saved) setCustomers(JSON.parse(saved));
-        else setCustomers([{ id: '1', name: 'ABC Corporation' }, { id: '2', name: 'XYZ Industries' }, { id: '3', name: 'Global Trading LLC' }]);
+    const loadCustomers = async () => {
+        try {
+            const data = await getCustomers();
+            const list = (Array.isArray(data) ? data : []).map((c: any) => ({
+                id: String(c._id || c.id),
+                name: c.name,
+            }));
+            setCustomers(list);
+        } catch {
+            setCustomers([]);
+        }
     };
 
     const generateNoteNumber = () => {
-        const year = new Date().getFullYear();
-        const count = notes.length + 1;
-        return `DN-${year}-${count.toString().padStart(4, '0')}`;
+        return generateRef('DN');
     };
 
     const handleAddItem = () => {
@@ -113,7 +149,7 @@ export default function DeliveryNotesPage() {
         setEditingNote(prev => ({ ...prev, items: updatedItems }));
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!editingNote.customerName) { toast.error('Please select a customer'); return; }
         if (!editingNote.items?.length) { toast.error('Please add at least one item'); return; }
 
@@ -134,62 +170,93 @@ export default function DeliveryNotesPage() {
             createdAt: editingNote.createdAt || new Date().toISOString(),
         };
 
-        const existingIndex = notes.findIndex(n => n.id === note.id);
-        const updatedList = existingIndex >= 0 ? notes.map((n, idx) => idx === existingIndex ? note : n) : [...notes, note];
-        setNotes(updatedList);
-        localStorage.setItem('sales_deliveryNotes', JSON.stringify(updatedList));
-        toast.success('Delivery Note saved');
-        setDialogOpen(false);
-        setEditingNote(DEFAULT_NOTE);
+        try {
+            if (editingNote.id) {
+                const updated = normalizeNote(await updateDeliveryNote(editingNote.id, note));
+                setNotes(prev => prev.map(n => n.id === editingNote.id ? updated : n));
+            } else {
+                const created = normalizeNote(await createDeliveryNote(note));
+                setNotes(prev => [created, ...prev]);
+            }
+            toast.success('Delivery Note saved');
+            setDialogOpen(false);
+            setEditingNote(DEFAULT_NOTE);
+        } catch (error: any) {
+            toast.error(error?.message || 'Failed to save delivery note');
+        }
     };
 
-    const handleSubmitForApproval = (note: DeliveryNote) => {
-        const updated = { ...note, status: 'pending_approval' as DocumentStatus };
-        const updatedList = notes.map(n => n.id === note.id ? updated : n);
-        setNotes(updatedList);
-        localStorage.setItem('sales_deliveryNotes', JSON.stringify(updatedList));
-        toast.success('Submitted for approval');
+    const handleSubmitForApproval = async (note: DeliveryNote) => {
+        try {
+            const updated = normalizeNote(await updateDeliveryNote(note.id, { ...note, status: 'pending_approval' as DocumentStatus }));
+            setNotes(prev => prev.map(n => n.id === note.id ? updated : n));
+            toast.success('Submitted for approval');
+        } catch (error: any) {
+            toast.error(error?.message || 'Failed to submit for approval');
+        }
     };
 
-    const handleApprove = (note: DeliveryNote) => {
-        const updated = { ...note, status: 'approved' as DocumentStatus, approvedBy: currentUserRole, approvedAt: new Date().toISOString() };
-        const updatedList = notes.map(n => n.id === note.id ? updated : n);
-        setNotes(updatedList);
-        localStorage.setItem('sales_deliveryNotes', JSON.stringify(updatedList));
-        toast.success('Approved');
+    const handleApprove = async (note: DeliveryNote) => {
+        try {
+            const updated = normalizeNote(await updateDeliveryNote(note.id, {
+                ...note,
+                status: 'approved' as DocumentStatus,
+                approvedBy: currentUserRole,
+                approvedAt: new Date().toISOString(),
+            }));
+            setNotes(prev => prev.map(n => n.id === note.id ? updated : n));
+            toast.success('Approved');
+        } catch (error: any) {
+            toast.error(error?.message || 'Failed to approve delivery note');
+        }
     };
 
-    const handleReject = (note: DeliveryNote) => {
-        const updated = { ...note, status: 'rejected' as DocumentStatus, rejectedBy: currentUserRole, rejectedAt: new Date().toISOString(), rejectedReason: rejectReason };
-        const updatedList = notes.map(n => n.id === note.id ? updated : n);
-        setNotes(updatedList);
-        localStorage.setItem('sales_deliveryNotes', JSON.stringify(updatedList));
-        toast.success('Rejected');
-        setRejectDialogOpen(false);
-        setRejectReason('');
+    const handleReject = async (note: DeliveryNote) => {
+        try {
+            const updated = normalizeNote(await updateDeliveryNote(note.id, {
+                ...note,
+                status: 'rejected' as DocumentStatus,
+                rejectedBy: currentUserRole,
+                rejectedAt: new Date().toISOString(),
+                rejectedReason: rejectReason,
+            }));
+            setNotes(prev => prev.map(n => n.id === note.id ? updated : n));
+            toast.success('Rejected');
+            setRejectDialogOpen(false);
+            setRejectReason('');
+        } catch (error: any) {
+            toast.error(error?.message || 'Failed to reject delivery note');
+        }
     };
 
-    const handleResubmit = (note: DeliveryNote) => {
-        const updated = { ...note, status: 'pending_approval' as DocumentStatus };
-        const updatedList = notes.map(n => n.id === note.id ? updated : n);
-        setNotes(updatedList);
-        localStorage.setItem('sales_deliveryNotes', JSON.stringify(updatedList));
-        toast.success('Resubmitted for approval');
+    const handleResubmit = async (note: DeliveryNote) => {
+        try {
+            const updated = normalizeNote(await updateDeliveryNote(note.id, { ...note, status: 'pending_approval' as DocumentStatus }));
+            setNotes(prev => prev.map(n => n.id === note.id ? updated : n));
+            toast.success('Resubmitted for approval');
+        } catch (error: any) {
+            toast.error(error?.message || 'Failed to resubmit delivery note');
+        }
     };
 
-    const handleComplete = (note: DeliveryNote) => {
-        const updated = { ...note, status: 'completed' as DocumentStatus };
-        const updatedList = notes.map(n => n.id === note.id ? updated : n);
-        setNotes(updatedList);
-        localStorage.setItem('sales_deliveryNotes', JSON.stringify(updatedList));
-        toast.success('Marked as completed');
+    const handleComplete = async (note: DeliveryNote) => {
+        try {
+            const updated = normalizeNote(await updateDeliveryNote(note.id, { ...note, status: 'completed' as DocumentStatus }));
+            setNotes(prev => prev.map(n => n.id === note.id ? updated : n));
+            toast.success('Marked as completed');
+        } catch (error: any) {
+            toast.error(error?.message || 'Failed to complete delivery note');
+        }
     };
 
-    const handleDelete = (note: DeliveryNote) => {
-        const updatedList = notes.filter(n => n.id !== note.id);
-        setNotes(updatedList);
-        localStorage.setItem('sales_deliveryNotes', JSON.stringify(updatedList));
-        toast.success('Deleted');
+    const handleDelete = async (note: DeliveryNote) => {
+        try {
+            await deleteDeliveryNote(note.id);
+            setNotes(prev => prev.filter(n => n.id !== note.id));
+            toast.success('Deleted');
+        } catch (error: any) {
+            toast.error(error?.message || 'Failed to delete delivery note');
+        }
     };
 
     const openEditDialog = (note?: DeliveryNote) => {
@@ -219,10 +286,51 @@ export default function DeliveryNotesPage() {
     const canResubmit = (note: DeliveryNote) => note.status === 'rejected';
     const canComplete = (note: DeliveryNote) => note.status === 'approved';
 
-    if (loading) return <div className="flex items-center justify-center min-h-[400px]"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+    if (loading) {
+        return (
+            <div className="space-y-6 max-w-7xl mx-auto pb-12 animate-pulse">
+                <div className="flex justify-between items-center border-b pb-6">
+                    <div className="space-y-2">
+                        <Skeleton className="h-8 w-48 bg-muted" />
+                        <Skeleton className="h-4 w-32 bg-muted" />
+                    </div>
+                    <div className="flex gap-4">
+                        <Skeleton className="h-10 w-64 bg-muted rounded-md" />
+                        <Skeleton className="h-10 w-40 bg-muted rounded-md" />
+                    </div>
+                </div>
+                <div className="bg-card border border-border rounded-lg shadow-sm overflow-hidden divide-y divide-border">
+                    {[...Array(5)].map((_, i) => (
+                        <div key={i} className="p-4 flex items-center justify-between">
+                            <div className="flex items-center gap-6">
+                                <Skeleton className="h-10 w-10 rounded-lg bg-muted" />
+                                <div className="space-y-2">
+                                    <Skeleton className="h-4 w-24 bg-muted" />
+                                    <Skeleton className="h-3 w-48 bg-muted" />
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-6">
+                                <div className="space-y-2 text-right">
+                                    <Skeleton className="h-4 w-16 bg-muted ml-auto" />
+                                    <Skeleton className="h-3 w-20 bg-muted ml-auto" />
+                                </div>
+                                <div className="flex gap-2">
+                                    <Skeleton className="h-8 w-8 bg-muted rounded-md" />
+                                    <Skeleton className="h-8 w-8 bg-muted rounded-md" />
+                                    <Skeleton className="h-8 w-8 bg-muted rounded-md" />
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    }
 
     return (
-        <div className="space-y-6 max-w-7xl mx-auto pb-12">
+        <DashboardShell requireAdmin>
+            <ModuleGuard module="sales">
+                <div className="space-y-6 max-w-7xl mx-auto pb-12">
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
                 <div>
@@ -262,10 +370,9 @@ export default function DeliveryNotesPage() {
             {/* Delivery Notes List */}
             <div className="bg-card border border-border rounded-lg shadow-sm divide-y divide-border">
                 {filteredNotes.length === 0 ? (
-                    <div className="py-16 text-center">
-                        <Truck size={32} className="mx-auto text-muted-foreground mb-3" />
-                        <p className="text-sm font-bold text-foreground">No delivery notes found</p>
-                        <p className="text-xs text-muted-foreground mt-1">Create a new delivery note to get started.</p>
+                    <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                        <p className="text-lg font-medium">No records found</p>
+                        <p className="text-sm mt-1">Records will appear here once added</p>
                     </div>
                 ) : (
                     filteredNotes.map(note => (
@@ -506,6 +613,8 @@ export default function DeliveryNotesPage() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-        </div>
+                </div>
+            </ModuleGuard>
+        </DashboardShell>
     );
 }

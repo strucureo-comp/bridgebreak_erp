@@ -46,6 +46,9 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { useCompanySettings } from '@/lib/hooks/use-company-settings';
+import { formatCurrency } from '@/lib/utils/currency';
+import { Skeleton } from '@/components/ui/skeleton';
 
 import {
     getStockJournals,
@@ -84,11 +87,18 @@ const VALUATION_METHODS = [
 ];
 
 export function StockJournalContent() {
+    const { baseCurrency } = useCompanySettings();
     const [journals, setJournals] = useState<StockJournal[]>([]);
     const [products, setProducts] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [activeTab, setActiveTab] = useState('all');
+
+    useEffect(() => {
+        const handler = () => window.location.reload();
+        window.addEventListener('erp_company_settings_changed', handler);
+        return () => window.removeEventListener('erp_company_settings_changed', handler);
+    }, []);
 
     // Form state
     const [formData, setFormData] = useState({
@@ -165,7 +175,7 @@ export function StockJournalContent() {
     // Add line item
     const addLineItem = () => {
         setLineItems(prev => [...prev, {
-            id: Math.random().toString(36).substr(2, 9),
+            id: Date.now().toString(),
             variantId: '',
             fromLocationId: '',
             toLocationId: '',
@@ -292,7 +302,7 @@ export function StockJournalContent() {
                             <div>
                                 <p className="text-sm text-muted-foreground font-medium">Total Value</p>
                                 <p className="text-2xl font-bold text-foreground mt-1">
-                                    ${stats.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                    {formatCurrency(stats.total, baseCurrency)}
                                 </p>
                             </div>
                             <div className="p-3 bg-emerald-100 rounded-xl">
@@ -487,7 +497,7 @@ export function StockJournalContent() {
                                                 </div>
                                                 <div className="col-span-2">
                                                     <Label className="text-xs">Total</Label>
-                                                    <p className="text-sm font-medium text-slate-700 mt-3">${item.totalCost.toFixed(2)}</p>
+                                                    <p className="text-sm font-medium text-slate-700 mt-3">{formatCurrency(item.totalCost, baseCurrency)}</p>
                                                 </div>
                                                 <div className="col-span-2">
                                                     {lineItems.length > 1 && (
@@ -546,7 +556,7 @@ export function StockJournalContent() {
                                         </div>
                                         <div className="flex justify-between text-lg font-bold">
                                             <span>Total Value:</span>
-                                            <span>${totals.totalValue.toFixed(2)}</span>
+                                            <span>{formatCurrency(totals.totalValue, baseCurrency)}</span>
                                         </div>
                                     </div>
 
@@ -594,9 +604,13 @@ export function StockJournalContent() {
                                 </TableHeader>
                                 <TableBody>
                                     {loading ? (
-                                        <TableRow>
-                                            <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Loading...</TableCell>
-                                        </TableRow>
+                                        [...Array(5)].map((_, i) => (
+                                            <TableRow key={i}>
+                                                <TableCell colSpan={7}>
+                                                    <Skeleton className="h-6 w-full bg-muted" />
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
                                     ) : filteredJournals.length === 0 ? (
                                         <TableRow>
                                             <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No stock journals found</TableCell>
@@ -609,7 +623,7 @@ export function StockJournalContent() {
                                                 <TableCell>{format(new Date(journal.date), 'MMM d, yyyy')}</TableCell>
                                                 <TableCell>{journal.reference || '-'}</TableCell>
                                                 <TableCell className="font-medium">
-                                                    ${Number(journal.total_value).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                                    {formatCurrency(Number(journal.total_value), baseCurrency)}
                                                 </TableCell>
                                                 <TableCell>{getStatusBadge(journal.posting_status)}</TableCell>
                                                 <TableCell className="text-right">

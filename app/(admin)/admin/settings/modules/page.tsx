@@ -10,6 +10,7 @@ import { Save, Loader2, CheckCircle2, Package, ShoppingCart, Users, DollarSign, 
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { settingsApi } from '@/lib/settings-api';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface Module {
     id: string;
@@ -56,7 +57,7 @@ export default function ModulesSettingsPage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [modulesConfig, setModulesConfig] = useState<ModulesConfig>(DEFAULT_MODULES);
-    const { refreshTenantStatus } = useTenant();
+    const { refreshTenantStatus, globalCompanyName, globalCurrency } = useTenant();
 
     useEffect(() => {
         const loadModules = async () => {
@@ -103,8 +104,21 @@ export default function ModulesSettingsPage() {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <div className="space-y-6 max-w-4xl animate-pulse">
+                <div>
+                    <Skeleton className="h-8 w-48 mb-2" />
+                    <Skeleton className="h-4 w-64" />
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                    <Skeleton className="h-20 w-full rounded-xl" />
+                    <Skeleton className="h-20 w-full rounded-xl" />
+                    <Skeleton className="h-20 w-full rounded-xl" />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {[...Array(10)].map((_, i) => (
+                        <Skeleton key={i} className="h-24 w-full rounded-xl" />
+                    ))}
+                </div>
             </div>
         );
     }
@@ -117,6 +131,9 @@ export default function ModulesSettingsPage() {
             <div>
                 <h1 className="text-2xl font-semibold">Modules</h1>
                 <p className="text-muted-foreground">Enable or disable system modules</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                    Active organization: {globalCompanyName} | Base currency: {globalCurrency}
+                </p>
             </div>
 
             {/* Stats */}

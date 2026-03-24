@@ -14,6 +14,7 @@ import { Clock, Plus, Save, CheckCircle, XCircle, FileDown, Calendar, User, Time
 import { toast } from 'sonner';
 import type { Employee } from '@/lib/db/types';
 import { authHeaders } from '@/lib/api';
+import { useCompanySettings } from '@/lib/hooks/use-company-settings';
 
 interface TimesheetEntry {
   id?: string;
@@ -45,8 +46,15 @@ interface TimesheetTrackingProps {
 }
 
 export function TimesheetTracking({ employees, onRefresh }: TimesheetTrackingProps) {
+  const { baseCurrency } = useCompanySettings();
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const handler = () => window.location.reload();
+    window.addEventListener('erp_company_settings_changed', handler);
+    return () => window.removeEventListener('erp_company_settings_changed', handler);
+  }, []);
   const [timesheets, setTimesheets] = useState<TimesheetEntry[]>([]);
   const [summary, setSummary] = useState<any[]>([]);
   const [selectedMonth, setSelectedMonth] = useState(() => {

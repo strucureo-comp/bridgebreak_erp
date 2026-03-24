@@ -15,9 +15,11 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { DollarSign, ArrowRight, CheckCircle2, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useSettings } from '@/lib/settings-context';
 
 export function PayrollNotifications() {
     const router = useRouter();
+    const { settings } = useSettings();
     const [pendingPayrolls, setPendingPayrolls] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(false);
 
@@ -51,9 +53,9 @@ export function PayrollNotifications() {
     }, []);
 
     const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('en-AE', {
+        return new Intl.NumberFormat('en-US', {
             style: 'currency',
-            currency: 'AED',
+            currency: settings.currency,
             maximumFractionDigits: 0,
         }).format(amount);
     };

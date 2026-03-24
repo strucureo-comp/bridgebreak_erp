@@ -65,7 +65,7 @@ export function ManufacturingContent({ boms, orders, onRefresh }: ManufacturingC
                                             <ClipboardList size={20} />
                                         </div>
                                         <Badge variant="outline" className={cn(
-                                            "text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border-none",
+                                            "text-xs font-semibold tracking-widest px-2 py-0.5 rounded-full border-none",
                                             order.status === 'in_progress' ? "bg-primary/5 text-primary" : "bg-muted text-muted-foreground"
                                         )}>
                                             {order.status.replace('_', ' ')}
@@ -105,11 +105,11 @@ export function ManufacturingContent({ boms, orders, onRefresh }: ManufacturingC
                             <table className="w-full text-left">
                                 <thead className="bg-muted border-b border-border">
                                     <tr>
-                                        <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground">BOM Reference</th>
-                                        <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground">Output Material</th>
-                                        <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground text-center">Components</th>
-                                        <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground">Status</th>
-                                        <th className="px-6 py-3 text-right text-[9px] font-black uppercase tracking-wider text-muted-foreground">Action</th>
+                                        <th className="px-6 py-3 text-xs font-medium text-muted-foreground">BOM Reference</th>
+                                        <th className="px-6 py-3 text-xs font-medium text-muted-foreground">Output Material</th>
+                                        <th className="px-6 py-3 text-xs font-medium text-muted-foreground text-center">Components</th>
+                                        <th className="px-6 py-3 text-xs font-medium text-muted-foreground">Status</th>
+                                        <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-border">
@@ -119,7 +119,7 @@ export function ManufacturingContent({ boms, orders, onRefresh }: ManufacturingC
                                             <td className="px-6 py-4 text-xs font-medium text-muted-foreground uppercase">{bom.output_item}</td>
                                             <td className="px-6 py-4 text-xs font-black text-foreground text-center">{bom.components} Items</td>
                                             <td className="px-6 py-4">
-                                                <Badge variant="outline" className="text-[8px] font-black uppercase px-2 py-0.5 rounded-full border-none bg-emerald-50 text-emerald-700">
+                                                <Badge variant="outline" className="text-xs font-semibold px-2 py-0.5 rounded-full border-none bg-emerald-50 text-emerald-700">
                                                     Active
                                                 </Badge>
                                             </td>

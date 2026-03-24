@@ -21,20 +21,23 @@ import { getProjects } from '@/lib/api';
 import type { Project } from '@/lib/db/types';
 import { ModuleGuard } from '@/components/shared/layout/module-guard';
 import { useTenant } from '@/lib/tenant-context';
-
-function fmt(n: number): string {
-    return new Intl.NumberFormat('en-AE', {
-        style: 'currency',
-        currency: 'AED',
-        maximumFractionDigits: 0
-    }).format(n);
-}
+import { useCompanySettings } from '@/lib/hooks/use-company-settings';
+import { formatCurrency } from '@/lib/utils/currency';
 
 export default function OperationsPage() {
     const router = useRouter();
     const { tenantStatus, getModuleLabel } = useTenant();
+    const { baseCurrency } = useCompanySettings();
     const [loading, setLoading] = useState(true);
     const [projects, setProjects] = useState<Project[]>([]);
+
+    useEffect(() => {
+        const handler = () => window.location.reload();
+        window.addEventListener('erp_company_settings_changed', handler);
+        return () => window.removeEventListener('erp_company_settings_changed', handler);
+    }, []);
+
+    const fmt = (n: number) => formatCurrency(n, baseCurrency);
 
     const fetchData = useCallback(async () => {
         try {
@@ -61,33 +64,22 @@ export default function OperationsPage() {
     if (loading) return null;
 
     return (
-        <DashboardShell requireAdmin>
-            <ModuleGuard module="operations">
-                <div className="space-y-6">
-                    {/* Header */}
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div className="flex items-center gap-4">
-                            <div className="h-10 w-10 rounded-lg bg-foreground text-card-foreground flex items-center justify-center shadow-sm">
-                                <Cog className="h-5 w-5" />
-                            </div>
-                            <div>
-                                <h1 className="text-xl font-bold tracking-tight text-foreground uppercase leading-none">{getModuleLabel('operations')}</h1>
-                                <div className="flex items-center gap-2 mt-0.5">
-                                    <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Resource & Process Control</span>
-                                    <Badge variant="secondary" className="hidden sm:inline-flex font-bold uppercase text-[9px] tracking-widest bg-slate-100 text-slate-600">
-                                        Lifecycle HUB
-                                    </Badge>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <Button size="sm" className="h-9 gap-2 bg-primary hover:bg-primary/90" onClick={() => router.push('/admin/projects/new')}>
-                                <Plus className="h-3.5 w-3.5" /> New Project
-                            </Button>
-                        </div>
+        <ModuleGuard module="operations">
+            <div className="space-y-6 max-w-6xl">
+                {/* HeaderArea */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h1 className="text-2xl font-semibold">{getModuleLabel('operations')}</h1>
+                        <p className="text-muted-foreground">Manage organizational resources and process workflows.</p>
                     </div>
+                    <div className="flex items-center gap-2">
+                        <Button size="sm" className="gap-2" onClick={() => router.push('/admin/projects/new')}>
+                            <Plus className="h-4 w-4" /> New Project
+                        </Button>
+                    </div>
+                </div>
 
-                    {/* KPI Strip */}
+                {/* KPI Strip */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         <MetricCard title="Active Projects" value={stats.active.length} icon={FolderKanban} trend="In Progress" trendUp />
                         <MetricCard title="Pending Review" value={stats.pending.length} icon={AlertCircle} trend="Review" trendUp={false} />
@@ -135,7 +127,7 @@ export default function OperationsPage() {
                                                     </TableCell>
                                                     <TableCell className="px-6 py-4">
                                                         <Badge variant="outline" className={cn(
-                                                            "text-[8px] font-black uppercase tracking-widest",
+                                                            "text-xs font-semibold tracking-widest",
                                                             p.status === 'completed' ? "border-emerald-100 text-emerald-700 bg-emerald-50" :
                                                                 p.status === 'in_progress' ? "border-blue-100 text-blue-700 bg-blue-50" :
                                                                     "text-muted-foreground"
@@ -193,7 +185,14 @@ export default function OperationsPage() {
                                 <Card className="border shadow-sm rounded-md overflow-hidden">
                                     <CardHeader className="border-b bg-muted/50 py-4 flex flex-row items-center justify-between">
                                         <CardTitle className="text-sm font-bold">Labour Timesheets</CardTitle>
-                                        <Button size="sm" variant="outline" className="h-8 text-[10px] font-bold uppercase tracking-widest">View HR</Button>
+                                        <Button 
+                                            size="sm" 
+                                            variant="outline" 
+                                            className="h-8 text-[10px] font-bold uppercase tracking-widest"
+                                            onClick={() => router.push('/admin/hr')}
+                                        >
+                                            View HR
+                                        </Button>
                                     </CardHeader>
                                     <div className="p-12 text-center text-muted-foreground italic">
                                         <Timer className="h-8 w-8 mx-auto mb-3 opacity-20" />
@@ -205,27 +204,30 @@ export default function OperationsPage() {
                     </Tabs>
                 </div>
             </ModuleGuard>
-        </DashboardShell>
     );
 }
 
 function MetricCard({ title, value, icon: Icon, trend, trendUp }: any) {
     return (
-        <Card className="border shadow-sm rounded-md bg-card hover:border-primary/50 transition-colors">
-            <CardHeader className="pb-1 flex flex-row items-center justify-between space-y-0">
-                <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{title}</CardTitle>
-                <div className={cn(
-                    "text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded",
-                    trendUp ? "bg-emerald-50 text-emerald-700" : trendUp === false ? "bg-rose-50 text-rose-600" : "bg-muted text-muted-foreground"
-                )}>
-                    {trend}
-                </div>
+        <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                    {title}
+                </CardTitle>
+                <Icon className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-                <div className="flex items-center gap-2">
-                    <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-                    <div className="text-xl font-bold tracking-tight text-foreground">{value}</div>
-                </div>
+                <div className="text-2xl font-bold">{value}</div>
+                {trend && (
+                    <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                        <span className={cn(
+                            "font-medium",
+                            trendUp ? "text-emerald-500" : trendUp === false ? "text-red-500" : "text-muted-foreground"
+                        )}>
+                            {trend}
+                        </span>
+                    </p>
+                )}
             </CardContent>
         </Card>
     );
@@ -233,15 +235,15 @@ function MetricCard({ title, value, icon: Icon, trend, trendUp }: any) {
 
 function OpsLinkCard({ title, desc, icon: Icon, href }: any) {
     return (
-        <Link href={href}>
-            <Card className="border shadow-sm rounded-md hover:border-primary/50 transition-all cursor-pointer group bg-card">
-                <CardContent className="p-5">
-                    <div className="h-9 w-9 rounded-md bg-muted flex items-center justify-center mb-4 group-hover:bg-primary group-hover:text-white transition-all">
-                        <Icon className="h-4 w-4" />
-                    </div>
-                    <h4 className="text-sm font-bold text-foreground">{title}</h4>
-                    <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-tight mt-1">{desc}</p>
-                </CardContent>
+        <Link href={href} className="block h-full block">
+            <Card className="h-full transition-colors hover:bg-muted/50 cursor-pointer">
+                <CardHeader className="pb-3">
+                     <div className="flex flex-row justify-between items-start mb-2">
+                        <Icon className="h-5 w-5 text-muted-foreground" />
+                     </div>
+                    <CardTitle className="text-base font-semibold">{title}</CardTitle>
+                    <CardDescription className="text-xs">{desc}</CardDescription>
+                </CardHeader>
             </Card>
         </Link>
     );

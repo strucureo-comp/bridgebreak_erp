@@ -76,7 +76,7 @@ export function LeadForm({ onSuccess }: LeadFormProps) {
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1.5">
                             <Label className="text-xs font-bold ml-1">Email Address</Label>
-                            <Input type="email" placeholder="john@example.com" className="h-10 bg-background" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
+                            <Input type="email" placeholder="email@example.com" className="h-10 bg-background" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
                         </div>
                         <div className="space-y-1.5">
                             <Label className="text-xs font-bold ml-1">Company</Label>

@@ -9,6 +9,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Send, Check, X, Download } from 'lucide-react';
 import { authHeaders } from '@/lib/api';
 import { toast } from 'sonner';
+import { useCompanySettings } from '@/lib/hooks/use-company-settings';
+import { formatCurrency } from '@/lib/utils/currency';
 
 interface QuotationViewerProps {
   quotation: any;
@@ -18,6 +20,7 @@ interface QuotationViewerProps {
 }
 
 export function QuotationViewer({ quotation, open, onClose, onRefresh }: QuotationViewerProps) {
+  const { baseCurrency } = useCompanySettings();
   const [fullQuotation, setFullQuotation] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -163,8 +166,8 @@ export function QuotationViewer({ quotation, open, onClose, onRefresh }: Quotati
                 <div key={index} className="grid grid-cols-12 gap-2 text-sm py-2 border-b">
                   <div className="col-span-6">{line.description}</div>
                   <div className="col-span-2 text-right">{line.quantity}</div>
-                  <div className="col-span-2 text-right">AED {line.unit_price.toFixed(2)}</div>
-                  <div className="col-span-2 text-right font-medium">AED {line.total.toFixed(2)}</div>
+                  <div className="col-span-2 text-right">{formatCurrency(line.unit_price, baseCurrency)}</div>
+                  <div className="col-span-2 text-right font-medium">{formatCurrency(line.total, baseCurrency)}</div>
                 </div>
               ))}
             </div>
@@ -175,15 +178,15 @@ export function QuotationViewer({ quotation, open, onClose, onRefresh }: Quotati
             <div className="space-y-4">
               <div className="flex justify-between items-center pb-3 border-b">
                 <span className="text-muted-foreground font-medium">Subtotal:</span>
-                <span className="text-xl font-bold">AED {fullQuotation.subtotal?.toFixed(2)}</span>
+                <span className="text-xl font-bold">{formatCurrency(fullQuotation.subtotal || 0, baseCurrency)}</span>
               </div>
               <div className="flex justify-between items-center pb-3 border-b">
                 <span className="text-muted-foreground font-medium">Tax ({fullQuotation.tax_mode === 'auto' ? `${fullQuotation.tax_rate}%` : 'Manual'}):</span>
-                <span className="text-xl font-bold">AED {fullQuotation.tax_amount?.toFixed(2)}</span>
+                <span className="text-xl font-bold">{formatCurrency(fullQuotation.tax_amount || 0, baseCurrency)}</span>
               </div>
               <div className="flex justify-between items-center bg-primary/10 rounded-lg p-4 border border-primary/30">
                 <span className="text-lg font-bold text-primary">Total Amount:</span>
-                <span className="text-3xl font-bold text-primary">AED {fullQuotation.total_amount?.toFixed(2)}</span>
+                <span className="text-3xl font-bold text-primary">{formatCurrency(fullQuotation.total_amount || 0, baseCurrency)}</span>
               </div>
             </div>
           </Card>

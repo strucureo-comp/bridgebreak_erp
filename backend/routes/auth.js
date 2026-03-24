@@ -106,6 +106,23 @@ router.get('/users', auth, async (req, res) => {
     }
 });
 
+// GET /api/auth/users/:id - Get single user
+router.get('/users/:id', auth, async (req, res) => {
+    try {
+        const tenant_id = req.user?.tenant_id || 'default';
+        const user = await User.findOne({ _id: req.params.id, tenant_id }).select('-password');
+        
+        if (!user) {
+            return res.status(404).json({ success: false, error: 'User not found' });
+        }
+        
+        res.json({ success: true, data: user });
+    } catch (error) {
+        console.error('Error fetching user:', error);
+        res.status(500).json({ success: false, error: 'Failed to fetch user' });
+    }
+});
+
 // POST /api/auth/users/invite - Invite new user
 router.post('/users/invite', auth, adminOnly, async (req, res) => {
     try {

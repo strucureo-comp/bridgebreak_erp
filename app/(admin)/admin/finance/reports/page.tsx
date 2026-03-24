@@ -1,135 +1,253 @@
 'use client';
 
-import { useState } from 'react';
-
+import { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { BarChart3, Download, ArrowUpRight, ArrowDownRight, Loader2 } from 'lucide-react';
+import { BarChart3, Download, Loader2 } from 'lucide-react';
 import { useCurrency } from '@/lib/hooks/use-currency';
 import { cn } from '@/lib/utils';
 import { KpiCard } from '@/components/finance/KpiCard';
 import { FinancePageHeader } from '@/components/finance/FinancePageHeader';
 import { toast } from 'sonner';
-
-// Optional static import of jsPDF for client-side generation
+import { getAccounts, getInvoices, getExpenses } from '@/lib/api';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-// ── MOCK DATA ──
-const BS = {
-    assets: [
-        { name: 'Cash & Bank', value: 1840000 }, { name: 'Accounts Receivable', value: 542000 },
-        { name: 'Inventory', value: 380000 }, { name: 'Prepaid Expenses', value: 45000 },
-        { name: 'Property, Plant & Equipment (Net)', value: 960000 },
-    ],
-    liabilities: [
-        { name: 'Accounts Payable', value: 218000 }, { name: 'Accrued Expenses', value: 67000 },
-        { name: 'VAT Payable', value: 123000 }, { name: 'Unearned Revenue', value: 89000 },
-        { name: 'Long-term Loan', value: 500000 },
-    ],
-    equity: [
-        { name: 'Share Capital', value: 1000000 }, { name: 'Retained Earnings', value: 850000 },
-        { name: 'Current Year P&L', value: 860000 },
-    ],
-};
+type ReportRow = { name: string; value: number };
 
-const IS = {
-    revenue: [{ name: 'Sales Revenue', value: 2460000 }, { name: 'Service Revenue', value: 340000 }, { name: 'Other Income', value: 28000 }],
-    directCosts: [{ name: 'Cost of Goods Sold', value: 412000 }, { name: 'Direct Labour', value: 180000 }],
-    operatingExp: [
-        { name: 'Salaries & Wages', value: 156000 }, { name: 'Rent', value: 72000 },
-        { name: 'Utilities', value: 18500 }, { name: 'Depreciation', value: 48000 },
-        { name: 'Insurance', value: 24000 },
-    ],
-    financeCosts: [{ name: 'Interest Expense', value: 32000 }, { name: 'FX Loss', value: 8400 }],
-};
+function toISODate(date: Date) {
+    return date.toISOString().split('T')[0];
+}
 
-const CF = {
-    operating: [{ name: 'Net Income', value: 1568000 }, { name: 'Depreciation Add-back', value: 48000 }, { name: 'Change in Receivables', value: -142000 }, { name: 'Change in Payables', value: 68000 }],
-    investing: [{ name: 'Equipment Purchase', value: -95000 }, { name: 'Asset Sale Proceeds', value: 12000 }],
-    financing: [{ name: 'Loan Repayment', value: -100000 }, { name: 'Dividend Paid', value: -200000 }],
-};
+function getCurrentMonthRange() {
+    const today = new Date();
+    return {
+        start: toISODate(new Date(today.getFullYear(), today.getMonth(), 1)),
+        end: toISODate(today),
+    };
+}
 
-const BVA = [
-    { dept: 'Engineering', budget: 420000, actual: 392000 },
-    { dept: 'Sales & Marketing', budget: 180000, actual: 205000 },
-    { dept: 'Operations', budget: 310000, actual: 295000 },
-    { dept: 'Admin & HR', budget: 120000, actual: 118000 },
-    { dept: 'IT & Systems', budget: 95000, actual: 82000 },
-];
+function parseDate(value: any) {
+    if (!value) return null;
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function inRange(value: any, start: string, end: string) {
+    const date = parseDate(value);
+    if (!date) return false;
+    const startDate = parseDate(start);
+    const endDate = parseDate(end);
+    if (!startDate || !endDate) return true;
+    return date >= startDate && date <= endDate;
+}
+
+function expenseAmount(expense: any) {
+    return Number(expense.total || expense.amount || 0);
+}
+
+function invoiceAmount(invoice: any) {
+    return Number(invoice.total || invoice.amount || 0);
+}
+
+function expenseDate(expense: any) {
+    return expense.date || expense.createdAt;
+}
+
+function invoiceDate(invoice: any) {
+    return invoice.issue_date || invoice.date || invoice.createdAt;
+}
+
+function isDirectCost(expense: any) {
+    const text = `${expense.category || ''} ${expense.description || ''}`.toLowerCase();
+    return [
+        'cogs',
+        'cost of goods',
+        'material',
+        'materials',
+        'inventory',
+        'production',
+        'subcontract',
+        'project cost',
+        'direct cost',
+    ].some((keyword) => text.includes(keyword));
+}
 
 export default function FinancialReportingPage() {
     const { format: fmt, currencyCode } = useCurrency();
     const [tab, setTab] = useState('bs');
-
-    // Date Range State
-    const [startDate, setStartDate] = useState('2026-02-01');
-    const [endDate, setEndDate] = useState('2026-02-28');
+    const defaultRange = useMemo(() => getCurrentMonthRange(), []);
+    const [draftStartDate, setDraftStartDate] = useState(defaultRange.start);
+    const [draftEndDate, setDraftEndDate] = useState(defaultRange.end);
+    const [reportRange, setReportRange] = useState(defaultRange);
     const [exporting, setExporting] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [accounts, setAccounts] = useState<any[]>([]);
+    const [invoices, setInvoices] = useState<any[]>([]);
+    const [expenses, setExpenses] = useState<any[]>([]);
 
-    const totalAssets = BS.assets.reduce((s, a) => s + a.value, 0);
-    const totalLiab = BS.liabilities.reduce((s, l) => s + l.value, 0);
-    const totalEquity = BS.equity.reduce((s, e) => s + e.value, 0);
-    const totalRevenue = IS.revenue.reduce((s, r) => s + r.value, 0);
-    const totalDirectCosts = IS.directCosts.reduce((s, d) => s + d.value, 0);
-    const grossProfit = totalRevenue - totalDirectCosts;
-    const totalOpex = IS.operatingExp.reduce((s, o) => s + o.value, 0);
-    const totalFinance = IS.financeCosts.reduce((s, f) => s + f.value, 0);
-    const netIncome = grossProfit - totalOpex - totalFinance;
+    useEffect(() => {
+        let active = true;
 
-    // Real PDF Export logic
+        async function fetchData() {
+            setLoading(true);
+            try {
+                const [accountsData, invoicesData, expensesData] = await Promise.all([
+                    getAccounts().catch(() => []),
+                    getInvoices().catch(() => []),
+                    getExpenses().catch(() => []),
+                ]);
+
+                if (!active) return;
+                setAccounts(accountsData || []);
+                setInvoices(invoicesData || []);
+                setExpenses(expensesData || []);
+            } catch (error) {
+                console.error('Failed to fetch financial data:', error);
+                toast.error('Failed to load financial report data');
+            } finally {
+                if (active) {
+                    setLoading(false);
+                }
+            }
+        }
+
+        void fetchData();
+
+        return () => {
+            active = false;
+        };
+    }, []);
+
+    const runReport = () => {
+        if (!draftStartDate || !draftEndDate) {
+            toast.error('Select a start and end date');
+            return;
+        }
+
+        if (draftStartDate > draftEndDate) {
+            toast.error('Start date cannot be after end date');
+            return;
+        }
+
+        setReportRange({ start: draftStartDate, end: draftEndDate });
+    };
+
+    const filteredInvoices = useMemo(
+        () => invoices.filter((invoice) => inRange(invoiceDate(invoice), reportRange.start, reportRange.end)),
+        [invoices, reportRange]
+    );
+
+    const filteredExpenses = useMemo(
+        () => expenses.filter((expense) => inRange(expenseDate(expense), reportRange.start, reportRange.end)),
+        [expenses, reportRange]
+    );
+
+    const financialData = useMemo(() => {
+        const assets = accounts.filter((account: any) => account.type === 'asset');
+        const liabilities = accounts.filter((account: any) => account.type === 'liability');
+        const equity = accounts.filter((account: any) => account.type === 'equity');
+
+        const directCosts = filteredExpenses.filter(isDirectCost);
+        const operatingExpenses = filteredExpenses.filter((expense) => !isDirectCost(expense));
+
+        const totalAssets = assets.reduce((sum: number, account: any) => sum + Number(account.balance || 0), 0);
+        const totalLiabilities = liabilities.reduce((sum: number, account: any) => sum + Number(account.balance || 0), 0);
+        const totalEquity = equity.reduce((sum: number, account: any) => sum + Number(account.balance || 0), 0);
+        const totalRevenue = filteredInvoices.reduce((sum: number, invoice: any) => sum + invoiceAmount(invoice), 0);
+        const directCostTotal = directCosts.reduce((sum: number, expense: any) => sum + expenseAmount(expense), 0);
+        const operatingExpenseTotal = operatingExpenses.reduce((sum: number, expense: any) => sum + expenseAmount(expense), 0);
+        const totalExpenses = directCostTotal + operatingExpenseTotal;
+        const grossProfit = totalRevenue - directCostTotal;
+        const operatingIncome = grossProfit - operatingExpenseTotal;
+        const operatingCash = totalRevenue - totalExpenses;
+
+        return {
+            assets: assets.map((account: any) => ({ name: account.name, value: Number(account.balance || 0) })),
+            liabilities: liabilities.map((account: any) => ({ name: account.name, value: Number(account.balance || 0) })),
+            equity: equity.map((account: any) => ({ name: account.name, value: Number(account.balance || 0) })),
+            directCosts,
+            operatingExpenses,
+            totalAssets,
+            totalLiabilities,
+            totalEquity,
+            totalRevenue,
+            directCostTotal,
+            operatingExpenseTotal,
+            totalExpenses,
+            grossProfit,
+            operatingIncome,
+            netIncome: operatingIncome,
+            operatingCash,
+        };
+    }, [accounts, filteredExpenses, filteredInvoices]);
+
+    const {
+        assets,
+        liabilities,
+        equity,
+        directCosts,
+        operatingExpenses,
+        totalAssets,
+        totalLiabilities,
+        totalEquity,
+        totalRevenue,
+        directCostTotal,
+        operatingExpenseTotal,
+        grossProfit,
+        netIncome,
+        operatingCash,
+    } = financialData;
+
     const handleExportPDF = async () => {
         setExporting(true);
         try {
             const doc = new jsPDF();
-            const title = `Financial Report: ${tab.toUpperCase()}`;
-
             doc.setFontSize(16);
-            doc.text(title, 14, 22);
+            doc.text(`Financial Report: ${tab.toUpperCase()}`, 14, 22);
             doc.setFontSize(10);
-            doc.text(`Period: ${startDate} to ${endDate}`, 14, 28);
+            doc.text(`Period: ${reportRange.start} to ${reportRange.end}`, 14, 28);
             doc.text(`Currency: ${currencyCode}`, 14, 34);
 
-            let head: any[] = [];
-            let body: any[] = [];
+            let head: string[][] = [];
+            let body: string[][] = [];
 
             if (tab === 'bs') {
                 head = [['Category', 'Account', 'Balance']];
-                BS.assets.forEach(a => body.push(['Asset', a.name, fmt(a.value)]));
-                BS.liabilities.forEach(l => body.push(['Liability', l.name, fmt(l.value)]));
-                BS.equity.forEach(e => body.push(['Equity', e.name, fmt(e.value)]));
+                assets.forEach((row: ReportRow) => body.push(['Asset', row.name, fmt(row.value)]));
+                liabilities.forEach((row: ReportRow) => body.push(['Liability', row.name, fmt(row.value)]));
+                equity.forEach((row: ReportRow) => body.push(['Equity', row.name, fmt(row.value)]));
             } else if (tab === 'is') {
                 head = [['Category', 'Description', 'Amount']];
-                IS.revenue.forEach(r => body.push(['Revenue', r.name, fmt(r.value)]));
-                IS.directCosts.forEach(d => body.push(['Direct Cost', d.name, fmt(d.value)]));
-                IS.operatingExp.forEach(o => body.push(['Operating Expense', o.name, fmt(o.value)]));
-                IS.financeCosts.forEach(f => body.push(['Finance Cost', f.name, fmt(f.value)]));
-                body.push(['', 'NET INCOME', fmt(netIncome)]);
+                filteredInvoices.forEach((invoice: any) => body.push(['Revenue', invoice.customer_name || invoice.customerName || 'Invoice', fmt(invoiceAmount(invoice))]));
+                directCosts.forEach((expense: any) => body.push(['Direct Cost', expense.description || expense.category || 'Expense', fmt(expenseAmount(expense))]));
+                operatingExpenses.forEach((expense: any) => body.push(['Operating Expense', expense.description || expense.category || 'Expense', fmt(expenseAmount(expense))]));
+                body.push(['', 'Net Income', fmt(netIncome)]);
             } else if (tab === 'cf') {
                 head = [['Activity Type', 'Description', 'Amount']];
-                CF.operating.forEach(o => body.push(['Operating', o.name, fmt(o.value)]));
-                CF.investing.forEach(i => body.push(['Investing', i.name, fmt(i.value)]));
-                CF.financing.forEach(f => body.push(['Financing', f.name, fmt(f.value)]));
-            } else if (tab === 'bva') {
-                head = [['Department', 'Budget', 'Actual', 'Variance']];
-                BVA.forEach(b => body.push([b.dept, fmt(b.budget), fmt(b.actual), fmt(b.budget - b.actual)]));
+                body.push(['Operating Inflows', 'Revenue billed in period', fmt(totalRevenue)]);
+                body.push(['Operating Outflows', 'Expense outflows in period', fmt(-1 * (directCostTotal + operatingExpenseTotal))]);
+                body.push(['', 'Net Operating Cash', fmt(operatingCash)]);
+            } else {
+                head = [['Section', 'Notes']];
+                body.push(['Budget Controls', 'Budget controls are not configured from source data in this workspace.']);
             }
 
             autoTable(doc, {
                 startY: 40,
-                head: head,
-                body: body,
+                head,
+                body,
                 theme: 'striped',
-                headStyles: { fillColor: [220, 38, 38] } // Red accent to match theme
+                headStyles: { fillColor: [220, 38, 38] },
             });
 
-            doc.save(`Financial_Report_${tab}_${endDate}.pdf`);
-            toast.success('PDF Export downloaded successfully');
-        } catch (err) {
-            console.error(err);
+            doc.save(`Financial_Report_${tab}_${reportRange.end}.pdf`);
+            toast.success('PDF export downloaded');
+        } catch (error) {
+            console.error(error);
             toast.error('Failed to export PDF');
         } finally {
             setExporting(false);
@@ -137,84 +255,84 @@ export default function FinancialReportingPage() {
     };
 
     return (
+        <div className="space-y-6 pb-8">
+            <FinancePageHeader
+                title="Financial Reporting"
+                subtitle="Balance Sheet · P&L · Cash Movement · Budget Controls"
+                icon={BarChart3}
+                actions={
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-2 text-[10px] h-8"
+                        onClick={handleExportPDF}
+                        disabled={exporting || loading}
+                    >
+                        {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                        {exporting ? 'Generating...' : 'Export PDF'}
+                    </Button>
+                }
+            />
 
-            <div className="space-y-6 pb-8">
-
-                <FinancePageHeader
-                    title="Financial Reporting"
-                    subtitle="Balance Sheet · P&L · Cash Flow · Budget vs Actual"
-                    icon={BarChart3}
-                    actions={
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="gap-2 text-[10px] h-8"
-                            onClick={handleExportPDF}
-                            disabled={exporting}
-                        >
-                            {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-                            {exporting ? 'Generating...' : 'Export PDF'}
+            <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
+                <Card className="border-border shadow-sm w-full md:w-auto shrink-0 bg-muted/30">
+                    <CardContent className="p-3 flex flex-col sm:flex-row items-start sm:items-end gap-3">
+                        <div className="space-y-1">
+                            <Label className="text-[10px] uppercase text-muted-foreground font-bold tracking-wider">Start Date</Label>
+                            <Input type="date" value={draftStartDate} onChange={(e) => setDraftStartDate(e.target.value)} className="h-8 text-xs font-mono" />
+                        </div>
+                        <div className="space-y-1">
+                            <Label className="text-[10px] uppercase text-muted-foreground font-bold tracking-wider">End Date</Label>
+                            <Input type="date" value={draftEndDate} onChange={(e) => setDraftEndDate(e.target.value)} className="h-8 text-xs font-mono" />
+                        </div>
+                        <Button size="sm" className="h-8 bg-red-600 hover:bg-red-700" onClick={runReport} disabled={loading}>
+                            Apply Report
                         </Button>
-                    }
-                />
+                    </CardContent>
+                </Card>
 
-                {/* Date Filter & Executive KPIs */}
-                <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
-                    <Card className="border-border shadow-sm w-full md:w-auto shrink-0 bg-muted/30">
-                        <CardContent className="p-3 flex items-center gap-3">
-                            <div className="space-y-1">
-                                <Label className="text-[10px] uppercase text-muted-foreground font-bold tracking-wider">Start Date</Label>
-                                <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="h-8 text-xs font-mono" />
-                            </div>
-                            <div className="text-muted-foreground mt-4">—</div>
-                            <div className="space-y-1">
-                                <Label className="text-[10px] uppercase text-muted-foreground font-bold tracking-wider">End Date</Label>
-                                <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="h-8 text-xs font-mono" />
-                            </div>
-                            <Button size="sm" className="mt-4 h-8 bg-red-600 hover:bg-red-700" onClick={() => toast.success('Report data refreshed for selected period')}>
-                                Run Report
-                            </Button>
-                        </CardContent>
-                    </Card>
-
-                    <div className="grid gap-3 grid-cols-2 md:grid-cols-4 w-full">
-                        <KpiCard label="Total Assets" value={fmt(totalAssets)} />
-                        <KpiCard label="Gross Profit" value={fmt(grossProfit)} />
-                        <KpiCard label="Net Income" value={fmt(netIncome)} positive={netIncome >= 0} />
-                        <KpiCard label="Operating Cash" value={fmt(CF.operating.reduce((s, o) => s + o.value, 0))} />
-                    </div>
+                <div className="grid gap-3 grid-cols-2 md:grid-cols-4 w-full">
+                    <KpiCard label="Total Assets" value={fmt(totalAssets)} />
+                    <KpiCard label="Gross Profit" value={fmt(grossProfit)} />
+                    <KpiCard label="Net Income" value={fmt(netIncome)} positive={netIncome >= 0} />
+                    <KpiCard label="Operating Cash" value={fmt(operatingCash)} positive={operatingCash >= 0} />
                 </div>
+            </div>
 
+            {loading ? (
+                <div className="flex items-center justify-center py-16">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+            ) : (
                 <Tabs value={tab} onValueChange={setTab}>
                     <TabsList className="bg-muted/50 border h-9 p-0.5">
                         <TabsTrigger value="bs" className="text-xs font-semibold h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">Balance Sheet</TabsTrigger>
                         <TabsTrigger value="is" className="text-xs font-semibold h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">Income Statement</TabsTrigger>
-                        <TabsTrigger value="cf" className="text-xs font-semibold h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">Cash Flow</TabsTrigger>
-                        <TabsTrigger value="bva" className="text-xs font-semibold h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">Budget vs Actual</TabsTrigger>
+                        <TabsTrigger value="cf" className="text-xs font-semibold h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">Cash Movement</TabsTrigger>
+                        <TabsTrigger value="bva" className="text-xs font-semibold h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">Budget Controls</TabsTrigger>
                     </TabsList>
 
-                    {/* ── ALONG WITH EXISTING REPORTS ── */}
                     <TabsContent value="bs" className="mt-6">
                         <Card className="border-border shadow-sm">
                             <CardHeader className="pb-2 border-b">
                                 <CardTitle className="text-sm">Statement of Financial Position</CardTitle>
-                                <CardDescription className="text-[11px]">As at {new Date(endDate).toLocaleDateString()}</CardDescription>
+                                <CardDescription className="text-[11px]">As at {new Date(reportRange.end).toLocaleDateString()}</CardDescription>
                             </CardHeader>
                             <CardContent className="p-0">
                                 <div className="divide-y">
                                     <SectionHeader title="ASSETS" />
-                                    {BS.assets.map(a => <LineItem key={a.name} name={a.name} value={fmt(a.value)} />)}
+                                    {assets.map((row: ReportRow) => <LineItem key={row.name} name={row.name} value={fmt(row.value)} />)}
                                     <TotalLine label="Total Assets" value={fmt(totalAssets)} />
 
                                     <SectionHeader title="LIABILITIES" />
-                                    {BS.liabilities.map(l => <LineItem key={l.name} name={l.name} value={fmt(l.value)} />)}
-                                    <TotalLine label="Total Liabilities" value={fmt(totalLiab)} />
+                                    {liabilities.map((row: ReportRow) => <LineItem key={row.name} name={row.name} value={fmt(row.value)} />)}
+                                    <TotalLine label="Total Liabilities" value={fmt(totalLiabilities)} />
 
                                     <SectionHeader title="EQUITY" />
-                                    {BS.equity.map(e => <LineItem key={e.name} name={e.name} value={fmt(e.value)} />)}
+                                    {equity.map((row: ReportRow) => <LineItem key={row.name} name={row.name} value={fmt(row.value)} />)}
                                     <TotalLine label="Total Equity" value={fmt(totalEquity)} />
 
-                                    <TotalLine label="Liabilities + Equity (Balanced check)" value={fmt(totalLiab + totalEquity)} highlight />
+                                    <TotalLine label="Liabilities + Equity" value={fmt(totalLiabilities + totalEquity)} highlight />
                                 </div>
                             </CardContent>
                         </Card>
@@ -224,24 +342,41 @@ export default function FinancialReportingPage() {
                         <Card className="border-border shadow-sm">
                             <CardHeader className="pb-2 border-b">
                                 <CardTitle className="text-sm">Income Statement</CardTitle>
-                                <CardDescription className="text-[11px]">For the period {new Date(startDate).toLocaleDateString()} to {new Date(endDate).toLocaleDateString()}</CardDescription>
+                                <CardDescription className="text-[11px]">For the period {new Date(reportRange.start).toLocaleDateString()} to {new Date(reportRange.end).toLocaleDateString()}</CardDescription>
                             </CardHeader>
                             <CardContent className="p-0">
                                 <div className="divide-y">
                                     <SectionHeader title="REVENUE" />
-                                    {IS.revenue.map(r => <LineItem key={r.name} name={r.name} value={fmt(r.value)} />)}
+                                    {filteredInvoices.length > 0 ? filteredInvoices.map((invoice: any) => (
+                                        <LineItem
+                                            key={invoice._id || invoice.id}
+                                            name={invoice.customer_name || invoice.customerName || invoice.description || 'Sales'}
+                                            value={fmt(invoiceAmount(invoice))}
+                                        />
+                                    )) : <EmptySection label="No revenue recorded in the selected period" />}
                                     <TotalLine label="Total Revenue" value={fmt(totalRevenue)} />
 
                                     <SectionHeader title="DIRECT COSTS" />
-                                    {IS.directCosts.map(d => <LineItem key={d.name} name={d.name} value={`(${fmt(d.value)})`} negative />)}
+                                    {directCosts.length > 0 ? directCosts.map((expense: any) => (
+                                        <LineItem
+                                            key={expense._id || expense.id}
+                                            name={expense.description || expense.category || 'Direct Cost'}
+                                            value={`(${fmt(expenseAmount(expense))})`}
+                                            negative
+                                        />
+                                    )) : <EmptySection label="No direct costs identified in the selected period" />}
                                     <TotalLine label="Gross Profit" value={fmt(grossProfit)} highlight />
 
                                     <SectionHeader title="OPERATING EXPENSES" />
-                                    {IS.operatingExp.map(o => <LineItem key={o.name} name={o.name} value={`(${fmt(o.value)})`} negative />)}
-                                    <TotalLine label="Operating Income" value={fmt(grossProfit - totalOpex)} />
-
-                                    <SectionHeader title="FINANCE COSTS" />
-                                    {IS.financeCosts.map(f => <LineItem key={f.name} name={f.name} value={`(${fmt(f.value)})`} negative />)}
+                                    {operatingExpenses.length > 0 ? operatingExpenses.map((expense: any) => (
+                                        <LineItem
+                                            key={expense._id || expense.id}
+                                            name={expense.description || expense.category || 'Expense'}
+                                            value={`(${fmt(expenseAmount(expense))})`}
+                                            negative
+                                        />
+                                    )) : <EmptySection label="No operating expenses recorded in the selected period" />}
+                                    <TotalLine label="Operating Income" value={fmt(grossProfit - operatingExpenseTotal)} />
                                     <TotalLine label="Net Income" value={fmt(netIncome)} highlight />
                                 </div>
                             </CardContent>
@@ -251,24 +386,19 @@ export default function FinancialReportingPage() {
                     <TabsContent value="cf" className="mt-6">
                         <Card className="border-border shadow-sm">
                             <CardHeader className="pb-2 border-b">
-                                <CardTitle className="text-sm">Statement of Cash Flows</CardTitle>
-                                <CardDescription className="text-[11px]">For the period {new Date(startDate).toLocaleDateString()} to {new Date(endDate).toLocaleDateString()}</CardDescription>
+                                <CardTitle className="text-sm">Cash Movement Summary</CardTitle>
+                                <CardDescription className="text-[11px]">Derived from billed revenue and recorded expenses for the selected period</CardDescription>
                             </CardHeader>
                             <CardContent className="p-0">
                                 <div className="divide-y">
-                                    <SectionHeader title="OPERATING ACTIVITIES" />
-                                    {CF.operating.map(o => <LineItem key={o.name} name={o.name} value={fmt(o.value)} negative={o.value < 0} />)}
-                                    <TotalLine label="Net Operating Cash" value={fmt(CF.operating.reduce((s, o) => s + o.value, 0))} />
+                                    <SectionHeader title="OPERATING INFLOWS" />
+                                    <LineItem name="Revenue billed during period" value={fmt(totalRevenue)} />
 
-                                    <SectionHeader title="INVESTING ACTIVITIES" />
-                                    {CF.investing.map(i => <LineItem key={i.name} name={i.name} value={fmt(i.value)} negative={i.value < 0} />)}
-                                    <TotalLine label="Net Investing Cash" value={fmt(CF.investing.reduce((s, i) => s + i.value, 0))} />
+                                    <SectionHeader title="OPERATING OUTFLOWS" />
+                                    <LineItem name="Direct cost outflows" value={`(${fmt(directCostTotal)})`} negative />
+                                    <LineItem name="Operating expense outflows" value={`(${fmt(operatingExpenseTotal)})`} negative />
 
-                                    <SectionHeader title="FINANCING ACTIVITIES" />
-                                    {CF.financing.map(f => <LineItem key={f.name} name={f.name} value={fmt(f.value)} negative={f.value < 0} />)}
-                                    <TotalLine label="Net Financing Cash" value={fmt(CF.financing.reduce((s, f) => s + f.value, 0))} />
-
-                                    <TotalLine label="Net Change in Cash" value={fmt([...CF.operating, ...CF.investing, ...CF.financing].reduce((s, c) => s + c.value, 0))} highlight />
+                                    <TotalLine label="Net Operating Cash" value={fmt(operatingCash)} highlight />
                                 </div>
                             </CardContent>
                         </Card>
@@ -277,65 +407,51 @@ export default function FinancialReportingPage() {
                     <TabsContent value="bva" className="mt-6">
                         <Card className="border-border shadow-sm">
                             <CardHeader className="pb-2 border-b">
-                                <CardTitle className="text-sm">Budget vs Actual — YTD</CardTitle>
+                                <CardTitle className="text-sm">Budget Controls</CardTitle>
+                                <CardDescription className="text-[11px]">Budget variance requires configured budget baselines</CardDescription>
                             </CardHeader>
-                            <CardContent className="p-0">
-                                <div className="divide-y">
-                                    <div className="grid grid-cols-12 px-6 py-2.5 bg-muted/50 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                                        <span className="col-span-3">Department</span><span className="col-span-2 text-right">Budget</span>
-                                        <span className="col-span-2 text-right">Actual</span><span className="col-span-2 text-right">Variance</span>
-                                        <span className="col-span-3">Utilization</span>
-                                    </div>
-                                    {BVA.map(b => {
-                                        const variance = b.budget - b.actual;
-                                        const pct = Math.round((b.actual / b.budget) * 100);
-                                        const over = b.actual > b.budget;
-                                        return (
-                                            <div key={b.dept} className="grid grid-cols-12 px-6 py-3 items-center hover:bg-muted/30 transition-colors text-sm">
-                                                <span className="col-span-3 text-xs font-medium">{b.dept}</span>
-                                                <span className="col-span-2 text-right text-xs">{fmt(b.budget)}</span>
-                                                <span className="col-span-2 text-right text-xs font-bold">{fmt(b.actual)}</span>
-                                                <span className={cn("col-span-2 text-right text-xs font-bold flex items-center justify-end gap-0.5", over ? "text-red-600" : "text-emerald-600")}>
-                                                    {over ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
-                                                    {fmt(Math.abs(variance))}
-                                                </span>
-                                                <span className="col-span-3 flex items-center gap-2 pl-2">
-                                                    <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                                                        <div className={cn("h-full rounded-full transition-all", over ? "bg-red-500" : "bg-emerald-500")} style={{ width: `${Math.min(pct, 100)}%` }} />
-                                                    </div>
-                                                    <span className={cn("text-[10px] font-bold w-8 text-right", over ? "text-red-600" : "text-emerald-600")}>{pct}%</span>
-                                                </span>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
+                            <CardContent className="p-6 space-y-3">
+                                <p className="text-sm text-muted-foreground">
+                                    Budget controls are not configured from source data in this workspace, so the system will not invent budget numbers.
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                    Once department or account budgets are configured, this tab can show budget vs actual with real variances.
+                                </p>
                             </CardContent>
                         </Card>
                     </TabsContent>
                 </Tabs>
-            </div>
+            )}
+        </div>
     );
 }
 
-// ── RENDER HELPER COMPONENTS ──
 function SectionHeader({ title }: { title: string }) {
-    return <div className="px-6 py-2 bg-muted/30 border-y"><p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{title}</p></div>;
+    return (
+        <div className="px-6 py-2 bg-muted/30 border-y">
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{title}</p>
+        </div>
+    );
+}
+
+function EmptySection({ label }: { label: string }) {
+    return <div className="px-6 py-3 text-xs text-muted-foreground">{label}</div>;
 }
 
 function LineItem({ name, value, negative }: { name: string; value: string; negative?: boolean }) {
     return (
         <div className="flex items-center justify-between px-6 py-3 hover:bg-muted/20 transition-colors">
             <span className="text-xs text-muted-foreground">{name}</span>
-            <span className={cn("text-xs font-medium tracking-tight", negative && "text-red-600 font-bold")}>{value}</span>
+            <span className={cn('text-xs font-medium tracking-tight', negative && 'text-red-600 font-bold')}>{value}</span>
         </div>
     );
 }
 
 function TotalLine({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
     return (
-        <div className={cn("flex items-center justify-between px-6 py-3", highlight ? "bg-red-50 border-t border-red-200" : "bg-muted/10 border-t")}>
-            <span className={cn("text-xs font-bold uppercase tracking-wider", highlight && "text-red-700")}>{label}</span>
-            <span className={cn("text-sm font-bold tracking-tight", highlight && "text-red-600")}>{value}</span>
+        <div className={cn('flex items-center justify-between px-6 py-3', highlight ? 'bg-red-50 border-t border-red-200' : 'bg-muted/10 border-t')}>
+            <span className={cn('text-xs font-bold uppercase tracking-wider', highlight && 'text-red-700')}>{label}</span>
+            <span className={cn('text-sm font-bold tracking-tight', highlight && 'text-red-600')}>{value}</span>
         </div>
     );
 }

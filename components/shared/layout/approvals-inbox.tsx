@@ -28,6 +28,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Check, X, ClipboardCheck, ArrowRight, Clock, FileText, User, Receipt, Truck, Bell, FileSignature, ShoppingCart, DollarSign, CreditCard, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { useSettings } from '@/lib/settings-context';
 import {
     AppModule,
     DocumentType,
@@ -95,11 +96,13 @@ interface PendingDocument {
 export function ApprovalsInbox() {
     const router = useRouter();
     const { user } = useAuth();
+    const { settings } = useSettings();
     const [pendingDocs, setPendingDocs] = useState<PendingDocument[]>([]);
     const [apiApprovals, setApiApprovals] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(false);
 
     const getCurrentUserRole = (): string => {
+        if (typeof window === 'undefined') return 'Employee';
         const role = localStorage.getItem('user_role');
         if (role) return role;
         return user?.role || 'Employee';
@@ -146,6 +149,7 @@ export function ApprovalsInbox() {
         const fetchApprovals = async () => {
             setIsLoading(true);
             try {
+                if (typeof window === 'undefined') return;
                 const token = localStorage.getItem('token');
                 if (!token || !user?.role) return;
 
@@ -266,6 +270,13 @@ export function ApprovalsInbox() {
         }
     };
 
+    const formatDocCurrency = (amount: number) => {
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: settings.currency,
+        }).format(amount);
+    };
+
     return (
         <>
             <DropdownMenu>
@@ -308,7 +319,7 @@ export function ApprovalsInbox() {
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <p className="text-sm font-medium truncate">{doc.title}</p>
-                                                    <p className="text-xs text-muted-foreground">{doc.number} • AED {doc.amount?.toFixed(2) || '0.00'}</p>
+                                                    <p className="text-xs text-muted-foreground">{doc.number} • {formatDocCurrency(doc.amount || 0)}</p>
                                                 </div>
                                                 <div className="flex gap-1 shrink-0">
                                                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); handleActionClick(doc, 'approve'); }}>

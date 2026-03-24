@@ -17,6 +17,9 @@ export function TitleUpdater() {
 
     useEffect(() => {
         const loadCompanyName = async () => {
+            const token = typeof window !== 'undefined' ? localStorage.getItem('bb_token') : null;
+            if (!token) return;
+
             try {
                 const [company, branding] = await Promise.all([
                     settingsApi.getCompany(),

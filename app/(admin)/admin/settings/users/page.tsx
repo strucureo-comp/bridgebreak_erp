@@ -7,10 +7,11 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Save, Loader2, Plus, Trash2, Search, Mail, UserCheck, UserX, Send, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { settingsApi } from '@/lib/settings-api';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface User {
     id: string;
@@ -168,8 +169,22 @@ export default function UsersSettingsPage() {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <div className="space-y-6 max-w-4xl animate-pulse">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <Skeleton className="h-8 w-48 mb-2" />
+                        <Skeleton className="h-4 w-64" />
+                    </div>
+                    <Skeleton className="h-10 w-32 rounded-md" />
+                </div>
+                <Skeleton className="h-10 w-full rounded-md" />
+                <Skeleton className="h-[400px] w-full rounded-xl" />
+                <div className="grid grid-cols-4 gap-4">
+                    <Skeleton className="h-20 w-full rounded-xl" />
+                    <Skeleton className="h-20 w-full rounded-xl" />
+                    <Skeleton className="h-20 w-full rounded-xl" />
+                    <Skeleton className="h-20 w-full rounded-xl" />
+                </div>
             </div>
         );
     }
@@ -337,6 +352,9 @@ export default function UsersSettingsPage() {
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Invite New User</DialogTitle>
+                        <DialogDescription>
+                            Send an invitation email to a new team member to join your organization.
+                        </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
                         <div className="space-y-2">

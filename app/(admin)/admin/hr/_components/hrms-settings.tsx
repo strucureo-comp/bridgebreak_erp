@@ -40,6 +40,8 @@ import {
   deleteDepartment,
   deleteLeaveType
 } from '@/lib/api';
+import { useCompanySettings } from '@/lib/hooks/use-company-settings';
+import { formatCurrency } from '@/lib/utils/currency';
 import { toast } from 'sonner';
 
 type ConfigMode = 'statutory' | 'roles' | 'departments' | 'employment-types' | 'components' | 'templates' | 'leave-types';
@@ -52,6 +54,7 @@ interface HRMSSettingsProps {
 }
 
 export function HRMSSettings({ roles = [], departments = [], leaveTypes = [], onRefresh = () => {} }: HRMSSettingsProps) {
+  const { baseCurrency } = useCompanySettings();
   const [mode, setConfigMode] = useState<ConfigMode>('statutory');
   const [editingItem, setEditingItem] = useState<any>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -72,6 +75,8 @@ export function HRMSSettings({ roles = [], departments = [], leaveTypes = [], on
       { name: 'Operations Manager', role: roleC, base: 8500, hra: 3400, ta: 1700 },
     ];
   });
+  const sampleSalary = formatCurrency(16000, baseCurrency);
+  const sampleDeductions = formatCurrency(0, baseCurrency);
 
   useEffect(() => {
     if (!departments?.length) return;
@@ -562,7 +567,7 @@ export function HRMSSettings({ roles = [], departments = [], leaveTypes = [], on
                       <div className="flex items-center gap-6">
                         <div className="text-right">
                           <p className="text-xs font-medium text-muted-foreground">Base Salary</p>
-                          <p className="text-sm font-semibold text-foreground">AED {template.base.toLocaleString()}</p>
+                          <p className="text-sm font-semibold text-foreground">{formatCurrency(template.base, baseCurrency)}</p>
                         </div>
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <Button variant="ghost" size="icon" className="h-8 w-8" title="Edit template" onClick={() => handleEdit({ type: 'template', name: template.name })}>
@@ -615,7 +620,7 @@ export function HRMSSettings({ roles = [], departments = [], leaveTypes = [], on
                     <div className="flex items-center justify-between p-3 bg-muted/50 rounded-md border border-border group hover:border-primary/30">
                       <div>
                         <p className="text-xs font-medium text-foreground">Transport Allowance</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">Flat 2000 AED</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{`Flat ${formatCurrency(2000, baseCurrency)}`}</p>
                       </div>
                       <input type="number" placeholder="2000" defaultValue="2000" className="w-24 h-8 rounded-md border border-border px-2 text-xs font-medium" />
                       <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100"><X size={14} /></Button>
@@ -639,18 +644,18 @@ export function HRMSSettings({ roles = [], departments = [], leaveTypes = [], on
                   <Button variant="outline" size="sm" className="w-full h-8 text-xs font-medium gap-1.5 mt-3"><Plus size={14} /> Add Deduction</Button>
                 </div>
 
-                <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 space-y-2">
+                  <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground font-medium">Gross Salary:</span>
-                    <span className="font-semibold text-foreground">AED 16,000</span>
+                    <span className="font-semibold text-foreground">{sampleSalary}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground font-medium">Total Deductions:</span>
-                    <span className="font-semibold text-red-600">- AED 0</span>
+                    <span className="font-semibold text-red-600">- {sampleDeductions}</span>
                   </div>
                   <div className="border-t border-primary/20 pt-2 flex justify-between">
                     <span className="text-foreground font-semibold">Net Salary:</span>
-                    <span className="text-lg font-bold text-primary">AED 16,000</span>
+                    <span className="text-lg font-bold text-primary">{sampleSalary}</span>
                   </div>
                 </div>
 

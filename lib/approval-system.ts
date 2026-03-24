@@ -117,6 +117,7 @@ export interface ApprovalDocument {
 
 // Get current user's role from auth context
 export function getCurrentUserRole(): string {
+    if (typeof window === 'undefined') return 'Employee';
     const userStr = localStorage.getItem('auth_user');
     if (userStr) {
         const user = JSON.parse(userStr);
@@ -125,8 +126,18 @@ export function getCurrentUserRole(): string {
     return 'Employee';
 }
 
+// Check if current user is the creator of the document
+export function isDocumentCreator(document: ApprovalDocument, _userId?: string): boolean {
+    const user = getCurrentUser();
+    // Use provided userId if available, otherwise check against current user's name/email
+    if (_userId) return document.createdBy === _userId;
+    // Assuming createdBy stores name or email
+    return document.createdBy === user.name || document.createdBy === user.email || document.createdBy === 'Current User';
+}
+
 // Get current user info
 export function getCurrentUser(): { name: string; email: string; role: string } {
+    if (typeof window === 'undefined') return { name: 'User', email: '', role: 'Employee' };
     const userStr = localStorage.getItem('auth_user');
     if (userStr) {
         const user = JSON.parse(userStr);
@@ -155,11 +166,7 @@ export function getModuleFromType(type: DocumentType): AppModule {
 
 // Get all approvals config from localStorage
 export function getApprovalsConfig(): AllApprovalsConfig {
-    const saved = localStorage.getItem('module_approvals_config');
-    if (saved) {
-        return JSON.parse(saved);
-    }
-    return {
+    const defaultConfig: AllApprovalsConfig = {
         sales: {
             quotation: { enabled: false, approverRole: '', threshold: 0 },
             proformaInvoice: { enabled: false, approverRole: '', threshold: 0 },
@@ -178,6 +185,17 @@ export function getApprovalsConfig(): AllApprovalsConfig {
             receiptVoucher: { enabled: false, approverRole: '', threshold: 0 },
         },
     };
+
+    if (typeof window === 'undefined') return defaultConfig;
+    const saved = localStorage.getItem('module_approvals_config');
+    if (saved) {
+        try {
+            return { ...defaultConfig, ...JSON.parse(saved) };
+        } catch (e) {
+            return defaultConfig;
+        }
+    }
+    return defaultConfig;
 }
 
 // Get approval config for specific module and document type
@@ -235,7 +253,7 @@ export function getStatusInfo(status: DocumentStatus): { label: string; color: s
 export function getDocumentTypeLabel(type: DocumentType): string {
     const module = getModuleFromType(type);
     const moduleConfig = MODULE_CONFIG[module as keyof typeof MODULE_CONFIG];
-    return moduleConfig?.documents[type as keyof typeof moduleConfig.documents]?.name || type;
+    return (moduleConfig.documents as any)[type]?.name || type;
 }
 
 // Get module label
@@ -422,6 +440,7 @@ export function getStorageKey(module: AppModule, type: DocumentType): string {
 
 // Get documents from localStorage
 export function getDocuments(module: AppModule, type: DocumentType): ApprovalDocument[] {
+    if (typeof window === 'undefined') return [];
     const key = getStorageKey(module, type);
     const saved = localStorage.getItem(key);
     return saved ? JSON.parse(saved) : [];
@@ -429,6 +448,7 @@ export function getDocuments(module: AppModule, type: DocumentType): ApprovalDoc
 
 // Save document to localStorage
 export function saveDocument(document: ApprovalDocument): void {
+    if (typeof window === 'undefined') return;
     const key = getStorageKey(document.module, document.type);
     const saved = localStorage.getItem(key);
     let documents: ApprovalDocument[] = saved ? JSON.parse(saved) : [];
@@ -445,6 +465,7 @@ export function saveDocument(document: ApprovalDocument): void {
 
 // Delete document from localStorage
 export function deleteDocument(document: ApprovalDocument): void {
+    if (typeof window === 'undefined') return;
     const key = getStorageKey(document.module, document.type);
     const saved = localStorage.getItem(key);
     if (saved) {
@@ -497,6 +518,40 @@ export function getPendingApprovalCounts(): Record<AppModule, number> {
     });
 
     return counts;
+}
+
+// ============= WORKFLOW HELPERS =============
+
+// Alias to get all configurations
+export function getApprovalWorkflows(): AllApprovalsConfig {
+    return getApprovalsConfig();
+}
+
+// Multi-step check (currently single-step, but for backward compatibility)
+export function hasMultiStepApproval(module: AppModule, type: DocumentType): boolean {
+    return false;
+}
+
+// Get approval steps (currently single-step)
+export function getApprovalSteps(module: AppModule, type: DocumentType): Array<{ step: number; role: string }> {
+    const config = getDocumentApprovalConfig(module, type);
+    if (!config.enabled) return [];
+    return [{ step: 0, role: config.approverRole }];
+}
+
+// Get current step
+export function getCurrentApprovalStep(document: ApprovalDocument): number {
+    return 0;
+}
+
+// Is final step
+export function isFinalApprovalStep(document: ApprovalDocument): boolean {
+    return true;
+}
+
+// Generic update for backward compatibility
+export function updateDocumentApproval(document: ApprovalDocument, update: Partial<ApprovalDocument>): ApprovalDocument {
+    return { ...document, ...update };
 }
 
 // ============= LEGACY COMPATIBILITY =============

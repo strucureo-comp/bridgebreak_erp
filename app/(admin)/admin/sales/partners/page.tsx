@@ -25,6 +25,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import type { User } from '@/lib/db/types';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function AdminClientsPage() {
   const { user } = useAuth();
@@ -61,21 +62,10 @@ export default function AdminClientsPage() {
         const now = new Date();
         return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
     }).length,
-    activeSites: 14 // Placeholder
+    activeSites: 0
   }), [clients]);
 
   if (!isMounted) return null;
-
-  if (loading) {
-    return (
-      <DashboardShell requireAdmin>
-        <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
-          <RefreshCcw className="h-12 w-12 animate-spin text-primary" />
-          <p className="font-bold text-foreground">Syncing Client Database...</p>
-        </div>
-      </DashboardShell>
-    );
-  }
 
   return (
     <DashboardShell requireAdmin>
@@ -95,11 +85,19 @@ export default function AdminClientsPage() {
         </div>
 
         {/* Global KPI Strip */}
-        <div className="grid gap-6 md:grid-cols-3">
-            <ClientKPI title="Total Partners" value={stats.total} icon={Users} color="blue" trend="Verified" />
-            <ClientKPI title="New Inbound" value={stats.newThisMonth} icon={Star} color="emerald" trend="This month" />
-            <ClientKPI title="Engagement" value="High" icon={ShieldCheck} color="indigo" trend="System status" />
-        </div>
+        {loading ? (
+          <div className="grid gap-6 md:grid-cols-3">
+            {[...Array(3)].map((_, i) => (
+              <Skeleton key={i} className="h-40 w-full rounded-[2.5rem]" />
+            ))}
+          </div>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-3">
+              <ClientKPI title="Total Partners" value={stats.total} icon={Users} color="blue" trend="Verified" />
+              <ClientKPI title="New Inbound" value={stats.newThisMonth} icon={Star} color="emerald" trend="This month" />
+              <ClientKPI title="Engagement" value="High" icon={ShieldCheck} color="indigo" trend="System status" />
+          </div>
+        )}
 
         <div className="space-y-6">
             <div className="flex items-center justify-between px-2">
@@ -115,48 +113,56 @@ export default function AdminClientsPage() {
                 </div>
             </div>
 
-            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-                {filteredClients.map(client => (
-                    <Card key={client.id} className="rounded-[3rem] border-none shadow-sm bg-card overflow-hidden group hover:shadow-2xl transition-all duration-500 cursor-pointer">
-                        <CardContent className="p-10">
-                            <div className="flex items-start justify-between mb-8">
-                                <Avatar className="h-20 w-20 rounded-[2rem] border-4 border-slate-50 shadow-inner group-hover:scale-110 transition-transform duration-500">
-                                    <AvatarFallback className="bg-slate-900 text-card-foreground font-black text-xl">
-                                        {client.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
-                                    </AvatarFallback>
-                                </Avatar>
-                                <Badge className="bg-emerald-50 text-emerald-600 border-none font-black text-[10px] uppercase tracking-widest px-3 py-1 rounded-full">Active Partner</Badge>
-                            </div>
-                            <div className="space-y-4">
-                                <div className="space-y-1">
-                                    <h3 className="text-2xl font-black text-foreground line-clamp-1">{client.full_name}</h3>
-                                    <div className="flex items-center gap-2 text-sm font-bold text-muted-foreground">
-                                        <Mail size={14} className="text-primary" />
-                                        <span className="truncate">{client.email}</span>
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4 pt-6 border-t border-slate-50">
-                                    <div className="space-y-1">
-                                        <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Joined</p>
-                                        <p className="text-xs font-black text-foreground">{new Date(client.created_at).toLocaleDateString()}</p>
-                                    </div>
-                                    <div className="text-right">
-                                        <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-muted text-slate-300 group-hover:bg-slate-900 group-hover:text-white transition-all">
-                                            <ChevronRight size={20} />
-                                        </Button>
-                                    </div>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
+            {loading ? (
+              <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+                {[...Array(6)].map((_, i) => (
+                  <Skeleton key={i} className="h-[300px] w-full rounded-[3rem]" />
                 ))}
-                {filteredClients.length === 0 && (
-                    <div className="col-span-full py-24 text-center bg-card rounded-[3rem] shadow-sm">
-                        <Users size={48} className="mx-auto text-slate-100 mb-4" />
-                        <p className="font-black text-slate-300 uppercase tracking-widest text-xs">No partners identified</p>
-                    </div>
-                )}
-            </div>
+              </div>
+            ) : (
+              <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+                  {filteredClients.map(client => (
+                      <Card key={client.id} className="rounded-[3rem] border-none shadow-sm bg-card overflow-hidden group hover:shadow-2xl transition-all duration-500 cursor-pointer">
+                          <CardContent className="p-10">
+                              <div className="flex items-start justify-between mb-8">
+                                  <Avatar className="h-20 w-20 rounded-[2rem] border-4 border-slate-50 shadow-inner group-hover:scale-110 transition-transform duration-500">
+                                      <AvatarFallback className="bg-slate-900 text-card-foreground font-black text-xl">
+                                          {client.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                                      </AvatarFallback>
+                                  </Avatar>
+                                  <Badge className="bg-emerald-50 text-emerald-600 border-none font-black text-[10px] uppercase tracking-widest px-3 py-1 rounded-full">Active Partner</Badge>
+                              </div>
+                              <div className="space-y-4">
+                                  <div className="space-y-1">
+                                      <h3 className="text-2xl font-black text-foreground line-clamp-1">{client.full_name}</h3>
+                                      <div className="flex items-center gap-2 text-sm font-bold text-muted-foreground">
+                                          <Mail size={14} className="text-primary" />
+                                          <span className="truncate">{client.email}</span>
+                                      </div>
+                                  </div>
+                                  <div className="grid grid-cols-2 gap-4 pt-6 border-t border-slate-50">
+                                      <div className="space-y-1">
+                                          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Joined</p>
+                                          <p className="text-xs font-black text-foreground">{new Date(client.created_at).toLocaleDateString()}</p>
+                                      </div>
+                                      <div className="text-right">
+                                          <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-muted text-slate-300 group-hover:bg-slate-900 group-hover:text-white transition-all">
+                                              <ChevronRight size={20} />
+                                          </Button>
+                                      </div>
+                                  </div>
+                              </div>
+                          </CardContent>
+                      </Card>
+                  ))}
+                  {filteredClients.length === 0 && (
+                      <div className="col-span-full py-24 text-center bg-card rounded-[3rem] shadow-sm">
+                          <Users size={48} className="mx-auto text-slate-100 mb-4" />
+                          <p className="font-black text-slate-300 uppercase tracking-widest text-xs">No partners identified</p>
+                      </div>
+                  )}
+              </div>
+            )}
         </div>
       </div>
     </DashboardShell>

@@ -4,13 +4,28 @@ const { auth, adminOnly } = require('../middleware/auth');
 
 const router = express.Router();
 
+function isAdminRole(role) {
+    const normalized = String(role || '').trim().toLowerCase();
+    return normalized === 'admin' || normalized === 'superadmin' || normalized === 'administrator';
+}
+
 // Public settings that don't require auth
 const PUBLIC_SETTINGS = ['branding_config', 'company_profile', 'tenant_status'];
 
-// GET /api/settings/:key
-router.get('/:key', async (req, res) => {
+// GET /api/settings/:key - requires auth, but allows public settings to be fetched without
+router.get('/:key', auth, async (req, res) => {
     try {
-        const setting = await Settings.findOne({ key: req.params.key });
+        const { key } = req.params;
+
+        // Allow public settings without admin check
+        const isPublicSetting = PUBLIC_SETTINGS.includes(key);
+
+        // For non-public settings, require admin
+        if (!isPublicSetting && !isAdminRole(req.user?.role)) {
+            return res.status(403).json({ error: 'Admin access required for this setting' });
+        }
+
+        const setting = await Settings.findOne({ key });
         if (!setting) {
             return res.json({ data: null });
         }

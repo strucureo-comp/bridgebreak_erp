@@ -3,7 +3,9 @@ import type { Metadata } from 'next';
 import { AuthProvider } from '@/lib/auth/context';
 import { TenantProvider } from '@/lib/tenant-context';
 import { ThemeProvider } from '@/lib/theme-context';
+import { SettingsProvider } from '@/lib/settings-context';
 import { Toaster } from '@/components/ui/sonner';
+import { ChunkErrorRecovery } from '@/components/shared/chunk-error-recovery';
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
@@ -22,12 +24,15 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head />
-      <body>
+      <body className="settings-ui-standard">
         <AuthProvider>
           <TenantProvider>
             <ThemeProvider>
-              {children}
-              <Toaster />
+              <SettingsProvider>
+                <ChunkErrorRecovery />
+                {children}
+                <Toaster />
+              </SettingsProvider>
             </ThemeProvider>
           </TenantProvider>
         </AuthProvider>

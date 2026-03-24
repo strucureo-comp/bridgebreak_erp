@@ -1,21 +1,6 @@
-import {
-    MOCK_PROJECTS,
-    MOCK_EMPLOYEES,
-    MOCK_FINANCE,
-    MOCK_CRM,
-    MOCK_INVENTORY,
-    MOCK_PROCUREMENT,
-    MOCK_MANUFACTURING
-} from './mock-data';
-
 // ==========================================
-// MOCK-FIRST API LAYER (EXPLICIT EXPORTS)
-// Disconnected for UI Prototyping
+// API LAYER (EXPLICIT EXPORTS)
 // ==========================================
-
-async function mockDelay<T>(data: T, ms = 300): Promise<T> {
-    return new Promise(resolve => setTimeout(() => resolve(data), ms));
-}
 
 // --- PROJECTS ---
 export async function getProjects(): Promise<any[]> {
@@ -103,10 +88,25 @@ export async function createOpportunity(data: any) {
     } catch (e) { console.warn('[API] createOpportunity error:', e); }
     return null;
 }
+
+function normalizeCustomerAccount(customer: any) {
+    return {
+        ...customer,
+        id: String(customer?._id || customer?.id || ''),
+        created_at: customer?.created_at || customer?.createdAt || '',
+        updated_at: customer?.updated_at || customer?.updatedAt || '',
+    };
+}
+
 export async function getCustomers(): Promise<any[]> {
     try {
         const res = await fetch(`${API_BASE}/crm/customers`, { headers: authHeaders() });
-        if (res.ok) return res.json();
+        if (res.ok) {
+            const data = await res.json();
+            return Array.isArray(data)
+                ? data.map(normalizeCustomerAccount).filter((customer) => customer.id)
+                : [];
+        }
     } catch (e) { console.warn('[API] getCustomers error:', e); }
     return [];
 }
@@ -117,13 +117,17 @@ export async function createCustomer(data: any): Promise<any> {
             headers: authHeaders(),
             body: JSON.stringify(data)
         });
-        if (res.ok) return res.json();
+        if (res.ok) return normalizeCustomerAccount(await res.json());
     } catch (e) { console.warn('[API] createCustomer error:', e); }
     return null;
 }
 export async function updateCustomer(id: string, data: any) {
+    if (!id) {
+        console.warn('[API] updateCustomer called without id');
+        return false;
+    }
     try {
-        const res = await fetch(`${API_BASE}/receivables/customers/${id}`, {
+        const res = await fetch(`${API_BASE}/crm/customers/${id}`, {
             method: 'PUT',
             headers: authHeaders(),
             body: JSON.stringify(data)
@@ -132,8 +136,27 @@ export async function updateCustomer(id: string, data: any) {
     } catch (e) { console.warn('[API] updateCustomer error:', e); }
     return false;
 }
-export async function deleteCustomer(id: string) { return mockDelay(true); }
-export async function deleteLead(id: string) { return mockDelay(true); }
+export async function deleteCustomer(id: string) {
+    if (!id) {
+        console.warn('[API] deleteCustomer called without id');
+        return false;
+    }
+    try {
+        const res = await fetch(`${API_BASE}/crm/customers/${id}`, {
+            method: 'DELETE',
+            headers: authHeaders()
+        });
+        return res.ok;
+    } catch (e) { console.warn('[API] deleteCustomer error:', e); }
+    return false;
+}
+export async function deleteLead(id: string) {
+    try {
+        const res = await fetch(`${API_BASE}/crm/leads/${id}`, { method: 'DELETE', headers: authHeaders() });
+        return res.ok;
+    } catch (e) { console.warn('[API] deleteLead error:', e); }
+    return false;
+}
 export async function convertLeadToCustomer(id: string): Promise<any> {
     try {
         const res = await fetch(`${API_BASE}/crm/opportunities/${id}/convert-to-customer`, {
@@ -144,15 +167,198 @@ export async function convertLeadToCustomer(id: string): Promise<any> {
     } catch (e) { console.warn('[API] convertLeadToCustomer error:', e); }
     return null;
 }
-export async function updateOpportunity(id: string, data: any) { return mockDelay(true); }
-export async function deleteOpportunity(id: string) { return mockDelay(true); }
-export async function getQuotes() { return mockDelay([]); }
-export async function createQuote(data: any) { return mockDelay(data); }
-export async function createQuotation(data: any) { return mockDelay(data); }
-export async function updateQuotation(id: string, data: any) { return mockDelay(true); }
-export async function deleteQuotation(id: string) { return mockDelay(true); }
-export async function getQuotations() { return mockDelay([]); }
-export async function getQuotation(id: string) { return mockDelay(null as any); }
+export async function updateOpportunity(id: string, data: any): Promise<boolean> { try { const res = await fetch(`${API_BASE}/crm/opportunities/${id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }); return res.ok; } catch (e) { console.warn('[API] updateOpportunity error:', e); return false; } }
+export async function deleteOpportunity(id: string): Promise<boolean> { try { const res = await fetch(`${API_BASE}/crm/opportunities/${id}`, { method: 'DELETE', headers: authHeaders() }); return res.ok; } catch (e) { console.warn('[API] deleteOpportunity error:', e); return false; } }
+
+function mapCrmQuotationToLegacy(q: any) {
+    const customerId = typeof q?.customer_id === 'object' ? q?.customer_id?._id : q?.customer_id;
+    const customerName = typeof q?.customer_id === 'object' ? q?.customer_id?.name : undefined;
+    const validUntil = q?.valid_until ? new Date(q.valid_until).toISOString().split('T')[0] : '';
+    const quotationDate = q?.quotation_date ? new Date(q.quotation_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+    const items = Array.isArray(q?.lines)
+        ? q.lines.map((l: any) => ({
+            description: l.description || '',
+            quantity: Number(l.quantity || 0),
+            unit_price: Number(l.unit_price || 0),
+            total: Number(l.total || 0),
+        }))
+        : [];
+
+    return {
+        ...q,
+        id: String(q?._id || q?.id || ''),
+        quotation_number: q?.quotation_number,
+        number: q?.quotation_number,
+        issue_date: quotationDate,
+        quotation_date: quotationDate,
+        valid_until: validUntil,
+        amount: Number(q?.total_amount || q?.amount || 0),
+        total_amount: Number(q?.total_amount || q?.amount || 0),
+        client_id: customerId ? String(customerId) : '',
+        account_id: customerId ? String(customerId) : '',
+        customer_id: customerId ? String(customerId) : '',
+        client_name: q?.customer_contact_person || customerName || '',
+        client_company: q?.customer_company_name || customerName || '',
+        lines: items,
+        items,
+        account: { name: customerName || q?.customer_company_name || q?.customer_contact_person || 'Customer' },
+    };
+}
+
+export async function getQuotes() {
+    try {
+        const res = await fetch(`${API_BASE}/crm/quotations`, { headers: authHeaders() });
+        if (res.ok) {
+            const data = await res.json();
+            return Array.isArray(data) ? data.map(mapCrmQuotationToLegacy) : [];
+        }
+    } catch (e) { console.warn('[API] getQuotes error:', e); }
+    return [];
+}
+
+export async function createQuote(data: any) {
+    try {
+        const total = Number(data?.total_amount || data?.amount || 0);
+        const payload = {
+            customer_type: 'registry',
+            customer_id: data?.account_id || data?.customer_id || undefined,
+            quotation_date: new Date().toISOString(),
+            valid_until: data?.valid_until,
+            status: data?.status || 'draft',
+            lines: Array.isArray(data?.lines) && data.lines.length > 0
+                ? data.lines.map((l: any) => ({
+                    description: l.description || 'Quoted Item',
+                    quantity: Number(l.quantity || 0),
+                    unit_price: Number(l.unit_price || 0),
+                    total: Number(l.total || 0),
+                }))
+                : [{ description: 'Estimated Quote', quantity: 1, unit_price: total, total }],
+            tax_mode: 'manual',
+            tax_amount: 0,
+            total_amount: total,
+            currency: data?.currency || 'AED',
+        };
+
+        const res = await fetch(`${API_BASE}/crm/quotations`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify(payload)
+        });
+        if (res.ok) return mapCrmQuotationToLegacy(await res.json());
+    } catch (e) { console.warn('[API] createQuote error:', e); }
+    return null;
+}
+
+export async function createQuotation(data: any) {
+    try {
+        const payload = {
+            quotation_number: data?.quotation_number,
+            customer_type: data?.client_id ? 'registry' : 'manual',
+            customer_id: data?.client_id || undefined,
+            customer_company_name: data?.client_company || '',
+            customer_contact_person: data?.client_name || '',
+            customer_email: data?.client_email || '',
+            customer_phone: data?.client_phone || '',
+            customer_address: data?.client_address || '',
+            customer_city: data?.client_city || '',
+            customer_country: data?.client_country || '',
+            customer_tax_id: data?.client_tax_id || '',
+            quotation_date: new Date().toISOString(),
+            valid_until: data?.valid_until,
+            status: data?.status || 'draft',
+            lines: Array.isArray(data?.items)
+                ? data.items.map((i: any) => ({
+                    description: i.description || '',
+                    quantity: Number(i.quantity || 0),
+                    unit_price: Number(i.unit_price || 0),
+                    total: Number(i.total || 0),
+                }))
+                : [],
+            tax_mode: data?.tax_mode || 'auto',
+            tax_amount: Number(data?.manual_tax_adjustment || 0),
+            notes: data?.notes || '',
+            terms_and_conditions: data?.terms_and_conditions || '',
+        };
+
+        const res = await fetch(`${API_BASE}/crm/quotations`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify(payload)
+        });
+        if (res.ok) return mapCrmQuotationToLegacy(await res.json());
+    } catch (e) { console.warn('[API] createQuotation error:', e); }
+    return null;
+}
+
+export async function updateQuotation(id: string, data: any) {
+    try {
+        const payload = {
+            customer_id: data?.client_id || data?.customer_id || undefined,
+            customer_company_name: data?.client_company || '',
+            customer_contact_person: data?.client_name || '',
+            customer_email: data?.client_email || '',
+            customer_phone: data?.client_phone || '',
+            customer_address: data?.client_address || '',
+            quotation_number: data?.quotation_number,
+            valid_until: data?.valid_until,
+            status: data?.status,
+            lines: Array.isArray(data?.items)
+                ? data.items.map((i: any) => ({
+                    description: i.description || '',
+                    quantity: Number(i.quantity || 0),
+                    unit_price: Number(i.unit_price || 0),
+                    total: Number(i.total || 0),
+                }))
+                : (Array.isArray(data?.lines) ? data.lines : undefined),
+            notes: data?.notes,
+            terms_and_conditions: data?.terms_and_conditions,
+            rejection_reason: data?.rejection_reason,
+            approved_at: data?.approved_at,
+            approved_by: data?.approved_by,
+            rejected_at: data?.rejected_at,
+            rejected_by: data?.rejected_by,
+            approval_records: data?.approval_records,
+        };
+
+        const res = await fetch(`${API_BASE}/crm/quotations/${id}`, {
+            method: 'PUT',
+            headers: authHeaders(),
+            body: JSON.stringify(payload)
+        });
+        return res.ok;
+    } catch (e) { console.warn('[API] updateQuotation error:', e); }
+    return false;
+}
+
+export async function deleteQuotation(id: string) {
+    try {
+        const res = await fetch(`${API_BASE}/crm/quotations/${id}`, {
+            method: 'DELETE',
+            headers: authHeaders()
+        });
+        return res.ok;
+    } catch (e) { console.warn('[API] deleteQuotation error:', e); }
+    return false;
+}
+
+export async function getQuotations() {
+    try {
+        const res = await fetch(`${API_BASE}/crm/quotations`, { headers: authHeaders() });
+        if (res.ok) {
+            const data = await res.json();
+            return Array.isArray(data) ? data.map(mapCrmQuotationToLegacy) : [];
+        }
+    } catch (e) { console.warn('[API] getQuotations error:', e); }
+    return [];
+}
+
+export async function getQuotation(id: string) {
+    try {
+        const res = await fetch(`${API_BASE}/crm/quotations/${id}`, { headers: authHeaders() });
+        if (res.ok) return mapCrmQuotationToLegacy(await res.json());
+    } catch (e) { console.warn('[API] getQuotation error:', e); }
+    return null as any;
+}
 export async function getActivities() {
     try {
         const res = await fetch(`${API_BASE}/crm/activities`, { headers: authHeaders() });
@@ -230,9 +436,9 @@ export async function getReceivables() { return getInvoices().then(inv => inv.fi
 export async function createReceivable(data: any) { return createInvoice(data); }
 
 // --- FINANCE & PAYABLES ---
-export async function getTransactions() { return mockDelay(MOCK_FINANCE.transactions); }
-export async function createTransaction(data: any) { return mockDelay({ id: 't-new', ...data }); }
-export async function deleteTransaction(id: string) { return mockDelay(true); }
+export async function getTransactions() { try { const res = await fetch(`${API_BASE}/finance/transactions`, { headers: authHeaders() }); if (res.ok) return res.json(); } catch (e) { console.warn('[API] getTransactions error:', e); } return []; }
+export async function createTransaction(data: any) { try { const res = await fetch(`${API_BASE}/finance/transactions`, { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) }); if (res.ok) return res.json(); } catch (e) { console.warn('[API] createTransaction error:', e); } return null; }
+export async function deleteTransaction(id: string): Promise<boolean> { try { const res = await fetch(`${API_BASE}/finance/transactions/${id}`, { method: 'DELETE', headers: authHeaders() }); return res.ok; } catch (e) { console.warn('[API] deleteTransaction error:', e); return false; } }
 export async function getAccounts(): Promise<any[]> {
     try {
         const res = await fetch(`${API_BASE}/finance/accounts`, { headers: authHeaders() });
@@ -246,6 +452,13 @@ export async function createAccount(data: any): Promise<any> {
         if (res.ok) return res.json();
     } catch (e) { console.warn('[API] createAccount error:', e); }
     return null;
+}
+export async function deleteAccount(id: string): Promise<boolean> {
+    try {
+        const res = await fetch(`${API_BASE}/finance/accounts/${id}`, { method: 'DELETE', headers: authHeaders() });
+        return res.ok;
+    } catch (e) { console.warn('[API] deleteAccount error:', e); }
+    return false;
 }
 export async function getJournalEntries(): Promise<any[]> {
     try {
@@ -261,11 +474,18 @@ export async function createJournalEntry(data: any): Promise<any> {
     } catch (e) { console.warn('[API] createJournalEntry error:', e); }
     return null;
 }
-export async function getFinancialReport(type: string) { return mockDelay({}); }
-export async function getBudgets() { return mockDelay([]); }
-export async function saveBudget(data: any) { return mockDelay(data); }
-export async function reconcileTransaction(bt: string, st: string) { return mockDelay(true); }
-export async function getUnreconciledTransactions() { return mockDelay({ bankTransactions: [], systemTransactions: [] }); }
+export async function deleteJournalEntry(id: string): Promise<boolean> {
+    try {
+        const res = await fetch(`${API_BASE}/finance/journals/${id}`, { method: 'DELETE', headers: authHeaders() });
+        return res.ok;
+    } catch (e) { console.warn('[API] deleteJournalEntry error:', e); }
+    return false;
+}
+export async function getFinancialReport(type: string) { try { const res = await fetch(`${API_BASE}/reports/financial/${type}`, { headers: authHeaders() }); if (res.ok) return res.json(); } catch (e) { console.warn('[API] getFinancialReport error:', e); } return {}; }
+export async function getBudgets() { try { const res = await fetch(`${API_BASE}/finance/budgets`, { headers: authHeaders() }); if (res.ok) return res.json(); } catch (e) { console.warn('[API] getBudgets error:', e); } return []; }
+export async function saveBudget(data: any) { try { const res = await fetch(`${API_BASE}/finance/budgets`, { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) }); if (res.ok) return res.json(); } catch (e) { console.warn('[API] saveBudget error:', e); } return null; }
+export async function reconcileTransaction(bt: string, st: string): Promise<boolean> { try { const res = await fetch(`${API_BASE}/finance/reconcile`, { method: 'POST', headers: authHeaders(), body: JSON.stringify({ bankTransaction: bt, systemTransaction: st }) }); return res.ok; } catch (e) { console.warn('[API] reconcileTransaction error:', e); return false; } }
+export async function getUnreconciledTransactions() { try { const res = await fetch(`${API_BASE}/finance/unreconciled`, { headers: authHeaders() }); if (res.ok) return res.json(); } catch (e) { console.warn('[API] getUnreconciledTransactions error:', e); } return { bankTransactions: [], systemTransactions: [] }; }
 export async function getPayables() { return getInvoices().then(inv => inv.filter(i => i.type === 'debit_note')); }
 export async function createPayable(data: any) { return createInvoice(data); }
 
@@ -336,7 +556,17 @@ export async function createFixedAsset(data: any) {
     } catch (e) { console.warn('[API] createFixedAsset error:', e); }
     return null;
 }
-export async function runDepreciation(date: string) { return mockDelay(true); }
+export async function deleteFixedAsset(id: string): Promise<boolean> {
+    try {
+        const res = await fetch(`${API_BASE}/fixed-assets/${id}`, {
+            method: 'DELETE',
+            headers: authHeaders(),
+        });
+        return res.ok;
+    } catch (e) { console.warn('[API] deleteFixedAsset error:', e); }
+    return false;
+}
+export async function runDepreciation(date: string): Promise<boolean> { try { const res = await fetch(`${API_BASE}/finance/depreciation/run?date=${date}`, { method: 'POST', headers: authHeaders() }); return res.ok; } catch (e) { console.warn('[API] runDepreciation error:', e); return false; } }
 
 // --- HRMS ---
 export async function getEmployees() {
@@ -1003,8 +1233,8 @@ export async function createDisciplinaryAction(data: any) {
     return null;
 }
 
-export async function allocateLabour(data: any) { return mockDelay(data); }
-export async function getLabourAllocations() { return mockDelay([]); }
+export async function allocateLabour(data: any) { try { const res = await fetch(`${API_BASE}/hrms/labour-allocations`, { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) }); if (res.ok) return res.json(); } catch (e) { console.warn('[API] allocateLabour error:', e); } return null; }
+export async function getLabourAllocations() { try { const res = await fetch(`${API_BASE}/hrms/labour-allocations`, { headers: authHeaders() }); if (res.ok) return res.json(); } catch (e) { console.warn('[API] getLabourAllocations error:', e); } return []; }
 export async function getEmployeeDocuments(employeeId?: string, expiringSoon = false) {
     try {
         const params = new URLSearchParams();
@@ -1154,6 +1384,7 @@ async function invFetch(path: string, opts?: RequestInit) {
 export async function getInventoryItems() { try { return await invFetch('/items'); } catch { return []; } }
 export async function createInventoryItem(data: any) { return invFetch('/items', { method: 'POST', body: JSON.stringify(data) }); }
 export async function updateInventoryItem(id: string, data: any) { return invFetch(`/items/${id}`, { method: 'PUT', body: JSON.stringify(data) }); }
+export async function deleteInventoryItem(id: string) { return invFetch(`/items/${id}`, { method: 'DELETE' }); }
 
 export async function getProducts(): Promise<any[]> { return getInventoryItems(); }
 export async function createProduct(data: any) { return createInventoryItem(data); }
@@ -1200,6 +1431,57 @@ export async function createPurchaseRequest(data: any) {
     } catch (e) { console.warn('[API] createPurchaseRequest error:', e); }
     return null;
 }
+
+// RFQ
+export async function getRFQs() {
+    try {
+        const res = await fetch(`${API_BASE}/procurement/rfqs`, { headers: authHeaders() });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] getRFQs error:', e); }
+    return [];
+}
+export async function createRFQ(data: any) {
+    try {
+        const res = await fetch(`${API_BASE}/procurement/rfqs`, { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] createRFQ error:', e); }
+    return null;
+}
+
+// Recurring
+export async function getRecurringBills() {
+    try {
+        const res = await fetch(`${API_BASE}/payables/recurring-bills`, { headers: authHeaders() });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] getRecurringBills error:', e); }
+    return [];
+}
+export async function getRecurringExpenses() {
+    try {
+        const res = await fetch(`${API_BASE}/finance/recurring-expenses`, { headers: authHeaders() });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] getRecurringExpenses error:', e); }
+    return [];
+}
+
+// Vendor Credits
+export async function getVendorCredits() {
+    try {
+        const res = await fetch(`${API_BASE}/payables/debit-notes`, { headers: authHeaders() });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] getVendorCredits error:', e); }
+    return [];
+}
+
+// Batch Payments
+export async function getBatchPayments() {
+    try {
+        const res = await fetch(`${API_BASE}/payables/batch-payments`, { headers: authHeaders() });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] getBatchPayments error:', e); }
+    return [];
+}
+
 export async function getPurchaseOrders(): Promise<any[]> {
     try {
         const res = await fetch(`${API_BASE}/procurement/orders`, { headers: authHeaders() });
@@ -1207,7 +1489,13 @@ export async function getPurchaseOrders(): Promise<any[]> {
     } catch (e) { console.warn('[API] getPurchaseOrders error:', e); }
     return [];
 }
-export async function getPurchaseOrder(id: string): Promise<any | null> { return mockDelay(null); }
+export async function getPurchaseOrder(id: string): Promise<any | null> {
+    try {
+        const res = await fetch(`${API_BASE}/procurement/orders/${id}`, { headers: authHeaders() });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] getPurchaseOrder error:', e); }
+    return null;
+}
 export async function createPurchaseOrder(data: any) {
     try {
         const res = await fetch(`${API_BASE}/procurement/orders`, {
@@ -1226,8 +1514,18 @@ export async function getGRNs() {
     } catch (e) { console.warn('[API] getGRNs error:', e); }
     return [];
 }
-export async function createGRN(data: any) { return mockDelay(data); }
-export async function createGRNs(data: any) { return mockDelay(data); }
+export async function createGRN(data: any) {
+    try {
+        const res = await fetch(`${API_BASE}/procurement/grns`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify(data)
+        });
+        if (res.ok) return res.json();
+    } catch (e) { console.warn('[API] createGRN error:', e); }
+    return null;
+}
+export async function createGRNs(data: any) { return createGRN(data); }
 export async function getVendorBills(): Promise<any[]> {
     try {
         const res = await fetch(`${API_BASE}/payables/bills`, { headers: authHeaders() });
@@ -1302,7 +1600,7 @@ export async function createProductionOrder(data: any) {
     } catch (e) { console.warn('[API] createProductionOrder error:', e); }
     return null;
 }
-export async function updateProductionOrder(id: string, s: string) { return mockDelay(true); }
+export async function updateProductionOrder(id: string, s: string): Promise<boolean> { try { const res = await fetch(`${API_BASE}/manufacturing/orders/${id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify({ status: s }) }); return res.ok; } catch (e) { console.warn('[API] updateProductionOrder error:', e); return false; } }
 
 // --- STOCK JOURNAL ---
 export async function getStockJournals() {
@@ -1312,7 +1610,7 @@ export async function getStockJournals() {
     } catch (e) { console.warn('[API] getStockJournals error:', e); }
     return [];
 }
-export async function getStockJournal(id: string) { return mockDelay(null); }
+export async function getStockJournal(id: string) { try { const res = await fetch(`${API_BASE}/stock-journal/${id}`, { headers: authHeaders() }); if (res.ok) return res.json(); } catch (e) { console.warn('[API] getStockJournal error:', e); } return null; }
 export async function createStockJournal(data: any) {
     try {
         const res = await fetch(`${API_BASE}/stock-journal`, {
@@ -1324,13 +1622,13 @@ export async function createStockJournal(data: any) {
     } catch (e) { console.warn('[API] createStockJournal error:', e); }
     return null;
 }
-export async function updateStockJournal(id: string, data: any) { return mockDelay(true); }
-export async function deleteStockJournal(id: string) { return mockDelay(true); }
-export async function postStockJournal(id: string) { return mockDelay(true); }
+export async function updateStockJournal(id: string, data: any): Promise<boolean> { try { const res = await fetch(`${API_BASE}/stock-journal/${id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }); return res.ok; } catch (e) { console.warn('[API] updateStockJournal error:', e); return false; } }
+export async function deleteStockJournal(id: string): Promise<boolean> { try { const res = await fetch(`${API_BASE}/stock-journal/${id}`, { method: 'DELETE', headers: authHeaders() }); return res.ok; } catch (e) { console.warn('[API] deleteStockJournal error:', e); return false; } }
+export async function postStockJournal(id: string): Promise<boolean> { try { const res = await fetch(`${API_BASE}/stock-journal/${id}/post`, { method: 'POST', headers: authHeaders() }); return res.ok; } catch (e) { console.warn('[API] postStockJournal error:', e); return false; } }
 
 // --- CRM CUSTOMERS & OPPORTUNITIES ---
-export async function getOpportunity(id: string) { return mockDelay(null); }
-export async function getActivitiesByEntity(type: string, id: string) { return mockDelay([]); }
+export async function getOpportunity(id: string) { try { const res = await fetch(`${API_BASE}/crm/opportunities/${id}`, { headers: authHeaders() }); if (res.ok) return res.json(); } catch (e) { console.warn('[API] getOpportunity error:', e); } return null; }
+export async function getActivitiesByEntity(type: string, id: string) { try { const res = await fetch(`${API_BASE}/crm/activities?type=${type}&id=${id}`, { headers: authHeaders() }); if (res.ok) return res.json(); } catch (e) { console.warn('[API] getActivitiesByEntity error:', e); } return []; }
 
 // --- PROJECT OPS ---
 export async function submitTimesheet(data: any) {
@@ -1344,9 +1642,9 @@ export async function submitTimesheet(data: any) {
     } catch (e) { console.warn('[API] submitTimesheet error:', e); }
     return false;
 }
-export async function approveTimesheet(id: string, s: string) { return mockDelay(true); }
-export async function submitExpense(data: any) { return mockDelay(true); }
-export async function approveExpense(id: string, s: string) { return mockDelay(true); }
+export async function approveTimesheet(id: string, s: string): Promise<boolean> { try { const res = await fetch(`${API_BASE}/project-ops/timesheets/${id}/approve`, { method: 'POST', headers: authHeaders(), body: JSON.stringify({ status: s }) }); return res.ok; } catch (e) { console.warn('[API] approveTimesheet error:', e); return false; } }
+export async function submitExpense(data: any): Promise<boolean> { try { const res = await fetch(`${API_BASE}/project-ops/expenses`, { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) }); return res.ok; } catch (e) { console.warn('[API] submitExpense error:', e); return false; } }
+export async function approveExpense(id: string, s: string): Promise<boolean> { try { const res = await fetch(`${API_BASE}/project-ops/expenses/${id}/approve`, { method: 'POST', headers: authHeaders(), body: JSON.stringify({ status: s }) }); return res.ok; } catch (e) { console.warn('[API] approveExpense error:', e); return false; } }
 export async function getResourceBookings() {
     try {
         const res = await fetch(`${API_BASE}/project-ops/resource-bookings`, { headers: authHeaders() });
@@ -1365,11 +1663,40 @@ export async function createResourceBooking(data: any) {
     } catch (e) { console.warn('[API] createResourceBooking error:', e); }
     return false;
 }
-export async function getPriceLists() { return mockDelay([]); }
-export async function createPriceList(data: any) { return mockDelay(true); }
+export async function getPriceLists() {
+    if (typeof window === 'undefined') return [];
+    try {
+        const saved = localStorage.getItem('sales_price_lists');
+        return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+        console.warn('[API] getPriceLists error:', e);
+        return [];
+    }
+}
+export async function createPriceList(data: any) {
+    if (typeof window === 'undefined') return false;
+    try {
+        const existing = await getPriceLists();
+        const item = {
+            id: String(Date.now()),
+            name: data?.name || 'Price List',
+            currency: data?.currency || 'AED',
+            items: Array.isArray(data?.items) ? data.items : [],
+            createdAt: new Date().toISOString(),
+        };
+        localStorage.setItem('sales_price_lists', JSON.stringify([item, ...existing]));
+        return true;
+    } catch (e) {
+        console.warn('[API] createPriceList error:', e);
+        return false;
+    }
+}
 
 // --- TENANT & SETTINGS (REAL BACKEND) ---
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4000/api';
+const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '/api/backend';
+const API_BASE = BASE_URL.startsWith('/')
+    ? BASE_URL
+    : (BASE_URL.endsWith('/api') ? BASE_URL : `${BASE_URL}/api`);
 
 function getToken(): string | null {
     if (typeof window === 'undefined') return null;
@@ -1520,27 +1847,27 @@ export async function getBankTransactions() {
 export async function createBankTransaction(data: any) { return createJournalEntry(data); }
 
 // --- DEBIT/CREDIT NOTES ---
-export async function getCreditNotes() { return mockDelay([]); }
-export async function getCreditNote(id: string) { return mockDelay(null); }
-export async function createCreditNote(data: any) { return mockDelay(data); }
-export async function updateCreditNote(id: string, data: any) { return mockDelay(true); }
-export async function deleteCreditNote(id: string) { return mockDelay(true); }
-export async function postCreditNote(id: string) { return mockDelay(true); }
-export async function applyCreditNote(id: string, inv: string, amt: number) { return mockDelay(true); }
+export async function getCreditNotes() { try { const res = await fetch(`${API_BASE}/finance/credit-notes`, { headers: authHeaders() }); if (res.ok) return res.json(); } catch (e) { console.warn('[API] getCreditNotes error:', e); } return []; }
+export async function getCreditNote(id: string) { try { const res = await fetch(`${API_BASE}/finance/credit-notes/${id}`, { headers: authHeaders() }); if (res.ok) return res.json(); } catch (e) { console.warn('[API] getCreditNote error:', e); } return null; }
+export async function createCreditNote(data: any) { try { const res = await fetch(`${API_BASE}/finance/credit-notes`, { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) }); if (res.ok) return res.json(); } catch (e) { console.warn('[API] createCreditNote error:', e); } return null; }
+export async function updateCreditNote(id: string, data: any): Promise<boolean> { try { const res = await fetch(`${API_BASE}/finance/credit-notes/${id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }); return res.ok; } catch (e) { console.warn('[API] updateCreditNote error:', e); return false; } }
+export async function deleteCreditNote(id: string): Promise<boolean> { try { const res = await fetch(`${API_BASE}/finance/credit-notes/${id}`, { method: 'DELETE', headers: authHeaders() }); return res.ok; } catch (e) { console.warn('[API] deleteCreditNote error:', e); return false; } }
+export async function postCreditNote(id: string): Promise<boolean> { try { const res = await fetch(`${API_BASE}/finance/credit-notes/${id}/post`, { method: 'POST', headers: authHeaders() }); return res.ok; } catch (e) { console.warn('[API] postCreditNote error:', e); return false; } }
+export async function applyCreditNote(id: string, inv: string, amt: number): Promise<boolean> { try { const res = await fetch(`${API_BASE}/finance/credit-notes/${id}/apply`, { method: 'POST', headers: authHeaders(), body: JSON.stringify({ invoiceId: inv, amount: amt }) }); return res.ok; } catch (e) { console.warn('[API] applyCreditNote error:', e); return false; } }
 
-export async function getDebitNotes() { return mockDelay([]); }
-export async function getDebitNote(id: string) { return mockDelay(null); }
-export async function createDebitNote(data: any) { return mockDelay(data); }
-export async function updateDebitNote(id: string, data: any) { return mockDelay(true); }
-export async function deleteDebitNote(id: string) { return mockDelay(true); }
-export async function postDebitNote(id: string) { return mockDelay(true); }
-export async function applyDebitNote(id: string, bill: string, amt: number) { return mockDelay(true); }
+export async function getDebitNotes() { try { const res = await fetch(`${API_BASE}/finance/debit-notes`, { headers: authHeaders() }); if (res.ok) return res.json(); } catch (e) { console.warn('[API] getDebitNotes error:', e); } return []; }
+export async function getDebitNote(id: string) { try { const res = await fetch(`${API_BASE}/finance/debit-notes/${id}`, { headers: authHeaders() }); if (res.ok) return res.json(); } catch (e) { console.warn('[API] getDebitNote error:', e); } return null; }
+export async function createDebitNote(data: any) { try { const res = await fetch(`${API_BASE}/finance/debit-notes`, { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) }); if (res.ok) return res.json(); } catch (e) { console.warn('[API] createDebitNote error:', e); } return null; }
+export async function updateDebitNote(id: string, data: any): Promise<boolean> { try { const res = await fetch(`${API_BASE}/finance/debit-notes/${id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }); return res.ok; } catch (e) { console.warn('[API] updateDebitNote error:', e); return false; } }
+export async function deleteDebitNote(id: string): Promise<boolean> { try { const res = await fetch(`${API_BASE}/finance/debit-notes/${id}`, { method: 'DELETE', headers: authHeaders() }); return res.ok; } catch (e) { console.warn('[API] deleteDebitNote error:', e); return false; } }
+export async function postDebitNote(id: string): Promise<boolean> { try { const res = await fetch(`${API_BASE}/finance/debit-notes/${id}/post`, { method: 'POST', headers: authHeaders() }); return res.ok; } catch (e) { console.warn('[API] postDebitNote error:', e); return false; } }
+export async function applyDebitNote(id: string, bill: string, amt: number): Promise<boolean> { try { const res = await fetch(`${API_BASE}/finance/debit-notes/${id}/apply`, { method: 'POST', headers: authHeaders(), body: JSON.stringify({ billId: bill, amount: amt }) }); return res.ok; } catch (e) { console.warn('[API] applyDebitNote error:', e); return false; } }
 
 // --- TAX DATA ---
 export async function getTaxDataForCountry(c: string) { return getTaxRates(c); }
-export async function getAllTaxCountries() { return mockDelay([]); }
-export async function calculatePriceWithVAT(c: string, a: number) { return mockDelay(null); }
-export async function validateVATNumber(v: string) { return mockDelay({ valid: true, country: 'AE' }); }
+export async function getAllTaxCountries() { try { const res = await fetch(`${API_BASE}/tax/countries`, { headers: authHeaders() }); if (res.ok) return res.json(); } catch (e) { console.warn('[API] getAllTaxCountries error:', e); } return []; }
+export async function calculatePriceWithVAT(c: string, a: number) { try { const res = await fetch(`${API_BASE}/tax/calculate?country=${c}&amount=${a}`, { headers: authHeaders() }); if (res.ok) return res.json(); } catch (e) { console.warn('[API] calculatePriceWithVAT error:', e); } return null; }
+export async function validateVATNumber(v: string) { try { const res = await fetch(`${API_BASE}/tax/validate-vat?vatNumber=${v}`, { headers: authHeaders() }); if (res.ok) return res.json(); } catch (e) { console.warn('[API] validateVATNumber error:', e); } return { valid: false, country: null }; }
 export async function getTaxDatabaseStatus() {
     try {
         const res = await fetch(`${API_BASE}/tax/rates/AE`);
@@ -1560,7 +1887,7 @@ export async function getSupportRequests() {
     } catch (e) { console.warn('[API] getSupportRequests error:', e); }
     return [];
 }
-export async function getSupportRequest(id: string): Promise<any | null> { return mockDelay(null); }
+export async function getSupportRequest(id: string): Promise<any | null> { try { const res = await fetch(`${API_BASE}/support-meetings/support/${id}`, { headers: authHeaders() }); if (res.ok) return res.json(); } catch (e) { console.warn('[API] getSupportRequest error:', e); } return null; }
 export async function createSupportRequest(data: any) {
     try {
         const res = await fetch(`${API_BASE}/support-meetings/support`, {
@@ -1572,7 +1899,7 @@ export async function createSupportRequest(data: any) {
     } catch (e) { console.warn('[API] createSupportRequest error:', e); }
     return null;
 }
-export async function updateSupportRequest(id: string, data: any) { return mockDelay(true); }
+export async function updateSupportRequest(id: string, data: any): Promise<boolean> { try { const res = await fetch(`${API_BASE}/support-meetings/support/${id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }); return res.ok; } catch (e) { console.warn('[API] updateSupportRequest error:', e); return false; } }
 
 // --- MEETINGS ---
 export async function getMeetings() {
@@ -1582,7 +1909,7 @@ export async function getMeetings() {
     } catch (e) { console.warn('[API] getMeetings error:', e); }
     return [];
 }
-export async function getMeeting(id: string): Promise<any | null> { return mockDelay(null); }
+export async function getMeeting(id: string): Promise<any | null> { try { const res = await fetch(`${API_BASE}/support-meetings/meetings/${id}`, { headers: authHeaders() }); if (res.ok) return res.json(); } catch (e) { console.warn('[API] getMeeting error:', e); } return null; }
 export async function createMeetingRequest(data: any) {
     try {
         const res = await fetch(`${API_BASE}/support-meetings/meetings`, {
@@ -1594,10 +1921,10 @@ export async function createMeetingRequest(data: any) {
     } catch (e) { console.warn('[API] createMeetingRequest error:', e); }
     return null;
 }
-export async function updateMeeting(id: string, data: any) { return mockDelay(true); }
+export async function updateMeeting(id: string, data: any): Promise<boolean> { try { const res = await fetch(`${API_BASE}/support-meetings/meetings/${id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }); return res.ok; } catch (e) { console.warn('[API] updateMeeting error:', e); return false; } }
 
 // --- MISC ---
-export async function getTeamMembers() { return mockDelay([]); }
+export async function getTeamMembers() { try { const res = await fetch(`${API_BASE}/hrms/employees`, { headers: authHeaders() }); if (res.ok) return res.json(); } catch (e) { console.warn('[API] getTeamMembers error:', e); } return []; }
 export async function getPlanningNotes() {
     try {
         const res = await fetch(`${API_BASE}/misc/planning-notes`, { headers: authHeaders() });
@@ -1616,8 +1943,8 @@ export async function createPlanningNote(data: any) {
     } catch (e) { console.warn('[API] createPlanningNote error:', e); }
     return null;
 }
-export async function updatePlanningNote(id: string, data: any) { return mockDelay(true); }
-export async function deletePlanningNote(id: string) { return mockDelay(true); }
+export async function updatePlanningNote(id: string, data: any): Promise<boolean> { try { const res = await fetch(`${API_BASE}/misc/planning-notes/${id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }); return res.ok; } catch (e) { console.warn('[API] updatePlanningNote error:', e); return false; } }
+export async function deletePlanningNote(id: string): Promise<boolean> { try { const res = await fetch(`${API_BASE}/misc/planning-notes/${id}`, { method: 'DELETE', headers: authHeaders() }); return res.ok; } catch (e) { console.warn('[API] deletePlanningNote error:', e); return false; } }
 export async function getEnquiries() {
     try {
         const res = await fetch(`${API_BASE}/misc/enquiries`, { headers: authHeaders() });
@@ -1636,9 +1963,9 @@ export async function createEnquiry(data: any) {
     } catch (e) { console.warn('[API] createEnquiry error:', e); }
     return null;
 }
-export async function updateEnquiry(id: string, data: any) { return mockDelay(true); }
-export async function getPerformanceData(t: string) { return mockDelay([]); }
-export async function createPerformanceItem(data: any) { return mockDelay(true); }
+export async function updateEnquiry(id: string, data: any): Promise<boolean> { try { const res = await fetch(`${API_BASE}/misc/enquiries/${id}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }); return res.ok; } catch (e) { console.warn('[API] updateEnquiry error:', e); return false; } }
+export async function getPerformanceData(t: string) { try { const res = await fetch(`${API_BASE}/reports/performance?type=${t}`, { headers: authHeaders() }); if (res.ok) return res.json(); } catch (e) { console.warn('[API] getPerformanceData error:', e); } return []; }
+export async function createPerformanceItem(data: any): Promise<boolean> { try { const res = await fetch(`${API_BASE}/reports/performance`, { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) }); return res.ok; } catch (e) { console.warn('[API] createPerformanceItem error:', e); return false; } }
 
 // --- REPORTS API ---
 export async function getPnLReport(period = 'month') {
@@ -1798,8 +2125,8 @@ export async function deleteApprovalWorkflow(id: string) {
     return true;
 }
 
-export async function getBudgetControls() { return mockDelay([]); }
-export async function setBudgetControl(data: any) { return mockDelay(true); }
+export async function getBudgetControls() { try { const res = await fetch(`${API_BASE}/finance/budget-controls`, { headers: authHeaders() }); if (res.ok) return res.json(); } catch (e) { console.warn('[API] getBudgetControls error:', e); } return []; }
+export async function setBudgetControl(data: any): Promise<boolean> { try { const res = await fetch(`${API_BASE}/finance/budget-controls`, { method: 'POST', headers: authHeaders(), body: JSON.stringify(data) }); return res.ok; } catch (e) { console.warn('[API] setBudgetControl error:', e); return false; } }
 
 // ====================================================================
 // TAX CENTER API (REAL BACKEND)

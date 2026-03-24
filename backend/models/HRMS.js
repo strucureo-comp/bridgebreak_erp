@@ -149,6 +149,9 @@ const payrollSchema = new mongoose.Schema({
     total_deductions: { type: Number, default: 0 },
     total_net: { type: Number, default: 0 },
     deletedAt: { type: Date, default: null }, // Soft-delete timestamp
+    finance_journal_id: { type: mongoose.Schema.Types.ObjectId, ref: 'JournalEntry' },
+    processed_at: Date,
+    posted_at: Date,
 
     // Approval workflow fields
     submitted_by: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
@@ -164,7 +167,9 @@ const payrollSchema = new mongoose.Schema({
         allowances: Number,
         deductions: Number,
         net_pay: Number,
-        status: String
+        status: String,
+        payslip_number: String,
+        payslip_generated_at: Date,
     }]
 }, { timestamps: true });
 

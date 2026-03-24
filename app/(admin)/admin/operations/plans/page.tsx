@@ -154,7 +154,7 @@ export default function AdminPlansPage() {
                                     <CardContent className="p-6 space-y-3">
                                         <div className="flex items-start justify-between">
                                             <Badge className={cn(
-                                                "rounded-full px-2 py-0.5 text-[8px] font-black uppercase tracking-widest border-none",
+                                                "rounded-full px-2 py-0.5 text-xs font-semibold tracking-widest border-none",
                                                 selectedNoteId === note.id ? "bg-white/10 text-card-foreground" : "bg-muted text-muted-foreground"
                                             )}>
                                                 {note.category}

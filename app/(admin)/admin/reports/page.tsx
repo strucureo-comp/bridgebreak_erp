@@ -30,6 +30,8 @@ import {
 } from '@/lib/api';
 import { toast } from 'sonner';
 
+import { Skeleton } from '@/components/ui/skeleton';
+
 interface ReportData {
     name: string;
     type: string;
@@ -61,18 +63,14 @@ export default function ReportsPage() {
         setLoading(true);
         try {
             const data = await getDashboardSummary();
+            setSummary(data || null);
             if (data) {
-                setSummary(data);
                 setLastUpdated(new Date());
-            } else {
-                // Use fallback demo data if no data from API
-                setSummary(getFallbackData());
             }
         } catch (error) {
             console.error('Failed to load dashboard:', error);
             toast.error('Failed to load report data');
-            // Use fallback data on error
-            setSummary(getFallbackData());
+            setSummary(null);
         } finally {
             setLoading(false);
         }
@@ -81,45 +79,6 @@ export default function ReportsPage() {
     useEffect(() => {
         loadDashboardData();
     }, [period, loadDashboardData]);
-
-    // Fallback data when API returns nothing
-    const getFallbackData = () => ({
-        finance: {
-            revenue: 1250000,
-            expenses: 850000,
-            netIncome: 400000,
-            cashPosition: 2500000,
-            receivables: 320000,
-            payables: 180000
-        },
-        sales: {
-            totalSales: 1250000,
-            totalOrders: 156,
-            averageOrderValue: 8012,
-            conversionRate: 32.5,
-            customers: [
-                { name: 'Acme Corp', totalRevenue: 185000, orders: 24 },
-                { name: 'Global Tech', totalRevenue: 156000, orders: 18 }
-            ]
-        },
-        hr: {
-            totalEmployees: 42,
-            payrollThisMonth: 185000,
-            attendanceRate: 89.5,
-            leaveBalance: 156
-        },
-        inventory: {
-            totalValue: 850000,
-            totalItems: 1250,
-            lowStockItems: 8,
-            deadStockValue: 25000
-        },
-        tax: {
-            outputVAT: 125000,
-            inputVAT: 85000,
-            netVAT: 40000
-        }
-    });
 
     // Prepare report data with real values
     const reportCategories = [
@@ -158,7 +117,7 @@ export default function ReportsPage() {
                     name: 'VAT / Tax Compliance',
                     type: 'Statutory',
                     period: 'Quarterly',
-                    href: '/admin/finance/taxes',
+                    href: '/admin/settings/taxes',
                     value: formatValue(summary?.tax?.netVAT, fmt),
                     icon: Receipt
                 }
@@ -313,22 +272,13 @@ export default function ReportsPage() {
 
     return (
         <ModuleGuard module="reports">
-            <div className="space-y-6 pb-20">
-                {/* Page Header */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-border pb-6">
-                    <div className="flex items-center gap-4">
-                        <div className="h-11 w-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center shadow-sm transition-transform hover:scale-105">
-                            <BarChart3 className="h-6 w-6" />
-                        </div>
-                        <div>
-                            <h1 className="text-xl font-bold tracking-tight text-foreground uppercase leading-none">Intelligence Hub</h1>
-                            <div className="flex items-center gap-2 mt-0.5">
-                                <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Cross-Module Telemetry</span>
-                                <Badge variant="secondary" className="hidden sm:inline-flex font-bold uppercase text-[9px] tracking-widest bg-slate-100 text-slate-600">
-                                    {loading ? 'Loading...' : 'Live Data'}
-                                </Badge>
-                            </div>
-                        </div>
+            <div className="space-y-6 max-w-7xl pb-20">
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                    <div>
+                        <h1 className="text-2xl font-semibold">Reports</h1>
+                        <p className="text-muted-foreground">
+                            View intelligence and cross-module telemetry.
+                        </p>
                     </div>
                     <div className="flex items-center gap-2">
                         <div className="relative group mr-2">
@@ -365,7 +315,7 @@ export default function ReportsPage() {
                 </div>
 
                 {/* Last Updated */}
-                {lastUpdated && (
+                {lastUpdated && !loading && (
                     <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
                         <Clock className="h-3 w-3" />
                         <span>Last updated: {lastUpdated.toLocaleTimeString()}</span>
@@ -374,8 +324,21 @@ export default function ReportsPage() {
 
                 {/* KPI Summary Cards */}
                 {loading ? (
-                    <div className="flex items-center justify-center py-12">
-                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <div className="space-y-8 animate-pulse">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            {[...Array(4)].map((_, i) => (
+                                <Skeleton key={i} className="h-28 w-full rounded-xl" />
+                            ))}
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <Skeleton className="h-64 w-full rounded-xl" />
+                            <Skeleton className="h-64 w-full rounded-xl" />
+                        </div>
+                        <div className="space-y-3">
+                            {[...Array(5)].map((_, i) => (
+                                <Skeleton key={i} className="h-12 w-full rounded-md" />
+                            ))}
+                        </div>
                     </div>
                 ) : (
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -400,7 +363,8 @@ export default function ReportsPage() {
                 )}
 
                 {/* Strategic Panel */}
-                <Card className="border-none shadow-xl shadow-primary/5 rounded-2xl bg-foreground text-card-foreground p-8 relative overflow-hidden group">
+                {!loading && (
+                    <Card className="border-none shadow-xl shadow-primary/5 rounded-2xl bg-foreground text-card-foreground p-8 relative overflow-hidden group">
                     <div className="absolute top-0 right-0 w-96 h-96 bg-primary/10 rounded-full blur-[100px] -mr-48 -mt-48" />
                     <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
                         <div className="space-y-3 max-w-2xl">
@@ -422,80 +386,87 @@ export default function ReportsPage() {
                                 <Download className="h-4 w-4" /> Export All
                             </Button>
                         </div>
+                                            </div>
+                                        </Card>
+                                    )}
+                                    {/* Report Matrix Grid */}
+                {loading ? null : filteredCategories.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                        <p className="text-lg font-medium">No records found</p>
+                        <p className="text-sm mt-1">Records will appear here once added</p>
                     </div>
-                </Card>
-
-                {/* Report Matrix Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
-                    {filteredCategories.map(cat => (
-                        <Card key={cat.title} className="border-border shadow-sm rounded-xl overflow-hidden bg-card group hover:border-primary/50 transition-all duration-300">
-                            <CardHeader className="border-b border-border bg-muted/30 py-4 flex flex-row items-center justify-between">
-                                <div className="flex items-center gap-4">
-                                    <div className={cn("h-9 w-9 rounded-lg bg-card border border-border flex items-center justify-center shadow-sm", cat.color)}>
-                                        <cat.icon size={20} />
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+                        {filteredCategories.map(cat => (
+                            <Card key={cat.title} className="border-border shadow-sm rounded-xl overflow-hidden bg-card group hover:border-primary/50 transition-all duration-300">
+                                <CardHeader className="border-b border-border bg-muted/30 py-4 flex flex-row items-center justify-between">
+                                    <div className="flex items-center gap-4">
+                                        <div className={cn("h-9 w-9 rounded-lg bg-card border border-border flex items-center justify-center shadow-sm", cat.color)}>
+                                            <cat.icon size={20} />
+                                        </div>
+                                        <CardTitle className="text-[14px] font-bold text-foreground">{cat.title}</CardTitle>
                                     </div>
-                                    <CardTitle className="text-[14px] font-bold text-foreground">{cat.title}</CardTitle>
+                                    <Badge variant="outline" className="text-[9px] font-black border-border bg-card">{cat.reports.length} REPORTS</Badge>
+                                </CardHeader>
+                                <CardContent className="p-0">
+                                    <div className="divide-y divide-border">
+                                        {cat.reports.map(report => (
+                                            <Link
+                                                key={report.name}
+                                                href={report.href}
+                                                className="flex items-center justify-between p-4 hover:bg-primary/5 transition-all cursor-pointer group/item"
+                                            >
+                                                <div className="flex items-center gap-4 min-w-0">
+                                                    <div className="h-8 w-8 rounded border border-border bg-card flex items-center justify-center text-muted-foreground/60 group-hover/item:text-primary group-hover/item:border-primary/20 transition-all">
+                                                        {report.icon ? <report.icon className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <div className="flex items-center gap-2">
+                                                            <p className="text-[13px] font-bold text-foreground group-hover/item:text-zinc-900">{report.name}</p>
+                                                            {report.trend && (
+                                                                <TrendingUp className={cn("h-3 w-3", report.trend === 'up' ? "text-emerald-500" : "text-red-500")} />
+                                                            )}
+                                                        </div>
+                                                        <div className="flex items-center gap-2 mt-0.5">
+                                                            <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-tight">{report.period}</p>
+                                                            {report.value && report.value !== '—' && (
+                                                                <span className="text-[11px] font-semibold text-primary">{report.value}</span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    <Badge variant="secondary" className="text-[9px] font-bold bg-muted text-muted-foreground border-none uppercase px-2">{report.type}</Badge>
+                                                    {report.change !== undefined && (
+                                                        <div className={cn("flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded", report.change >= 0 ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-600")}>
+                                                            {report.change >= 0 ? '+' : ''}{report.change}%
+                                                        </div>
+                                                    )}
+                                                    <div className="flex items-center opacity-0 group-hover/item:opacity-100 transition-all gap-1 translate-x-2 group-hover/item:translate-x-0">
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md hover:bg-white hover:text-primary">
+                                                            <Share2 className="h-3.5 w-3.5" />
+                                                        </Button>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md hover:bg-white hover:text-primary">
+                                                            <Printer className="h-3.5 w-3.5" />
+                                                        </Button>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md hover:bg-white hover:text-primary">
+                                                            <Download className="h-3.5 w-3.5" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </Link>
+                                        ))}
+                                    </div>
+                                </CardContent>
+                                <div className="p-3 bg-muted/50 border-t border-border text-center">
+                                    <Button variant="ghost" className="w-full h-8 text-[11px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary gap-2">
+                                        View All {cat.title} Analytics <ChevronRight size={14} />
+                                    </Button>
                                 </div>
-                                <Badge variant="outline" className="text-[9px] font-black border-border bg-card">{cat.reports.length} REPORTS</Badge>
-                            </CardHeader>
-                            <CardContent className="p-0">
-                                <div className="divide-y divide-border">
-                                    {cat.reports.map(report => (
-                                        <Link
-                                            key={report.name}
-                                            href={report.href}
-                                            className="flex items-center justify-between p-4 hover:bg-primary/5 transition-all cursor-pointer group/item"
-                                        >
-                                            <div className="flex items-center gap-4 min-w-0">
-                                                <div className="h-8 w-8 rounded border border-border bg-card flex items-center justify-center text-muted-foreground/60 group-hover/item:text-primary group-hover/item:border-primary/20 transition-all">
-                                                    {report.icon ? <report.icon size={16} /> : <FileText size={16} />}
-                                                </div>
-                                                <div className="min-w-0">
-                                                    <div className="flex items-center gap-2">
-                                                        <p className="text-[13px] font-bold text-foreground group-hover/item:text-zinc-900">{report.name}</p>
-                                                        {report.trend && (
-                                                            <TrendingUp className={cn("h-3 w-3", report.trend === 'up' ? "text-emerald-500" : "text-red-500")} />
-                                                        )}
-                                                    </div>
-                                                    <div className="flex items-center gap-2 mt-0.5">
-                                                        <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-tight">{report.period}</p>
-                                                        {report.value && report.value !== '—' && (
-                                                            <span className="text-[11px] font-semibold text-primary">{report.value}</span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-3">
-                                                <Badge variant="secondary" className="text-[9px] font-bold bg-muted text-muted-foreground border-none uppercase px-2">{report.type}</Badge>
-                                                {report.change !== undefined && (
-                                                    <div className={cn("flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded", report.change >= 0 ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-600")}>
-                                                        {report.change >= 0 ? '+' : ''}{report.change}%
-                                                    </div>
-                                                )}
-                                                <div className="flex items-center opacity-0 group-hover/item:opacity-100 transition-all gap-1 translate-x-2 group-hover/item:translate-x-0">
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md hover:bg-white hover:text-primary">
-                                                        <Share2 className="h-3.5 w-3.5" />
-                                                    </Button>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md hover:bg-white hover:text-primary">
-                                                        <Printer className="h-3.5 w-3.5" />
-                                                    </Button>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md hover:bg-white hover:text-primary">
-                                                        <Download className="h-3.5 w-3.5" />
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                        </Link>
-                                    ))}
-                                </div>
-                            </CardContent>
-                            <div className="p-3 bg-muted/50 border-t border-border text-center">
-                                <Button variant="ghost" className="w-full h-8 text-[11px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary gap-2">
-                                    View All {cat.title} Analytics <ChevronRight size={14} />
-                                </Button>
-                            </div>
-                        </Card>
-                    ))}
-                </div>
+                            </Card>
+                        ))}
+                    </div>
+                )}
             </div>
         </ModuleGuard>
     );

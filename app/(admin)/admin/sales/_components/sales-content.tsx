@@ -13,8 +13,11 @@ import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { useCompanySettings } from '@/lib/hooks/use-company-settings';
+import { formatCurrency } from '@/lib/utils/currency';
 
 export function QuotesList() {
+    const { baseCurrency } = useCompanySettings();
     const [quotes, setQuotes] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const router = useRouter();
@@ -92,7 +95,7 @@ export function QuotesList() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">
-                            ${quotes.reduce((sum, q) => sum + Number(q.total_amount || 0), 0).toLocaleString()}
+                            {formatCurrency(quotes.reduce((sum, q) => sum + Number(q.total_amount || 0), 0), baseCurrency)}
                         </div>
                         <p className="text-xs text-muted-foreground">All quotes</p>
                     </CardContent>
@@ -106,7 +109,7 @@ export function QuotesList() {
                         <CardTitle>Quotes</CardTitle>
                         <CardDescription>Manage customer estimates and convert to orders</CardDescription>
                     </div>
-                    <Button onClick={() => router.push('/admin/finance/quotations/new')}>
+                    <Button onClick={() => router.push('/admin/sales/quotations')}>
                         <Plus className="h-4 w-4 mr-2" /> New Quote
                     </Button>
                 </CardHeader>
@@ -130,7 +133,7 @@ export function QuotesList() {
                                     <TableCell>{quote.account?.name}</TableCell>
                                     <TableCell>{quote.project?.title || '-'}</TableCell>
                                     <TableCell>{format(new Date(quote.issue_date), 'MMM dd, yyyy')}</TableCell>
-                                    <TableCell>${Number(quote.total_amount).toFixed(2)}</TableCell>
+                                    <TableCell>{formatCurrency(Number(quote.total_amount), baseCurrency)}</TableCell>
                                     <TableCell>
                                         <Badge variant={quote.status === 'converted' ? 'default' : 'outline'}>
                                             {quote.status}
@@ -165,6 +168,7 @@ export function QuotesList() {
 }
 
 export function PriceListsContent() {
+    const { baseCurrency } = useCompanySettings();
     const [lists, setLists] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -185,7 +189,7 @@ export function PriceListsContent() {
     async function handleCreate() {
         if (!newName) return;
         try {
-            await createPriceList({ name: newName, currency: 'USD', items: [] });
+            await createPriceList({ name: newName, currency: baseCurrency, items: [] });
             toast.success("Price List Created");
             setIsCreateOpen(false);
             setNewName("");

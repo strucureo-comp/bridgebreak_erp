@@ -11,6 +11,9 @@ import { Separator } from '@/components/ui/separator';
 import { Save, Loader2, CheckCircle2, Globe, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { settingsApi } from '@/lib/settings-api';
+import { useTenant } from '@/lib/tenant-context';
+import { broadcastCurrencyChange } from '@/lib/hooks/use-currency';
+import { Skeleton } from '@/components/ui/skeleton';
 
 // ============= TYPES =============
 
@@ -47,15 +50,15 @@ interface CompanyProfile {
 // ============= DEFAULT VALUES =============
 
 const DEFAULT_COMPANY: CompanyProfile = {
-    companyName: 'SYSTEM STEEL ENGINEERING LLC',
+    companyName: '',
     businessType: 'construction',
     companySize: 'startup',
     country: 'AE',
-    address: 'Warehouse 4, Al Quoz Industrial Area, Dubai, UAE',
-    phone: '+971 4 123 4567',
-    email: 'ops@systemsteel.ae',
-    website: 'www.systemsteel.ae',
-    taxId: '100123456789003',
+    address: '',
+    phone: '',
+    email: '',
+    website: '',
+    taxId: '',
     baseCurrency: 'AED',
     fiscalYearStart: '1',
     defaultTaxName: 'VAT',
@@ -151,6 +154,7 @@ export default function CompanySettingsPage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [company, setCompany] = useState<CompanyProfile>(DEFAULT_COMPANY);
+    const { refreshTenantStatus } = useTenant();
 
     useEffect(() => {
         const loadCompany = async () => {
@@ -193,6 +197,44 @@ export default function CompanySettingsPage() {
                 ...company,
                 fiscalYearStart: String(company.fiscalYearStart),
             });
+            broadcastCurrencyChange(company.baseCurrency);
+            await refreshTenantStatus();
+
+            // Broadcast event
+            window.dispatchEvent(new CustomEvent('erp_company_settings_changed', {
+                detail: {
+                    companyName: company.companyName,
+                    address: company.address,
+                    phone: company.phone,
+                    email: company.email,
+                    website: company.website,
+                    taxId: company.taxId,
+                    baseCurrency: company.baseCurrency,
+                    country: company.country
+                }
+            }));
+
+            // Sync for PDF
+            const existingPdfSettings = JSON.parse(localStorage.getItem('pdf-settings') || '{}');
+            const syncedPdfSettings = {
+                ...existingPdfSettings,
+                companyName: company.companyName,
+                companyAddress: company.address,
+                companyPhone: company.phone,
+                companyEmail: company.email,
+                companyTRN: company.taxId,
+                currency: company.baseCurrency,
+                address: company.address,
+                phone: company.phone,
+                email: company.email,
+                website: company.website,
+                taxId: company.taxId
+            };
+            localStorage.setItem('pdf-settings', JSON.stringify(syncedPdfSettings));
+            localStorage.setItem('erp_pdf_settings', JSON.stringify(syncedPdfSettings));
+            localStorage.setItem('company_settings', JSON.stringify(company));
+            window.dispatchEvent(new Event('erp_settings_updated'));
+
             toast.success('Company settings saved');
         } catch (error: any) {
             toast.error(error?.message || 'Failed to save company settings');
@@ -203,8 +245,13 @@ export default function CompanySettingsPage() {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <div className="space-y-6 max-w-4xl animate-pulse">
+                <div>
+                    <Skeleton className="h-8 w-48 mb-2" />
+                    <Skeleton className="h-4 w-64" />
+                </div>
+                <Skeleton className="h-[400px] w-full rounded-xl" />
+                <Skeleton className="h-32 w-full rounded-xl" />
             </div>
         );
     }
@@ -230,7 +277,7 @@ export default function CompanySettingsPage() {
                             <Input
                                 value={company.companyName}
                                 onChange={(e) => setCompany({ ...company, companyName: e.target.value })}
-                                placeholder="Your Company Name"
+                                placeholder="Enter company name"
                             />
                         </div>
                         <div className="space-y-2">
@@ -328,7 +375,7 @@ export default function CompanySettingsPage() {
                             <Input
                                 value={company.phone}
                                 onChange={(e) => setCompany({ ...company, phone: e.target.value })}
-                                placeholder={selectedCountry?.phoneCode ? `${selectedCountry.phoneCode} xxx xxxx` : "+971 4 123 4567"}
+                                placeholder={selectedCountry?.phoneCode ? `${selectedCountry.phoneCode} xxx xxxx` : "Enter phone number"}
                             />
                         </div>
                         <div className="space-y-2">

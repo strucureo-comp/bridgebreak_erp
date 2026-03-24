@@ -1,4 +1,7 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4000/api';
+const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '/api/backend';
+const API_BASE = BASE_URL.startsWith('/')
+  ? BASE_URL
+  : (BASE_URL.endsWith('/api') ? BASE_URL : `${BASE_URL}/api`);
 
 function getToken(): string | null {
   if (typeof window === 'undefined') return null;

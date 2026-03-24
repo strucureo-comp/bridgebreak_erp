@@ -1,53 +1,55 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { getSystemSetting } from '@/lib/api';
+import { getPDFSettings } from '@/lib/pdf-settings';
 import { formatCurrency, getCurrencySymbol, convertAmount, CURRENCY_NAMES } from '@/lib/currency';
+
+// Broadcast currency change to all subscribed components
+export function broadcastCurrencyChange(currencyCode: string) {
+    if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('erp_currency_changed', { detail: { currency: currencyCode } }));
+    }
+}
 
 interface UseCurrencyReturn {
     currencyCode: string;
     symbol: string;
     currencyName: string;
     format: (amount: number, options?: { compact?: boolean; showCode?: boolean }) => string;
-    convert: (amount: number, fromCurrency: string) => number;
+    convert: (amount: number, fromCurrency: string) => Promise<number>;
     loading: boolean;
 }
 
-let _cachedCurrency: string | null = null;
-const _listeners: Array<(c: string) => void> = [];
-
-// Global currency change broadcaster — so all components update together
-export function broadcastCurrencyChange(code: string) {
-    _cachedCurrency = code;
-    _listeners.forEach(fn => fn(code));
-}
-
 export function useCurrency(): UseCurrencyReturn {
-    const [currencyCode, setCurrencyCode] = useState<string>(_cachedCurrency ?? 'AED');
-    const [loading, setLoading] = useState(!_cachedCurrency);
+    const [currencyCode, setCurrencyCode] = useState<string>('AED');
+    const [loading, setLoading] = useState(true);
+
+    const refresh = useCallback(() => {
+        const settings = getPDFSettings();
+        setCurrencyCode(settings.currency);
+        setLoading(false);
+    }, []);
 
     useEffect(() => {
-        // Subscribe to global currency changes
-        const handler = (code: string) => setCurrencyCode(code);
-        _listeners.push(handler);
+        refresh();
 
-        // Load from settings if not cached
-        if (!_cachedCurrency) {
-            getSystemSetting('org_config').then((cfg: any) => {
-                const code = cfg?.baseCurrency ?? 'AED';
-                _cachedCurrency = code;
-                setCurrencyCode(code);
-                setLoading(false);
-            }).catch(() => setLoading(false));
-        } else {
-            setLoading(false);
-        }
+        // Listen for global settings updates
+        window.addEventListener('erp_settings_updated', refresh);
+        window.addEventListener('erp_company_settings_changed', (e: any) => {
+            if (e.detail?.baseCurrency) {
+                setCurrencyCode(e.detail.baseCurrency);
+            } else {
+                refresh();
+            }
+        });
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'erp_pdf_settings') refresh();
+        });
 
         return () => {
-            const idx = _listeners.indexOf(handler);
-            if (idx !== -1) _listeners.splice(idx, 1);
+            window.removeEventListener('erp_settings_updated', refresh);
         };
-    }, []);
+    }, [refresh]);
 
     const format = useCallback(
         (amount: number, options?: { compact?: boolean; showCode?: boolean }) =>

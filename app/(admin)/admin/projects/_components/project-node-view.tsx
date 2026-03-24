@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Briefcase, User, PenTool, Layers, Package, DollarSign, 
@@ -23,10 +23,14 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useRouter } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
 import type { Project } from '@/lib/db/types';
 import { NodeDetailSheet } from './node-detail-sheet';
 import { useTenant } from '@/lib/tenant-context';
 import { cn } from '@/lib/utils';
+import { useCompanySettings } from '@/lib/hooks/use-company-settings';
+import { formatCurrency } from '@/lib/utils/currency';
 
 // --- Sophisticated Mock Data ---
 const performanceData = [
@@ -46,15 +50,34 @@ const distributionData = [
 ];
 
 export function ProjectNodeView({ project, onRefresh }: { project: Project, onRefresh: () => void }) {
+  const router = useRouter();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('performance');
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const { tenantStatus } = useTenant();
   const businessType = tenantStatus?.business_type || 'service';
+  const { baseCurrency } = useCompanySettings();
+
+  useEffect(() => {
+    const handler = () => window.location.reload();
+    window.addEventListener('erp_company_settings_changed', handler);
+    return () => window.removeEventListener('erp_company_settings_changed', handler);
+  }, []);
 
   const handleAction = (id: string) => {
     setSelectedNode(id);
     setIsSheetOpen(true);
+  };
+
+  const handleShare = () => {
+    navigator.clipboard.writeText(window.location.href);
+    toast({ title: "Link copied", description: "Project link copied to clipboard" });
+  };
+
+  const handleGenerateReport = () => {
+    toast({ title: "Generating report...", description: "Your report will download shortly" });
+    router.push(`/admin/reports?project=${project.id}`);
   };
 
   return (
@@ -84,14 +107,21 @@ export function ProjectNodeView({ project, onRefresh }: { project: Project, onRe
           <div className="flex items-center gap-4 flex-wrap">
             <KPIItem label="Health Score" value="94/100" trend="Stable" icon={Zap} color="text-amber-500" />
             <div className="h-10 w-[1px] bg-muted hidden md:block" />
-            <KPIItem label="Budget" value={`$${(Number(project.estimated_cost)/1000).toFixed(1)}k`} trend="-2.4%" icon={DollarSign} color="text-emerald-500" />
+            <KPIItem label="Budget" value={formatCurrency(Number(project.estimated_cost), baseCurrency, { compact: true })} trend="-2.4%" icon={DollarSign} color="text-emerald-500" />
             <div className="h-10 w-[1px] bg-muted hidden md:block" />
             <KPIItem label="Completion" value="78.2%" trend="+5.0%" icon={Target} color="text-blue-500" />
             <div className="flex gap-2 ml-4">
-                <Button variant="outline" className="rounded-xl border-2 font-bold h-12 px-4 hover:bg-slate-50">
+                <Button 
+                    variant="outline" 
+                    className="rounded-xl border-2 font-bold h-12 px-4 hover:bg-slate-50"
+                    onClick={handleShare}
+                >
                     <Share2 size={18} className="text-muted-foreground" />
                 </Button>
-                <Button className="rounded-xl font-black h-12 px-8 bg-slate-900 hover:bg-slate-800 text-card-foreground shadow-lg shadow-slate-200">
+                <Button 
+                    className="rounded-xl font-black h-12 px-8 bg-slate-900 hover:bg-slate-800 text-card-foreground shadow-lg shadow-slate-200"
+                    onClick={handleGenerateReport}
+                >
                     Generate Report
                 </Button>
             </div>
@@ -177,7 +207,7 @@ export function ProjectNodeView({ project, onRefresh }: { project: Project, onRe
                                 </div>
                                 <div className="py-8">
                                     <div className="flex justify-between items-end mb-3">
-                                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Current Lifecycle</span>
+                                        <span className="text-muted-foreground">Current Lifecycle</span>
                                         <span className="text-2xl font-black">78%</span>
                                     </div>
                                     <div className="h-3 w-full bg-white/5 rounded-full overflow-hidden">
@@ -189,7 +219,10 @@ export function ProjectNodeView({ project, onRefresh }: { project: Project, onRe
                                         />
                                     </div>
                                 </div>
-                                <Button className="w-full rounded-2xl h-14 bg-card text-foreground font-black uppercase tracking-widest text-xs hover:bg-slate-100">
+                                <Button 
+                                    className="w-full rounded-2xl h-14 bg-card text-foreground font-black uppercase tracking-widest text-xs hover:bg-slate-100"
+                                    onClick={() => toast({ title: "Coming Soon", description: "Workflow optimization is under development" })}
+                                >
                                     Optimize Workflow
                                 </Button>
                             </Card>
@@ -212,7 +245,13 @@ export function ProjectNodeView({ project, onRefresh }: { project: Project, onRe
                                         <CardTitle className="text-xl font-black">Strategic Roadmap</CardTitle>
                                         <CardDescription className="font-bold text-muted-foreground uppercase tracking-tighter text-[10px]">Phase Control & Milestone Tracking</CardDescription>
                                     </div>
-                                    <Button variant="outline" className="rounded-xl font-bold text-xs h-10 border-2">Full Gantt View</Button>
+                                    <Button 
+                                        variant="outline" 
+                                        className="rounded-xl font-bold text-xs h-10 border-2"
+                                        onClick={() => toast({ title: "Coming Soon", description: "Full Gantt view is under development" })}
+                                    >
+                                        Full Gantt View
+                                    </Button>
                                 </div>
                             </CardHeader>
                             <CardContent className="p-0">
@@ -257,8 +296,20 @@ export function ProjectNodeView({ project, onRefresh }: { project: Project, onRe
                                     Budgetary Breakdown
                                 </h3>
                                 <div className="flex gap-2">
-                                    <Button variant="outline" className="rounded-xl h-10 font-bold text-xs border-2">Record Expense</Button>
-                                    <Button variant="outline" className="rounded-xl h-10 font-bold text-xs border-2">Billing View</Button>
+                                    <Button 
+                                        variant="outline" 
+                                        className="rounded-xl h-10 font-bold text-xs border-2"
+                                        onClick={() => router.push(`/admin/purchases/expenses/new?project=${project.id}`)}
+                                    >
+                                        Record Expense
+                                    </Button>
+                                    <Button 
+                                        variant="outline" 
+                                        className="rounded-xl h-10 font-bold text-xs border-2"
+                                        onClick={() => router.push(`/admin/sales/invoices?project=${project.id}`)}
+                                    >
+                                        Billing View
+                                    </Button>
                                 </div>
                             </div>
                             <div className="grid md:grid-cols-2 gap-12">
@@ -345,7 +396,10 @@ export function ProjectNodeView({ project, onRefresh }: { project: Project, onRe
             <div className="relative z-10">
                 <h4 className="font-black text-xl mb-2">Project Repository</h4>
                 <p className="text-xs font-medium text-blue-100 mb-6 opacity-80">14 Active Documents (CAD, Specs, Contracts)</p>
-                <Button className="w-full rounded-xl bg-card text-blue-600 font-black uppercase tracking-widest text-[10px] hover:bg-slate-100">
+                <Button 
+                    className="w-full rounded-xl bg-card text-blue-600 font-black uppercase tracking-widest text-[10px] hover:bg-slate-100"
+                    onClick={() => toast({ title: "Coming Soon", description: "Document vault is under development" })}
+                >
                     Access Vault
                 </Button>
             </div>
@@ -474,7 +528,7 @@ function ContactCard({ name, role, type }: any) {
                     <p className="text-[10px] font-bold text-muted-foreground uppercase">{role}</p>
                 </div>
             </div>
-            <Badge variant="outline" className="rounded-lg text-[8px] font-black uppercase tracking-widest border-border text-muted-foreground px-1.5 h-5">{type}</Badge>
+            <Badge variant="outline" className="rounded-lg text-xs font-semibold tracking-widest border-border text-muted-foreground px-1.5 h-5">{type}</Badge>
         </div>
     );
 }

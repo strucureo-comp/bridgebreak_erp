@@ -13,6 +13,8 @@ import { Clock, Plus, Save, CheckCircle, XCircle, FileDown } from 'lucide-react'
 import { toast } from 'sonner';
 import type { Employee } from '@/lib/db/types';
 import { authHeaders } from '@/lib/api';
+import { useCompanySettings } from '@/lib/hooks/use-company-settings';
+import { formatCurrency } from '@/lib/utils/currency';
 
 interface OvertimeLog {
   id?: string;
@@ -33,8 +35,15 @@ interface OvertimeTrackingProps {
 }
 
 export function OvertimeTracking({ employees, onRefresh }: OvertimeTrackingProps) {
+  const { baseCurrency } = useCompanySettings();
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const handler = () => window.location.reload();
+    window.addEventListener('erp_company_settings_changed', handler);
+    return () => window.removeEventListener('erp_company_settings_changed', handler);
+  }, []);
   const [overtimeLogs, setOvertimeLogs] = useState<OvertimeLog[]>([]);
   const [summary, setSummary] = useState<any[]>([]);
   const [selectedMonth, setSelectedMonth] = useState(() => {
@@ -387,7 +396,7 @@ export function OvertimeTracking({ employees, onRefresh }: OvertimeTrackingProps
                         {item.employee_name} ({item.employee_id})
                       </TableCell>
                       <TableCell className="text-right">{item.total_overtime_hours.toFixed(1)} hrs</TableCell>
-                      <TableCell className="text-right">AED {item.total_overtime_amount.toFixed(2)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(item.total_overtime_amount, baseCurrency)}</TableCell>
                       <TableCell className="text-right">{item.entries}</TableCell>
                     </TableRow>
                   ))}
@@ -438,7 +447,7 @@ export function OvertimeTracking({ employees, onRefresh }: OvertimeTrackingProps
                     <TableCell className="text-right">{log.hours_worked} hrs</TableCell>
                     <TableCell className="text-right">{log.overtime_hours} hrs</TableCell>
                     <TableCell className="text-right">{log.rate_multiplier}x</TableCell>
-                    <TableCell className="text-right">AED {log.overtime_amount.toFixed(2)}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(log.overtime_amount, baseCurrency)}</TableCell>
                     <TableCell>{getStatusBadge(log.status)}</TableCell>
                     <TableCell className="text-sm max-w-xs truncate">{log.notes || '-'}</TableCell>
                     <TableCell className="text-right">

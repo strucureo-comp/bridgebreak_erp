@@ -15,6 +15,17 @@ import { cn } from '@/lib/utils';
 import { generateProformaInvoicePDF } from '@/lib/pdf-generator';
 import { LiveDocumentPreview } from '@/components/shared/layout/live-document-preview';
 import { SalesDocumentType, DocumentStatus, isApprovalRequired, getApproverRole, canApproveDocument, getStatusInfo } from '@/lib/sales-approval';
+import {
+    getProformaInvoices,
+    createProformaInvoice,
+    updateProformaInvoice,
+    deleteProformaInvoice,
+} from '@/lib/services/business-documents-api';
+import { getCustomers } from '@/lib/api';
+import { useCompanySettings } from '@/lib/hooks/use-company-settings';
+import { formatCurrency } from '@/lib/utils/currency';
+import { DashboardShell } from '@/components/shared/layout/dashboard-shell';
+import { ModuleGuard } from '@/components/shared/layout/module-guard';
 
 interface InvoiceItem {
     id: string;
@@ -42,41 +53,57 @@ interface ProformaInvoice {
     createdAt: string;
 }
 
-const DEFAULT_INVOICE: Partial<ProformaInvoice> = {
-    items: [],
-    subtotal: 0,
-    taxRate: 5,
-    taxAmount: 0,
-    total: 0,
-    status: 'draft',
-};
-
 export default function ProformaInvoicesPage() {
+    const { baseCurrency, taxRate, taxName } = useCompanySettings();
     const [invoices, setInvoices] = useState<ProformaInvoice[]>([]);
     const [loading, setLoading] = useState(true);
     const [dialogOpen, setDialogOpen] = useState(false);
-    const [editingInvoice, setEditingInvoice] = useState<Partial<ProformaInvoice>>(DEFAULT_INVOICE);
+    const [editingInvoice, setEditingInvoice] = useState<Partial<ProformaInvoice>>({
+        items: [],
+        subtotal: 0,
+        taxRate: taxRate,
+        taxAmount: 0,
+        total: 0,
+        status: 'draft',
+    });
     const [customers, setCustomers] = useState<{ id: string; name: string }[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
 
     const documentType: SalesDocumentType = 'proformaInvoice';
-    const approvalRequired = isApprovalRequired(documentType);
+    const approvalRequired = isApprovalRequired('sales', documentType);
+
+    const normalizeInvoice = (doc: any): ProformaInvoice => ({
+        ...doc,
+        id: doc.id || doc._id,
+    });
 
     useEffect(() => {
-        loadInvoices();
+        void loadInvoices();
         loadCustomers();
     }, []);
 
-    const loadInvoices = () => {
-        const saved = localStorage.getItem('sales_proformaInvoices');
-        if (saved) setInvoices(JSON.parse(saved));
-        setLoading(false);
+    const loadInvoices = async () => {
+        try {
+            const data = await getProformaInvoices();
+            setInvoices(Array.isArray(data) ? data.map(normalizeInvoice) : []);
+        } catch (error: any) {
+            toast.error(error?.message || 'Failed to load proforma invoices');
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const loadCustomers = () => {
-        const saved = localStorage.getItem('sales_customers');
-        if (saved) setCustomers(JSON.parse(saved));
-        else setCustomers([{ id: '1', name: 'ABC Corporation' }, { id: '2', name: 'XYZ Industries' }]);
+    const loadCustomers = async () => {
+        try {
+            const data = await getCustomers();
+            const list = (Array.isArray(data) ? data : []).map((c: any) => ({
+                id: String(c._id || c.id),
+                name: c.name,
+            }));
+            setCustomers(list);
+        } catch {
+            setCustomers([]);
+        }
     };
 
     const filteredInvoices = useMemo(() => {
@@ -129,7 +156,7 @@ export default function ProformaInvoicesPage() {
         }));
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!editingInvoice.customerName) { toast.error('Please select a customer'); return; }
         if (!editingInvoice.items?.length) { toast.error('Please add at least one item'); return; }
 
@@ -143,7 +170,7 @@ export default function ProformaInvoicesPage() {
             validUntil: editingInvoice.validUntil || '',
             items: editingInvoice.items || [],
             subtotal: totals.subtotal,
-            taxRate: editingInvoice.taxRate || 5,
+            taxRate: editingInvoice.taxRate || taxRate,
             taxAmount: totals.taxAmount,
             total: totals.total,
             notes: editingInvoice.notes || '',
@@ -152,24 +179,50 @@ export default function ProformaInvoicesPage() {
             createdAt: editingInvoice.createdAt || new Date().toISOString(),
         };
 
-        const existingIndex = invoices.findIndex(i => i.id === invoice.id);
-        const updatedList = existingIndex >= 0 ? invoices.map((i, idx) => idx === existingIndex ? invoice : i) : [...invoices, invoice];
-        setInvoices(updatedList);
-        localStorage.setItem('sales_proformaInvoices', JSON.stringify(updatedList));
-        toast.success('Proforma Invoice saved');
-        setDialogOpen(false);
-        setEditingInvoice(DEFAULT_INVOICE);
+        try {
+            if (editingInvoice.id) {
+                const updated = normalizeInvoice(await updateProformaInvoice(editingInvoice.id, invoice));
+                setInvoices(prev => prev.map(i => i.id === editingInvoice.id ? updated : i));
+            } else {
+                const created = normalizeInvoice(await createProformaInvoice(invoice));
+                setInvoices(prev => [created, ...prev]);
+            }
+            toast.success('Proforma Invoice saved');
+            setDialogOpen(false);
+            setEditingInvoice({
+                items: [],
+                subtotal: 0,
+                taxRate: taxRate,
+                taxAmount: 0,
+                total: 0,
+                status: 'draft',
+            });
+        } catch (error: any) {
+            toast.error(error?.message || 'Failed to save proforma invoice');
+        }
     };
 
-    const handleDelete = (invoice: ProformaInvoice) => {
-        const updatedList = invoices.filter(i => i.id !== invoice.id);
-        setInvoices(updatedList);
-        localStorage.setItem('sales_proformaInvoices', JSON.stringify(updatedList));
-        toast.success('Deleted');
+    const handleDelete = async (invoice: ProformaInvoice) => {
+        try {
+            await deleteProformaInvoice(invoice.id);
+            setInvoices(prev => prev.filter(i => i.id !== invoice.id));
+            toast.success('Deleted');
+        } catch (error: any) {
+            toast.error(error?.message || 'Failed to delete proforma invoice');
+        }
     };
 
     const openEditDialog = (invoice?: ProformaInvoice) => {
-        setEditingInvoice(invoice ? invoice : { ...DEFAULT_INVOICE, number: generateInvoiceNumber(), date: new Date().toISOString().split('T')[0] });
+        setEditingInvoice(invoice ? invoice : {
+            items: [],
+            subtotal: 0,
+            taxRate: taxRate,
+            taxAmount: 0,
+            total: 0,
+            status: 'draft',
+            number: generateInvoiceNumber(),
+            date: new Date().toISOString().split('T')[0]
+        });
         setDialogOpen(true);
     };
 
@@ -191,7 +244,9 @@ export default function ProformaInvoicesPage() {
     if (loading) return <div className="flex items-center justify-center min-h-[400px]"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
     return (
-        <div className="space-y-6 max-w-7xl mx-auto pb-12">
+        <DashboardShell requireAdmin>
+            <ModuleGuard module="sales">
+                <div className="space-y-6 max-w-7xl mx-auto pb-12">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
                 <div>
                     <h1 className="text-3xl font-black tracking-tight text-foreground">Proforma Invoices</h1>
@@ -231,7 +286,7 @@ export default function ProformaInvoicesPage() {
                             </div>
                             <div className="flex items-center gap-6">
                                 <div className="text-right">
-                                    <p className="text-sm font-bold">AED {invoice.total.toFixed(2)}</p>
+                                    <p className="text-sm font-bold">{formatCurrency(invoice.total, baseCurrency)}</p>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => generateProformaInvoicePDF(invoice)}>
@@ -276,20 +331,20 @@ export default function ProformaInvoicesPage() {
                                         <Input className="flex-1" placeholder="Description" value={item.description} onChange={e => handleUpdateItem(item.id, 'description', e.target.value)} />
                                         <Input className="w-16" type="number" placeholder="Qty" value={item.quantity} onChange={e => handleUpdateItem(item.id, 'quantity', parseFloat(e.target.value) || 0)} />
                                         <Input className="w-20" type="number" placeholder="Price" value={item.unitPrice} onChange={e => handleUpdateItem(item.id, 'unitPrice', parseFloat(e.target.value) || 0)} />
-                                        <Input className="w-20" value={item.total.toFixed(2)} disabled />
+                                        <Input className="w-20" value={formatCurrency(item.total, baseCurrency)} disabled />
                                         <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)}><Trash2 className="h-4 w-4 text-red-500" /></Button>
                                     </div>
                                 ))}
                                 <Button variant="outline" size="sm" onClick={handleAddItem}><Plus className="h-4 w-4 mr-1" /> Add Item</Button>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2"><Label>Tax Rate (%)</Label><Input type="number" value={editingInvoice.taxRate || 5} onChange={e => { const rate = parseFloat(e.target.value) || 0; setEditingInvoice(prev => ({ ...prev, taxRate: rate, ...calculateTotals({ ...prev, taxRate: rate }) })); }} /></div>
+                                <div className="space-y-2"><Label>{taxName} Rate (%)</Label><Input type="number" value={editingInvoice.taxRate || taxRate} onChange={e => { const rate = parseFloat(e.target.value) || 0; setEditingInvoice(prev => ({ ...prev, taxRate: rate, ...calculateTotals({ ...prev, taxRate: rate }) })); }} /></div>
                                 <div className="space-y-2"><Label>Notes</Label><Input value={editingInvoice.notes || ''} onChange={e => setEditingInvoice({ ...editingInvoice, notes: e.target.value })} /></div>
                             </div>
                             <div className="border-t pt-4 space-y-2">
-                                <div className="flex justify-between"><span>Subtotal:</span><span>AED {(editingInvoice.subtotal || 0).toFixed(2)}</span></div>
-                                <div className="flex justify-between"><span>Tax:</span><span>AED {(editingInvoice.taxAmount || 0).toFixed(2)}</span></div>
-                                <div className="flex justify-between font-bold text-lg"><span>Total:</span><span>AED {(editingInvoice.total || 0).toFixed(2)}</span></div>
+                                <div className="flex justify-between"><span>Subtotal:</span><span>{formatCurrency(editingInvoice.subtotal || 0, baseCurrency)}</span></div>
+                                <div className="flex justify-between"><span>{taxName}:</span><span>{formatCurrency(editingInvoice.taxAmount || 0, baseCurrency)}</span></div>
+                                <div className="flex justify-between font-bold text-lg"><span>Total:</span><span>{formatCurrency(editingInvoice.total || 0, baseCurrency)}</span></div>
                             </div>
                         </div>
                         <div className="border rounded-lg overflow-hidden bg-gray-50">
@@ -302,6 +357,8 @@ export default function ProformaInvoicesPage() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-        </div>
+                </div>
+            </ModuleGuard>
+        </DashboardShell>
     );
 }

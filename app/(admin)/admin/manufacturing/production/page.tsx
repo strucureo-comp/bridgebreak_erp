@@ -51,7 +51,7 @@ export default function ProductionPage() {
       <DashboardShell requireAdmin>
         <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
           <RefreshCcw className="h-10 w-10 animate-spin text-primary" />
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Syncing Shop Floor Data</p>
+          <p className="text-muted-foreground">Syncing Shop Floor Data</p>
         </div>
       </DashboardShell>
     );
@@ -106,7 +106,7 @@ function StatsTile({ title, value, icon: Icon, label, highlight }: { title: stri
         <div className="space-y-0.5">
           <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{title}</p>
           <h3 className="text-xl font-black text-foreground tracking-tight">{value}</h3>
-          <p className={cn("text-[8px] font-black uppercase tracking-tighter", highlight ? "text-primary" : "text-muted-foreground")}>{label}</p>
+          <p className={cn("text-xs font-semibold tracking-tighter", highlight ? "text-primary" : "text-muted-foreground")}>{label}</p>
         </div>
       </Card>
     );

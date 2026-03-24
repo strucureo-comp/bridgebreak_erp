@@ -32,12 +32,22 @@ import type { Vendor, PurchaseRequest } from '@/lib/db/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { POPreview } from '@/app/(admin)/admin/purchases/_components/po-preview';
 import { useTenant } from '@/lib/tenant-context';
+import { useCompanySettings } from '@/lib/hooks/use-company-settings';
+import { formatCurrency } from '@/lib/utils/currency';
+import { Skeleton } from '@/components/ui/skeleton';
+
+const generateRef = (prefix: string) => {
+    const date = new Date();
+    const seq = String(date.getTime()).slice(-5);
+    return `${prefix}-${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}-${seq}`;
+};
 
 export default function NewPurchaseOrderPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const requestId = searchParams.get('request_id');
   const { companyProfile } = useTenant();
+  const { baseCurrency, taxRate, taxName } = useCompanySettings();
 
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [requests, setRequests] = useState<PurchaseRequest[]>([]);
@@ -45,13 +55,19 @@ export default function NewPurchaseOrderPage() {
   const [saving, setSaving] = useState(false);
   const [viewMode, setViewMode] = useState<'edit' | 'preview'>('edit');
 
+  useEffect(() => {
+    const handler = () => window.location.reload();
+    window.addEventListener('erp_company_settings_changed', handler);
+    return () => window.removeEventListener('erp_company_settings_changed', handler);
+  }, []);
+
   // Form State
-  const [poNumber, setPoNumber] = useState(`PO-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`);
+  const [poNumber, setPoNumber] = useState(generateRef('PO'));
   const [selectedVendorId, setSelectedVendor] = useState('');
   const [selectedRequest, setSelectedRequest] = useState(requestId || 'none');
   
   // Dynamic Defaults from Settings
-  const defaultTaxRate = companyProfile?.taxConfig?.rates?.[0]?.rate || 5;
+  const defaultTaxRate = taxRate;
   const [lines, setLines] = useState([{ description: '', quantity: 1, unit_price: 0, tax_rate: defaultTaxRate }]);
   const [notes, setNotes] = useState('');
 
@@ -147,10 +163,28 @@ export default function NewPurchaseOrderPage() {
   };
 
   if (loading) return (
-    <div className="flex flex-col items-center justify-center min-h-screen space-y-4">
-        <RefreshCcw className="h-10 w-10 animate-spin text-primary" />
-        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Initializing Procurement Document</p>
-    </div>
+    <DashboardShell requireAdmin>
+        <div className="space-y-6 pb-12 animate-pulse">
+            <div className="flex justify-between items-center border-b pb-6">
+                <div className="flex items-center gap-4">
+                    <Skeleton className="h-10 w-10 rounded-md bg-muted" />
+                    <div className="space-y-2">
+                        <Skeleton className="h-6 w-48 bg-muted" />
+                        <Skeleton className="h-3 w-32 bg-muted" />
+                    </div>
+                </div>
+                <div className="flex gap-2">
+                    <Skeleton className="h-10 w-24 bg-muted" />
+                    <Skeleton className="h-10 w-40 bg-muted" />
+                </div>
+            </div>
+            <div className="grid gap-6 md:grid-cols-3">
+                <Skeleton className="h-40 w-full bg-muted rounded-md" />
+                <Skeleton className="h-40 md:col-span-2 w-full bg-muted rounded-md" />
+            </div>
+            <Skeleton className="h-64 w-full bg-muted rounded-md" />
+        </div>
+    </DashboardShell>
   );
 
   return (
@@ -278,7 +312,7 @@ export default function NewPurchaseOrderPage() {
                                         <Truck size={16} />
                                     </div>
                                     <div className="space-y-0.5">
-                                        <p className="text-[8px] font-black uppercase text-muted-foreground">Logistics Mode</p>
+                                        <p className="text-xs font-semibold text-muted-foreground">Logistics Mode</p>
                                         <p className="text-[10px] font-bold text-foreground uppercase">Standard Delivery</p>
                                     </div>
                                 </div>
@@ -303,12 +337,12 @@ export default function NewPurchaseOrderPage() {
                             <table className="w-full text-left">
                                 <thead className="bg-muted/50 border-b border-border">
                                     <tr>
-                                        <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground">Description</th>
-                                        <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground w-24">Qty</th>
-                                        <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground w-32">Price ({companyProfile?.baseCurrency || 'AED'})</th>
-                                        <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground w-24">Tax%</th>
-                                        <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground w-32 text-right">Total</th>
-                                        <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground w-16 text-right"></th>
+                                        <th className="px-6 py-3 text-xs font-medium text-muted-foreground">Description</th>
+                                        <th className="px-6 py-3 text-xs font-medium text-muted-foreground w-24">Qty</th>
+                                        <th className="px-6 py-3 text-xs font-medium text-muted-foreground w-32">Price ({baseCurrency})</th>
+                                        <th className="px-6 py-3 text-xs font-medium text-muted-foreground w-24">Tax%</th>
+                                        <th className="px-6 py-3 text-xs font-medium text-muted-foreground w-32 text-right">Total</th>
+                                        <th className="px-6 py-3 text-xs font-medium text-muted-foreground w-16 text-right"></th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-border">
@@ -348,7 +382,7 @@ export default function NewPurchaseOrderPage() {
                                             </td>
                                             <td className="px-6 py-3 text-right">
                                                 <span className="text-xs font-black text-foreground">
-                                                    {(line.quantity * line.unit_price).toLocaleString()}
+                                                    {formatCurrency(line.quantity * line.unit_price, baseCurrency)}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-3 text-right">
@@ -382,17 +416,17 @@ export default function NewPurchaseOrderPage() {
                                 <div className="space-y-2 border-b border-border pb-4">
                                     <div className="flex justify-between items-center text-xs">
                                         <span className="font-bold text-muted-foreground uppercase tracking-widest">Subtotal</span>
-                                        <span className="font-black text-foreground">{companyProfile?.baseCurrency || 'AED'} {totals.subtotal.toLocaleString()}</span>
+                                        <span className="font-black text-foreground">{formatCurrency(totals.subtotal, baseCurrency)}</span>
                                     </div>
                                     <div className="flex justify-between items-center text-xs">
-                                        <span className="font-bold text-muted-foreground uppercase tracking-widest">VAT (Calculated)</span>
-                                        <span className="font-black text-foreground">{companyProfile?.baseCurrency || 'AED'} {totals.tax.toLocaleString()}</span>
+                                        <span className="font-bold text-muted-foreground uppercase tracking-widest">{taxName} (Calculated)</span>
+                                        <span className="font-black text-foreground">{formatCurrency(totals.tax, baseCurrency)}</span>
                                     </div>
                                 </div>
                                 <div className="flex justify-between items-center bg-foreground text-card-foreground p-6 rounded-md shadow-xl shadow-zinc-200">
                                     <div className="space-y-0.5">
-                                        <p className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground">Order Commitment</p>
-                                        <p className="text-2xl font-black tracking-tighter">{companyProfile?.baseCurrency || 'AED'} {totals.total.toLocaleString()}</p>
+                                        <p className="text-xs font-semibold tracking-[0.2em] text-muted-foreground">Order Commitment</p>
+                                        <p className="text-2xl font-black tracking-tighter">{formatCurrency(totals.total, baseCurrency)}</p>
                                     </div>
                                     <ShieldCheck className="h-8 w-8 text-primary opacity-50" />
                                 </div>
@@ -404,11 +438,17 @@ export default function NewPurchaseOrderPage() {
         ) : (
             <div className="animate-in zoom-in-95 duration-300 py-10 bg-muted rounded-md border-2 border-dashed border-border">
                 <POPreview 
-                    poNumber={poNumber}
-                    vendor={selectedVendor}
-                    lines={lines}
-                    totals={totals}
-                    notes={notes}
+                    data={{
+                        po_number: poNumber,
+                        vendor_name: selectedVendor?.name,
+                        vendor_address: selectedVendor?.address,
+                        vendor_email: selectedVendor?.email,
+                        items: lines,
+                        subtotal: totals.subtotal,
+                        tax_amount: totals.tax,
+                        total_amount: totals.total,
+                        notes: notes
+                    }}
                 />
             </div>
         )}

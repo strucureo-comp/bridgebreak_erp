@@ -16,6 +16,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useTenant } from '@/lib/tenant-context';
+import { useCompanySettings } from '@/lib/hooks/use-company-settings';
+import { formatCurrency } from '@/lib/utils/currency';
 import {
     Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription
 } from "@/components/ui/dialog";
@@ -27,6 +29,7 @@ import { ModuleGuard } from '@/components/shared/layout/module-guard';
 export default function AdminLeadsPage() {
     const { user } = useAuth();
     const { companyProfile } = useTenant();
+    const { baseCurrency } = useCompanySettings();
     const [leads, setLeads] = useState<Lead[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -37,11 +40,9 @@ export default function AdminLeadsPage() {
     const [convertingLead, setConvertingLead] = useState<Lead | null>(null);
 
     const isRetail = companyProfile?.businessType === 'b2c_retail';
-    const currency = companyProfile?.baseCurrency || 'AED';
+    const currency = baseCurrency;
 
-    const fmt = (n: number) => new Intl.NumberFormat('en-AE', {
-        style: 'currency', currency, maximumFractionDigits: 0
-    }).format(n);
+    const fmt = (n: number) => formatCurrency(n, baseCurrency);
 
     const [formData, setFormData] = useState({
         first_name: '', last_name: '', email: '', company: '', phone: '',
@@ -219,7 +220,7 @@ export default function AdminLeadsPage() {
                                                     </div>
                                                     <div className="space-y-1.5">
                                                         <Label className="text-xs font-bold ml-1">Email Address</Label>
-                                                        <Input type="email" placeholder="john@example.com" className="h-10 bg-background" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
+                                                        <Input type="email" placeholder="email@example.com" className="h-10 bg-background" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
                                                     </div>
                                                     <div className="space-y-1.5">
                                                         <Label className="text-xs font-bold ml-1">Phone</Label>

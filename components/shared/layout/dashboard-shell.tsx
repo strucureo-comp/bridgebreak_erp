@@ -20,11 +20,16 @@ export function DashboardShell({
   const router = useRouter();
   const { user, loading } = useAuth();
 
+  const isAdminUser = (role?: string | null) => {
+    const normalized = String(role || '').trim().toLowerCase();
+    return normalized === 'admin' || normalized === 'superadmin' || normalized === 'administrator';
+  };
+
   useEffect(() => {
     if (!loading && requireAuth) {
       if (!user) {
         router.push('/login');
-      } else if (requireAdmin && user.role !== 'admin') {
+      } else if (requireAdmin && !isAdminUser(user?.role)) {
         router.push('/admin/dashboard');
       }
     }
@@ -32,14 +37,27 @@ export function DashboardShell({
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-muted dark:bg-black">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     );
   }
 
-  if (requireAuth && !user) return null;
-  if (requireAdmin && user?.role !== 'admin') return null;
+  if (requireAuth && !user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
+
+  if (requireAdmin && !isAdminUser(user?.role)) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
 
   return (
     <>

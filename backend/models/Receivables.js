@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 // ── CUSTOMER MASTER ──────────────────────────────────────────────────────────
 const customerSchema = new mongoose.Schema({
+    tenant_id: { type: String, index: true, default: 'default' },
     customer_id: { type: String, required: true, unique: true },
     legal_name: { type: String, required: true },
     trade_name: { type: String },
@@ -60,6 +61,7 @@ const invoiceLineSchema = new mongoose.Schema({
 });
 
 const invoiceSchema = new mongoose.Schema({
+    tenant_id: { type: String, index: true, default: 'default' },
     invoice_number: { type: String, required: true, unique: true },
     customer_id: { type: String, required: true, index: true },
     customer_name: { type: String },
@@ -101,6 +103,7 @@ const invoiceSchema = new mongoose.Schema({
 
 // ── PAYMENT / RECEIPT ALLOCATION ──────────────────────────────────────────────
 const paymentAllocationSchema = new mongoose.Schema({
+    tenant_id: { type: String, index: true, default: 'default' },
     payment_id: { type: String, required: true, index: true },
     invoice_id: { type: String, required: true, index: true },
     amount_allocated: { type: Number, required: true },
@@ -108,6 +111,7 @@ const paymentAllocationSchema = new mongoose.Schema({
 });
 
 const paymentSchema = new mongoose.Schema({
+    tenant_id: { type: String, index: true, default: 'default' },
     receipt_number: { type: String, required: true, unique: true },
     customer_id: { type: String, required: true, index: true },
     payment_date: { type: Date, default: Date.now },
@@ -128,6 +132,7 @@ const paymentSchema = new mongoose.Schema({
 
 // ── CREDIT NOTE ──────────────────────────────────────────────────────────────
 const creditNoteSchema = new mongoose.Schema({
+    tenant_id: { type: String, index: true, default: 'default' },
     credit_note_number: { type: String, required: true, unique: true },
     customer_id: { type: String, required: true },
     original_invoice_id: { type: String }, // Linked invoice
@@ -146,6 +151,7 @@ const creditNoteSchema = new mongoose.Schema({
 
 // ── WRITE-OFF & PROVISIONS ──────────────────────────────────────────────────
 const writeOffSchema = new mongoose.Schema({
+    tenant_id: { type: String, index: true, default: 'default' },
     writeoff_number: { type: String, unique: true },
     customer_id: { type: String, required: true },
     invoice_id: { type: String, required: true },
@@ -157,6 +163,7 @@ const writeOffSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 const provisionSchema = new mongoose.Schema({
+    tenant_id: { type: String, index: true, default: 'default' },
     period: { type: String, required: true }, // e.g. "2026-Q1"
     as_of_date: { type: Date, required: true },
     total_receivable: { type: Number },
@@ -168,6 +175,7 @@ const provisionSchema = new mongoose.Schema({
 
 // ── AGING SNAPSHOT ──────────────────────────────────────────────────────────
 const agingSnapshotSchema = new mongoose.Schema({
+    tenant_id: { type: String, index: true, default: 'default' },
     snapshot_date: { type: Date, default: Date.now },
     customer_id: { type: String },
     customer_name: { type: String },

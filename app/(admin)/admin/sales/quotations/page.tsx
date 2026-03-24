@@ -14,7 +14,13 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { generateQuotationPDF } from '@/lib/pdf-generator';
 import { LiveDocumentPreview } from '@/components/shared/layout/live-document-preview';
+import { getSalesQuotations, createSalesQuotation, updateSalesQuotation, updateSalesQuotationStatus, deleteSalesQuotation } from '@/lib/services/business-documents-api';
+import { getCustomers } from '@/lib/api';
 import { SalesDocumentType, DocumentStatus, isApprovalRequired, getApproverRole, canApproveDocument, getStatusInfo } from '@/lib/sales-approval';
+import { useCompanySettings } from '@/lib/hooks/use-company-settings';
+import { formatCurrency } from '@/lib/utils/currency';
+import { DashboardShell } from '@/components/shared/layout/dashboard-shell';
+import { ModuleGuard } from '@/components/shared/layout/module-guard';
 
 interface QuotationItem {
     id: string;
@@ -47,33 +53,39 @@ interface SalesQuotation {
     rejectedReason?: string;
 }
 
-const DEFAULT_QUOTATION: Partial<SalesQuotation> = {
-    items: [],
-    subtotal: 0,
-    taxRate: 5,
-    taxAmount: 0,
-    total: 0,
-    status: 'draft',
-};
-
 export default function QuotationsPage() {
+    const { baseCurrency, taxRate, taxName } = useCompanySettings();
     const [quotations, setQuotations] = useState<SalesQuotation[]>([]);
     const [loading, setLoading] = useState(true);
     const [dialogOpen, setDialogOpen] = useState(false);
-    const [editingQuotation, setEditingQuotation] = useState<Partial<SalesQuotation>>(DEFAULT_QUOTATION);
+    const [editingQuotation, setEditingQuotation] = useState<Partial<SalesQuotation>>({
+        items: [],
+        subtotal: 0,
+        taxRate: taxRate,
+        taxAmount: 0,
+        total: 0,
+        status: 'draft',
+    });
     const [customers, setCustomers] = useState<{ id: string; name: string }[]>([]);
     const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
     const [rejectReason, setRejectReason] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
     const [quotationForReject, setQuotationForReject] = useState<SalesQuotation | null>(null);
+    const [currentUserRole, setCurrentUserRole] = useState('Employee');
 
     const documentType: SalesDocumentType = 'quotation';
-    const approvalRequired = isApprovalRequired(documentType);
-    const approverRole = getApproverRole(documentType);
-    const currentUserRole = localStorage.getItem('user_role') || 'Employee';
-    const canApprove = canApproveDocument(documentType);
+    const approvalRequired = isApprovalRequired('sales', documentType);
+    const approverRole = getApproverRole('sales', documentType);
+    const canApprove = canApproveDocument('sales', documentType);
+
+    const formatCurrencyValue = (amount: number) => {
+        return formatCurrency(amount, baseCurrency);
+    };
 
     useEffect(() => {
+        if (typeof window !== 'undefined') {
+            setCurrentUserRole(localStorage.getItem('user_role') || 'Employee');
+        }
         loadQuotations();
         loadCustomers();
     }, []);
@@ -85,16 +97,32 @@ export default function QuotationsPage() {
         );
     }, [quotations, searchQuery]);
 
-    const loadQuotations = () => {
-        const saved = localStorage.getItem('sales_quotations');
-        if (saved) setQuotations(JSON.parse(saved));
-        setLoading(false);
+    const loadQuotations = async () => {
+        try {
+            const data = await getSalesQuotations();
+            const list = (Array.isArray(data) ? data : []).map((doc: any) => ({
+                ...doc,
+                id: String(doc._id || doc.id),
+            }));
+            setQuotations(list);
+        } catch {
+            setQuotations([]);
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const loadCustomers = () => {
-        const saved = localStorage.getItem('sales_customers');
-        if (saved) setCustomers(JSON.parse(saved));
-        else setCustomers([{ id: '1', name: 'ABC Corporation' }, { id: '2', name: 'XYZ Industries' }, { id: '3', name: 'Global Trading LLC' }]);
+    const loadCustomers = async () => {
+        try {
+            const data = await getCustomers();
+            const list = (Array.isArray(data) ? data : []).map((c: any) => ({
+                id: String(c._id || c.id),
+                name: c.name,
+            }));
+            setCustomers(list);
+        } catch {
+            setCustomers([]);
+        }
     };
 
     const generateQuotationNumber = () => {
@@ -140,91 +168,120 @@ export default function QuotationsPage() {
         }));
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!editingQuotation.customerName) { toast.error('Please select a customer'); return; }
         if (!editingQuotation.items?.length) { toast.error('Please add at least one item'); return; }
 
-        const totals = calculateTotals(editingQuotation);
-        const quotation: SalesQuotation = {
-            id: editingQuotation.id || Date.now().toString(),
+        const payload = {
             number: editingQuotation.number || generateQuotationNumber(),
             customerId: editingQuotation.customerId || '',
             customerName: editingQuotation.customerName || '',
             date: editingQuotation.date || new Date().toISOString().split('T')[0],
             validUntil: editingQuotation.validUntil || '',
             items: editingQuotation.items || [],
-            subtotal: totals.subtotal,
-            taxRate: editingQuotation.taxRate || 5,
-            taxAmount: totals.taxAmount,
-            total: totals.total,
+            taxRate: editingQuotation.taxRate || taxRate,
             notes: editingQuotation.notes || '',
-            status: (editingQuotation.status as DocumentStatus) || 'draft',
+            status: editingQuotation.status || 'draft',
             createdBy: editingQuotation.createdBy || 'Current User',
-            createdAt: editingQuotation.createdAt || new Date().toISOString(),
         };
 
-        const existingIndex = quotations.findIndex(q => q.id === quotation.id);
-        const updatedList = existingIndex >= 0 ? quotations.map((q, idx) => idx === existingIndex ? quotation : q) : [...quotations, quotation];
-        setQuotations(updatedList);
-        localStorage.setItem('sales_quotations', JSON.stringify(updatedList));
-        toast.success('Quotation saved');
-        setDialogOpen(false);
-        setEditingQuotation(DEFAULT_QUOTATION);
+        try {
+            if (editingQuotation.id) {
+                await updateSalesQuotation(editingQuotation.id, payload);
+            } else {
+                await createSalesQuotation(payload);
+            }
+            await loadQuotations();
+            toast.success('Quotation saved');
+            setDialogOpen(false);
+            setEditingQuotation({
+                items: [],
+                subtotal: 0,
+                taxRate: taxRate,
+                taxAmount: 0,
+                total: 0,
+                status: 'draft',
+            });
+        } catch {
+            toast.error('Failed to save quotation');
+        }
     };
 
-    const handleSubmitForApproval = (quotation: SalesQuotation) => {
-        const updated = { ...quotation, status: 'pending_approval' as DocumentStatus };
-        const updatedList = quotations.map(q => q.id === quotation.id ? updated : q);
-        setQuotations(updatedList);
-        localStorage.setItem('sales_quotations', JSON.stringify(updatedList));
-        toast.success('Submitted for approval');
+    const handleSubmitForApproval = async (quotation: SalesQuotation) => {
+        try {
+            await updateSalesQuotationStatus(quotation.id, 'pending_approval');
+            await loadQuotations();
+            toast.success('Submitted for approval');
+        } catch {
+            toast.error('Failed to submit quotation');
+        }
     };
 
-    const handleApprove = (quotation: SalesQuotation) => {
-        const updated = { ...quotation, status: 'approved' as DocumentStatus, approvedBy: currentUserRole, approvedAt: new Date().toISOString() };
-        const updatedList = quotations.map(q => q.id === quotation.id ? updated : q);
-        setQuotations(updatedList);
-        localStorage.setItem('sales_quotations', JSON.stringify(updatedList));
-        toast.success('Approved');
+    const handleApprove = async (quotation: SalesQuotation) => {
+        try {
+            await updateSalesQuotationStatus(quotation.id, 'approved', { updatedBy: currentUserRole });
+            await loadQuotations();
+            toast.success('Approved');
+        } catch {
+            toast.error('Failed to approve quotation');
+        }
     };
 
-    const handleReject = () => {
+    const handleReject = async () => {
         if (!quotationForReject) return;
-        const updated = { ...quotationForReject, status: 'rejected' as DocumentStatus, rejectedBy: currentUserRole, rejectedAt: new Date().toISOString(), rejectedReason: rejectReason };
-        const updatedList = quotations.map(q => q.id === quotationForReject.id ? updated : q);
-        setQuotations(updatedList);
-        localStorage.setItem('sales_quotations', JSON.stringify(updatedList));
-        toast.success('Rejected');
-        setRejectDialogOpen(false);
-        setRejectReason('');
-        setQuotationForReject(null);
+        try {
+            await updateSalesQuotationStatus(quotationForReject.id, 'rejected', { updatedBy: currentUserRole, reason: rejectReason });
+            await loadQuotations();
+            toast.success('Rejected');
+            setRejectDialogOpen(false);
+            setRejectReason('');
+            setQuotationForReject(null);
+        } catch {
+            toast.error('Failed to reject quotation');
+        }
     };
 
-    const handleResubmit = (quotation: SalesQuotation) => {
-        const updated = { ...quotation, status: 'pending_approval' as DocumentStatus };
-        const updatedList = quotations.map(q => q.id === quotation.id ? updated : q);
-        setQuotations(updatedList);
-        localStorage.setItem('sales_quotations', JSON.stringify(updatedList));
-        toast.success('Resubmitted for approval');
+    const handleResubmit = async (quotation: SalesQuotation) => {
+        try {
+            await updateSalesQuotationStatus(quotation.id, 'pending_approval');
+            await loadQuotations();
+            toast.success('Resubmitted for approval');
+        } catch {
+            toast.error('Failed to resubmit quotation');
+        }
     };
 
-    const handleComplete = (quotation: SalesQuotation) => {
-        const updated = { ...quotation, status: 'completed' as DocumentStatus };
-        const updatedList = quotations.map(q => q.id === quotation.id ? updated : q);
-        setQuotations(updatedList);
-        localStorage.setItem('sales_quotations', JSON.stringify(updatedList));
-        toast.success('Marked as completed');
+    const handleComplete = async (quotation: SalesQuotation) => {
+        try {
+            await updateSalesQuotationStatus(quotation.id, 'completed');
+            await loadQuotations();
+            toast.success('Marked as completed');
+        } catch {
+            toast.error('Failed to complete quotation');
+        }
     };
 
-    const handleDelete = (quotation: SalesQuotation) => {
-        const updatedList = quotations.filter(q => q.id !== quotation.id);
-        setQuotations(updatedList);
-        localStorage.setItem('sales_quotations', JSON.stringify(updatedList));
-        toast.success('Deleted');
+    const handleDelete = async (quotation: SalesQuotation) => {
+        try {
+            await deleteSalesQuotation(quotation.id);
+            await loadQuotations();
+            toast.success('Deleted');
+        } catch {
+            toast.error('Failed to delete quotation');
+        }
     };
 
     const openEditDialog = (quotation?: SalesQuotation) => {
-        setEditingQuotation(quotation ? quotation : { ...DEFAULT_QUOTATION, number: generateQuotationNumber(), date: new Date().toISOString().split('T')[0] });
+        setEditingQuotation(quotation ? quotation : {
+            items: [],
+            subtotal: 0,
+            taxRate: taxRate,
+            taxAmount: 0,
+            total: 0,
+            status: 'draft',
+            number: generateQuotationNumber(),
+            date: new Date().toISOString().split('T')[0]
+        });
         setDialogOpen(true);
     };
 
@@ -253,7 +310,9 @@ export default function QuotationsPage() {
     if (loading) return <div className="flex items-center justify-center min-h-[400px]"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
     return (
-        <div className="space-y-6 max-w-7xl mx-auto pb-12">
+        <DashboardShell requireAdmin>
+            <ModuleGuard module="sales">
+                <div className="space-y-6 max-w-7xl mx-auto pb-12">
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
                 <div>
@@ -318,7 +377,7 @@ export default function QuotationsPage() {
 
                             <div className="flex items-center gap-6">
                                 <div className="text-right">
-                                    <p className="text-sm font-bold text-foreground">AED {quotation.total.toFixed(2)}</p>
+                                    <p className="text-sm font-bold text-foreground">{formatCurrencyValue(quotation.total)}</p>
                                     <p className="text-[10px] text-muted-foreground">Total</p>
                                 </div>
                                 <div className="flex items-center gap-2">
@@ -391,20 +450,25 @@ export default function QuotationsPage() {
                                         <Input className="flex-1" placeholder="Description" value={item.description} onChange={e => handleUpdateItem(item.id, 'description', e.target.value)} />
                                         <Input className="w-16" type="number" placeholder="Qty" value={item.quantity} onChange={e => handleUpdateItem(item.id, 'quantity', parseFloat(e.target.value) || 0)} />
                                         <Input className="w-24" type="number" placeholder="Price" value={item.unitPrice} onChange={e => handleUpdateItem(item.id, 'unitPrice', parseFloat(e.target.value) || 0)} />
-                                        <Input className="w-24" value={item.total.toFixed(2)} disabled />
+                                        <div className="w-32">
+                                            <Input className="w-full" type="number" value={item.total || 0} disabled />
+                                            <p className="mt-1 text-[10px] font-semibold text-right text-muted-foreground">
+                                                {formatCurrencyValue(item.total || 0)}
+                                            </p>
+                                        </div>
                                         <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)}><Trash2 className="h-4 w-4 text-red-500" /></Button>
                                     </div>
                                 ))}
                                 <Button variant="outline" size="sm" onClick={handleAddItem}><Plus className="h-4 w-4 mr-1" /> Add Item</Button>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2"><Label>Tax Rate (%)</Label><Input type="number" value={editingQuotation.taxRate || 5} onChange={e => { const rate = parseFloat(e.target.value) || 0; setEditingQuotation(prev => ({ ...prev, taxRate: rate, ...calculateTotals({ ...prev, taxRate: rate }) })); }} /></div>
+                                <div className="space-y-2"><Label>{taxName} Rate (%)</Label><Input type="number" value={editingQuotation.taxRate || taxRate} onChange={e => { const rate = parseFloat(e.target.value) || 0; setEditingQuotation(prev => ({ ...prev, taxRate: rate, ...calculateTotals({ ...prev, taxRate: rate }) })); }} /></div>
                                 <div className="space-y-2"><Label>Notes</Label><Input value={editingQuotation.notes || ''} onChange={e => setEditingQuotation({ ...editingQuotation, notes: e.target.value })} /></div>
                             </div>
                             <div className="border-t pt-4 space-y-2">
-                                <div className="flex justify-between"><span>Subtotal:</span><span>AED {(editingQuotation.subtotal || 0).toFixed(2)}</span></div>
-                                <div className="flex justify-between"><span>Tax:</span><span>AED {(editingQuotation.taxAmount || 0).toFixed(2)}</span></div>
-                                <div className="flex justify-between font-bold text-lg"><span>Total:</span><span>AED {(editingQuotation.total || 0).toFixed(2)}</span></div>
+                                <div className="flex justify-between"><span>Subtotal:</span><span>{formatCurrencyValue(editingQuotation.subtotal || 0)}</span></div>
+                                <div className="flex justify-between"><span>Tax:</span><span>{formatCurrencyValue(editingQuotation.taxAmount || 0)}</span></div>
+                                <div className="flex justify-between font-bold text-lg"><span>Total:</span><span>{formatCurrencyValue(editingQuotation.total || 0)}</span></div>
                             </div>
                         </div>
 
@@ -434,6 +498,8 @@ export default function QuotationsPage() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-        </div>
+                </div>
+            </ModuleGuard>
+        </DashboardShell>
     );
 }

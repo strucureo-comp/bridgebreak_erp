@@ -38,6 +38,8 @@ import type { Employee, HRDepartment, HRRole } from '@/lib/db/types';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useTenant } from '@/lib/tenant-context';
+import { useCompanySettings } from '@/lib/hooks/use-company-settings';
+import { formatCurrency } from '@/lib/utils/currency';
 
 interface EmployeeDirectoryProps {
   employees: Employee[];
@@ -56,9 +58,16 @@ function normalizeVisaStatus(value?: string): string {
 }
 
 export function EmployeeDirectory({ employees, departments, roles, documentCountByEmployee = {}, onRefresh }: EmployeeDirectoryProps) {
+  const { baseCurrency } = useCompanySettings();
   const [search, setSearch] = useState('');
   const [deptFilter, setDeptFilter] = useState('all');
   const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    const handler = () => window.location.reload();
+    window.addEventListener('erp_company_settings_changed', handler);
+    return () => window.removeEventListener('erp_company_settings_changed', handler);
+  }, []);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
   const [emergencyDialogOpen, setEmergencyDialogOpen] = useState(false);
@@ -136,7 +145,7 @@ export function EmployeeDirectory({ employees, departments, roles, documentCount
   });
 
   const { companyProfile } = useTenant();
-  const currency = companyProfile?.baseCurrency || 'AED';
+  const currency = baseCurrency;
 
   // Fetch salary structures when employee is selected
   useEffect(() => {
@@ -676,8 +685,7 @@ export function EmployeeDirectory({ employees, departments, roles, documentCount
                   <span className="text-xs font-medium">{emp.employee_id}</span>
                 </div>
                 <div className="flex items-center gap-2 text-muted-foreground justify-end">
-                  <span className="text-xs font-semibold text-emerald-500">{currency}</span>
-                  <span className="text-xs font-semibold text-foreground">{Number(emp.basic_salary).toLocaleString()}</span>
+                  <span className="text-xs font-semibold text-foreground">{formatCurrency(Number(emp.basic_salary), baseCurrency)}</span>
                 </div>
               </div>
             </CardContent>
@@ -850,7 +858,7 @@ export function EmployeeDirectory({ employees, departments, roles, documentCount
                             </CardContent>
                           </Card>
                         )}
-                        {selectedEmployee.documents.map((doc: any, idx: number) => (
+                        {(selectedEmployee as any).documents?.map((doc: any, idx: number) => (
                           <Card key={idx} className="border shadow-sm">
                             <CardContent className="p-4 space-y-3">
                               <div className="flex items-start justify-between">
@@ -962,7 +970,7 @@ export function EmployeeDirectory({ employees, departments, roles, documentCount
                       <p className="text-xs font-semibold text-muted-foreground">Overtime History</p>
                     </div>
 
-                    <EmployeeOvertimeHistory employeeId={selectedEmployee.id} currency={currency} />
+                    <EmployeeOvertimeHistory employeeId={selectedEmployee.id} />
                   </TabsContent>
 
                   <TabsContent value="compensation" className="space-y-6 animate-in fade-in duration-300">
@@ -1028,7 +1036,7 @@ export function EmployeeDirectory({ employees, departments, roles, documentCount
                                     {earnings.map((item, idx) => (
                                       <div key={idx} className="flex items-center justify-between text-sm py-1.5 px-3 bg-muted/40 rounded-md">
                                         <span className="text-muted-foreground">{item.label}</span>
-                                        <span className="font-medium text-foreground">{currency} {item.value.toLocaleString()}</span>
+                                        <span className="font-medium text-foreground">{formatCurrency(item.value, baseCurrency)}</span>
                                       </div>
                                     ))}
                                   </div>
@@ -1041,7 +1049,7 @@ export function EmployeeDirectory({ employees, departments, roles, documentCount
                                       {deductions.map((item, idx) => (
                                         <div key={idx} className="flex items-center justify-between text-sm py-1.5 px-3 bg-rose-50/30 dark:bg-rose-950/10 rounded-md">
                                           <span className="text-muted-foreground">{item.label}</span>
-                                          <span className="font-medium text-rose-600">- {currency} {item.value.toLocaleString()}</span>
+                                          <span className="font-medium text-rose-600">- {formatCurrency(item.value, baseCurrency)}</span>
                                         </div>
                                       ))}
                                     </div>
@@ -1051,15 +1059,15 @@ export function EmployeeDirectory({ employees, departments, roles, documentCount
                                 <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 space-y-2 mt-4">
                                   <div className="flex justify-between text-sm">
                                     <span className="text-muted-foreground font-medium">Gross Salary:</span>
-                                    <span className="font-semibold text-foreground">{currency} {currentStructure.gross_salary.toLocaleString()}</span>
+                                    <span className="font-semibold text-foreground">{formatCurrency(currentStructure.gross_salary, baseCurrency)}</span>
                                   </div>
                                   <div className="flex justify-between text-sm">
                                     <span className="text-muted-foreground font-medium">Total Deductions:</span>
-                                    <span className="font-semibold text-red-600">- {currency} {(currentStructure.gross_salary - currentStructure.net_salary).toLocaleString()}</span>
+                                    <span className="font-semibold text-red-600">- {formatCurrency(currentStructure.gross_salary - currentStructure.net_salary, baseCurrency)}</span>
                                   </div>
                                   <div className="border-t border-primary/20 pt-2 flex justify-between">
                                     <span className="text-foreground font-semibold">Net Salary:</span>
-                                    <span className="text-lg font-bold text-primary">{currency} {currentStructure.net_salary.toLocaleString()}</span>
+                                    <span className="text-lg font-bold text-primary">{formatCurrency(currentStructure.net_salary, baseCurrency)}</span>
                                   </div>
                                 </div>
 
@@ -1082,7 +1090,7 @@ export function EmployeeDirectory({ employees, departments, roles, documentCount
                                       <span className="text-muted-foreground">
                                         {new Date(structure.effective_from).toLocaleDateString()}
                                       </span>
-                                      <span className="font-medium">{currency} {structure.net_salary.toLocaleString()}</span>
+                                      <span className="font-medium">{formatCurrency(structure.net_salary, baseCurrency)}</span>
                                     </div>
                                   ))}
                                 </div>
@@ -1779,7 +1787,8 @@ function DetailBox({ icon: Icon, label, value }: any) {
   );
 }
 
-function EmployeeOvertimeHistory({ employeeId, currency }: { employeeId: string; currency: string }) {
+function EmployeeOvertimeHistory({ employeeId }: { employeeId: string }) {
+  const { baseCurrency } = useCompanySettings();
   const [overtimeLogs, setOvertimeLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [yearToDate, setYearToDate] = useState({ hours: 0, amount: 0 });
@@ -1836,7 +1845,7 @@ function EmployeeOvertimeHistory({ employeeId, currency }: { employeeId: string;
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Total Amount</p>
-              <p className="text-2xl font-bold text-primary">{currency} {yearToDate.amount.toFixed(2)}</p>
+              <p className="text-2xl font-bold text-primary">{formatCurrency(yearToDate.amount, baseCurrency)}</p>
             </div>
           </div>
         </CardContent>
@@ -1865,7 +1874,7 @@ function EmployeeOvertimeHistory({ employeeId, currency }: { employeeId: string;
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-bold text-primary">{currency} {log.overtime_amount.toFixed(2)}</p>
+                      <p className="text-sm font-bold text-primary">{formatCurrency(log.overtime_amount, baseCurrency)}</p>
                       <Badge variant={log.status === 'approved' ? 'default' : 'secondary'} className="text-xs mt-1">
                         {log.status}
                       </Badge>
@@ -1880,4 +1889,3 @@ function EmployeeOvertimeHistory({ employeeId, currency }: { employeeId: string;
     </div>
   );
 }
-

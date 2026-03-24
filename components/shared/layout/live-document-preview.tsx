@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
-import { getCompanySettings, getBrandingSettings, hexToRgb, formatPdfCurrency } from '@/lib/pdf-settings';
-import { cn } from '@/lib/utils';
+import { useSettings } from '@/lib/settings-context';
+import { hexToRgb, formatPdfCurrency } from '@/lib/pdf-settings';
+import { useCompanySettings } from '@/lib/hooks/use-company-settings';
 
 interface LineItem {
     id: string;
@@ -17,6 +17,7 @@ interface DocumentData {
     date: string;
     dueDate?: string;
     validUntil?: string;
+    currency?: string;
     customerName: string;
     items: LineItem[];
     subtotal: number;
@@ -37,15 +38,26 @@ interface LiveDocumentPreviewProps {
 }
 
 export function LiveDocumentPreview({ data, type }: LiveDocumentPreviewProps) {
-    const company = getCompanySettings();
-    const branding = getBrandingSettings();
+    const { settings } = useSettings();
+    const {
+        companyName,
+        address,
+        phone,
+        email,
+        taxId,
+        baseCurrency,
+        taxName,
+        logo,
+        footerText,
+    } = useCompanySettings();
+
     const colors = (() => {
-        const primary = hexToRgb(branding.primaryColor || '#0F172A') || { r: 15, g: 23, b: 42 };
-        const accent = hexToRgb(branding.accentColor || '#10B981') || { r: 16, g: 185, b: 129 };
+        const primary = hexToRgb(settings.primaryColor || '#0F172A') || { r: 15, g: 23, b: 42 };
+        const accent = hexToRgb(settings.accentColor || '#10B981') || { r: 16, g: 185, b: 129 };
         return { primary, accent };
     })();
 
-    const currency = company.baseCurrency || 'AED';
+    const currency = data.currency || baseCurrency;
 
     const getTitle = () => {
         switch (type) {
@@ -65,21 +77,21 @@ export function LiveDocumentPreview({ data, type }: LiveDocumentPreviewProps) {
                 <div className="flex justify-between items-start gap-4">
                     {/* Company Info - Left */}
                     <div className="w-1/2">
-                        {branding.logo ? (
-                            <img src={branding.logo || ''} alt="Logo" className="h-16 w-auto object-contain mb-2" />
+                        {logo || settings.logoUrl ? (
+                            <img src={logo || settings.logoUrl} alt={companyName} className="h-16 w-auto object-contain mb-2" />
                         ) : (
-                            <div className="h-12 w-12 bg-gray-200 rounded flex items-center justify-center mb-2">
-                                <span className="text-xs text-gray-400">Logo</span>
+                            <div className="mb-2 flex h-12 w-24 items-center justify-center rounded bg-muted text-xs font-medium text-muted-foreground">
+                                {companyName}
                             </div>
                         )}
                         <h3 className="font-bold text-sm" style={{ color: `rgb(${colors.primary.r},${colors.primary.g},${colors.primary.b})` }}>
-                            {company.companyName}
+                            {companyName}
                         </h3>
                         <div className="text-gray-500 mt-1 whitespace-pre-line">
-                            {company.address}
-                            {company.phone && `\nTel: ${company.phone}`}
-                            {company.email && `\nEmail: ${company.email}`}
-                            {company.trn && `\nTRN: ${company.trn}`}
+                            {address}
+                            {phone && `\nTel: ${phone}`}
+                            {email && `\nEmail: ${email}`}
+                            {taxId && `\nTRN: ${taxId}`}
                         </div>
                     </div>
 
@@ -154,7 +166,7 @@ export function LiveDocumentPreview({ data, type }: LiveDocumentPreviewProps) {
                                             </>
                                         )}
                                         {type === 'delivery' && (
-                                            <td className="p-2 border-b text-center">{item.unit || 'pcs'}</td>
+                                            <td className="p-2 border-b text-center">{ (item as any).unit || 'pcs'}</td>
                                         )}
                                     </tr>
                                 ))
@@ -176,7 +188,7 @@ export function LiveDocumentPreview({ data, type }: LiveDocumentPreviewProps) {
                                 <span className="font-medium">{formatPdfCurrency(data.subtotal || 0, currency)}</span>
                             </div>
                             <div className="flex justify-between text-xs">
-                                <span className="text-gray-500">Tax ({data.taxRate || 5}%):</span>
+                                <span className="text-gray-500">{`${taxName} (${data.taxRate || 5}%):`}</span>
                                 <span className="font-medium">{formatPdfCurrency(data.taxAmount || 0, currency)}</span>
                             </div>
                             <div className="flex justify-between border-t pt-2 font-bold text-sm" style={{ color: `rgb(${colors.primary.r},${colors.primary.g},${colors.primary.b})` }}>
@@ -198,14 +210,14 @@ export function LiveDocumentPreview({ data, type }: LiveDocumentPreviewProps) {
                 )}
 
                 {/* Bank Details - Only for Invoice */}
-                {type === 'invoice' && (company.bankName || company.bankAccount) && (
+                {type === 'invoice' && (settings.bankDetails.bankName || settings.bankDetails.accountNumber) && (
                     <div className="mt-6 pt-4 border-t">
                         <p className="text-xs font-bold mb-2" style={{ color: `rgb(${colors.primary.r},${colors.primary.g},${colors.primary.b})` }}>BANK DETAILS</p>
                         <div className="text-xs text-gray-500 space-y-1">
-                            {company.bankName && <p>Bank: {company.bankName}</p>}
-                            {company.bankAccount && <p>A/C: {company.bankAccount}</p>}
-                            {company.bankIban && <p>IBAN: {company.bankIban}</p>}
-                            {company.bankSwift && <p>SWIFT: {company.bankSwift}</p>}
+                            {settings.bankDetails.bankName && <p>Bank: {settings.bankDetails.bankName}</p>}
+                            {settings.bankDetails.accountNumber && <p>A/C: {settings.bankDetails.accountNumber}</p>}
+                            {settings.bankDetails.iban && <p>IBAN: {settings.bankDetails.iban}</p>}
+                            {settings.bankDetails.swiftCode && <p>SWIFT: {settings.bankDetails.swiftCode}</p>}
                         </div>
                     </div>
                 )}
@@ -237,7 +249,7 @@ export function LiveDocumentPreview({ data, type }: LiveDocumentPreviewProps) {
 
             {/* Footer */}
             <div className="bg-gray-50 p-2 text-center text-[10px] text-gray-400 border-t">
-                {branding.footerText || 'Powered by BridgeBreak ERP'}
+                {footerText || `${companyName} | This is a computer-generated document`}
             </div>
         </div>
     );

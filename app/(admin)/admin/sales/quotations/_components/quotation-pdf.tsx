@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Download, Printer } from 'lucide-react';
 import { authHeaders } from '@/lib/api';
 import { toast } from 'sonner';
+import { useCompanySettings } from '@/lib/hooks/use-company-settings';
+import { formatCurrency } from '@/lib/utils/currency';
 
 interface QuotationPDFProps {
   quotationId: string;
@@ -14,9 +16,8 @@ interface QuotationPDFProps {
 }
 
 export function QuotationPDF({ quotationId, open, onClose }: QuotationPDFProps) {
+  const { baseCurrency, companyName, logo, address, phone, email, footerText } = useCompanySettings();
   const [quotation, setQuotation] = useState<any>(null);
-  const [branding, setBranding] = useState<any>(null);
-  const [companyInfo, setCompanyInfo] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const pdfRef = useRef<HTMLDivElement>(null);
 
@@ -28,6 +29,7 @@ export function QuotationPDF({ quotationId, open, onClose }: QuotationPDFProps) 
 
   const loadData = async () => {
     try {
+      setLoading(true);
       // Load quotation
       const quotRes = await fetch(`/api/crm/quotations/${quotationId}`, {
         headers: authHeaders()
@@ -35,37 +37,6 @@ export function QuotationPDF({ quotationId, open, onClose }: QuotationPDFProps) 
       if (quotRes.ok) {
         const quotData = await quotRes.json();
         setQuotation(quotData);
-      }
-
-      // Load branding settings (logo, colors)
-      const brandRes = await fetch('/api/settings/branding_config');
-      if (brandRes.ok) {
-        const brandData = await brandRes.json();
-        setBranding(brandData.data || {});
-      }
-
-      // Load company info
-      const companyRes = await fetch('/api/settings/company_profile');
-      if (companyRes.ok) {
-        const companyData = await companyRes.json();
-        setCompanyInfo(companyData.data || {
-          name: 'SYSTEM STEEL ENGINEERING LLC',
-          tagline: 'Global Engineering Solutions',
-          address: 'Warehouse 4, Al Quoz Industrial Area, Dubai, UAE',
-          trn: '100123456789003',
-          phone: '+971 4 XXX XXXX',
-          email: 'info@systemsteel.ae'
-        });
-      } else {
-        // Default values
-        setCompanyInfo({
-          name: 'SYSTEM STEEL ENGINEERING LLC',
-          tagline: 'Global Engineering Solutions',
-          address: 'Warehouse 4, Al Quoz Industrial Area, Dubai, UAE',
-          trn: '100123456789003',
-          phone: '+971 4 XXX XXXX',
-          email: 'info@systemsteel.ae'
-        });
       }
     } catch (err) {
       console.error('Failed to load data:', err);
@@ -80,8 +51,6 @@ export function QuotationPDF({ quotationId, open, onClose }: QuotationPDFProps) 
   };
 
   const handleDownload = async () => {
-    // For now, trigger print dialog
-    // In production, you would use a library like jsPDF or send to backend
     handlePrint();
     toast.success('PDF generation initiated. Use your browser print dialog to save as PDF.');
   };
@@ -99,8 +68,7 @@ export function QuotationPDF({ quotationId, open, onClose }: QuotationPDFProps) 
     );
   }
 
-  const primaryColor = branding?.primary_color || '#1e40af';
-  const accentColor = branding?.accent_color || '#3b82f6';
+  const primaryColor = '#1e40af';
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -140,25 +108,22 @@ export function QuotationPDF({ quotationId, open, onClose }: QuotationPDFProps) 
             <div style={{ borderBottom: `4px solid ${primaryColor}`, paddingBottom: '16px', marginBottom: '24px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
-                  {branding?.logo_url ? (
+                  {logo ? (
                     <img
-                      src={branding.logo_url}
-                      alt="Company Logo"
+                      src={logo}
+                      alt={companyName}
                       style={{ maxHeight: '60px', maxWidth: '200px' }}
                     />
                   ) : (
                     <div style={{ fontSize: '22px', fontWeight: 'bold', color: primaryColor }}>
-                      {companyInfo?.name || 'COMPANY NAME'}
+                      {companyName}
                     </div>
                   )}
                   <div style={{ fontSize: '11px', color: '#555', marginTop: '8px' }}>
-                    {companyInfo?.tagline}
+                    Your Professional Solution Partner
                   </div>
                   <div style={{ fontSize: '10px', color: '#666', marginTop: '4px' }}>
-                    {companyInfo?.address}
-                  </div>
-                  <div style={{ fontSize: '10px', color: '#666', marginTop: '2px' }}>
-                    TRN: {companyInfo?.trn}
+                    {address}
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
@@ -239,10 +204,10 @@ export function QuotationPDF({ quotationId, open, onClose }: QuotationPDFProps) 
                     <td style={{ padding: '12px' }}>{line.description}</td>
                     <td style={{ padding: '12px', textAlign: 'center' }}>{line.quantity}</td>
                     <td style={{ padding: '12px', textAlign: 'right' }}>
-                      AED {line.unit_price.toFixed(2)}
+                      {formatCurrency(line.unit_price, baseCurrency)}
                     </td>
                     <td style={{ padding: '12px', textAlign: 'right', fontWeight: '500' }}>
-                      AED {line.total.toFixed(2)}
+                      {formatCurrency(line.total, baseCurrency)}
                     </td>
                   </tr>
                 ))}
@@ -256,7 +221,7 @@ export function QuotationPDF({ quotationId, open, onClose }: QuotationPDFProps) 
               {/* Subtotal */}
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', fontSize: '13px' }}>
                 <span style={{ color: '#6b7280', fontWeight: '500' }}>Subtotal:</span>
-                <span style={{ fontWeight: '500', minWidth: '150px', textAlign: 'right' }}>AED {(quotation.subtotal || 0).toFixed(2)}</span>
+                <span style={{ fontWeight: '500', minWidth: '150px', textAlign: 'right' }}>{formatCurrency(quotation.subtotal || 0, baseCurrency)}</span>
               </div>
               
               {/* Tax */}
@@ -264,7 +229,7 @@ export function QuotationPDF({ quotationId, open, onClose }: QuotationPDFProps) 
                 <span style={{ color: '#6b7280', fontWeight: '500' }}>
                   Tax {quotation.tax_mode === 'auto' ? `(${quotation.tax_rate}%)` : '(Adjusted)'}:
                 </span>
-                <span style={{ fontWeight: '500', minWidth: '150px', textAlign: 'right' }}>AED {(quotation.tax_amount || 0).toFixed(2)}</span>
+                <span style={{ fontWeight: '500', minWidth: '150px', textAlign: 'right' }}>{formatCurrency(quotation.tax_amount || 0, baseCurrency)}</span>
               </div>
               
               {/* Total Amount - Prominent */}
@@ -282,7 +247,7 @@ export function QuotationPDF({ quotationId, open, onClose }: QuotationPDFProps) 
                 }}
               >
                 <span style={{ color: primaryColor }}>TOTAL AMOUNT:</span>
-                <span style={{ color: primaryColor, minWidth: '180px', textAlign: 'right' }}>AED {(quotation.total_amount || 0).toFixed(2)}</span>
+                <span style={{ color: primaryColor, minWidth: '180px', textAlign: 'right' }}>{formatCurrency(quotation.total_amount || 0, baseCurrency)}</span>
               </div>
             </div>
           </div>
@@ -320,7 +285,7 @@ export function QuotationPDF({ quotationId, open, onClose }: QuotationPDFProps) 
                 </div>
                 <div style={{ borderTop: '1px solid #000', paddingTop: '8px' }}>
                   <div style={{ fontSize: '10px', color: '#666' }}>
-                    {companyInfo?.name}
+                    {companyName}
                   </div>
                 </div>
               </div>
@@ -342,9 +307,9 @@ export function QuotationPDF({ quotationId, open, onClose }: QuotationPDFProps) 
 
           {/* Footer */}
           <div style={{ marginTop: '48px', paddingTop: '16px', borderTop: '1px solid #e5e7eb', textAlign: 'center', fontSize: '9px', color: '#666' }}>
-            <div>{companyInfo?.phone} | {companyInfo?.email}</div>
+            <div>{[phone, email].filter(Boolean).join(' | ')}</div>
             <div style={{ marginTop: '4px' }}>
-              This is a computer-generated quotation and is valid without signature.
+              {footerText || `${companyName} | This is a computer-generated document`}
             </div>
           </div>
             </div>

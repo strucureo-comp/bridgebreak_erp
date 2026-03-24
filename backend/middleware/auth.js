@@ -24,7 +24,8 @@ async function auth(req, res, next) {
 }
 
 function adminOnly(req, res, next) {
-    if (req.user.role !== 'admin' && req.user.role !== 'superadmin') {
+    const role = (req.user.role || '').toLowerCase();
+    if (role !== 'admin' && role !== 'superadmin' && role !== 'administrator') {
         return res.status(403).json({ error: 'Admin access required' });
     }
     next();

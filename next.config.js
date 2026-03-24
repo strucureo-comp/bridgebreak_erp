@@ -10,6 +10,15 @@ const nextConfig = {
   experimental: {
     serverActions: true,
   },
+  async rewrites() {
+    const backendBase = process.env.API_PROXY_TARGET || 'http://localhost:4000';
+    return [
+      {
+        source: '/api/backend/:path*',
+        destination: `${backendBase}/api/:path*`,
+      },
+    ];
+  },
 };
 
 module.exports = nextConfig;

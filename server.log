@@ -1,0 +1,20 @@
+[Server] CORS_ORIGIN: https://rr3n51gc-3000.inc1.devtunnels.ms
+[Server] MONGODB_URI loaded: Yes
+[Server] Connecting to MongoDB...
+(node:7289) [MONGOOSE] Warning: Duplicate schema index on {"tenant_id":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:7289) [MONGOOSE] Warning: Duplicate schema index on {"tenant_id":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(node:7289) [MONGOOSE] Warning: Duplicate schema index on {"tenant_id":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+[MongoDB] Connected: ac-x4e3sec-shard-00-01.rb6yxp3.mongodb.net
+[Server] MongoDB connected, starting Express...
+
+[Server] BridgeBreak API running on http://localhost:4000
+[Server] Health: http://localhost:4000/api/health
+
+[2026-03-15T17:18:50.874Z] GET /api/health 200 - 7ms
+[2026-03-15T17:22:40.759Z] OPTIONS /api/auth/me 204 - 1ms
+[2026-03-15T17:22:40.762Z] OPTIONS /api/auth/me 204 - 0ms
+[2026-03-15T17:22:41.194Z] GET /me 401 - 54ms
+[2026-03-15T17:22:41.514Z] GET /me 401 - 27ms
+[2026-03-15T17:22:59.531Z] OPTIONS /api/auth/login 204 - 0ms
+[2026-03-15T17:22:59.678Z] POST /login 401 - 42ms

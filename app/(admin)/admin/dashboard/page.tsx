@@ -11,14 +11,14 @@ export default function AdminDashboard() {
         setIsMounted(true);
     }, []);
 
-    if (!isMounted) return null;
-
     return (
         <div className="space-y-6 pb-12">
             <div className="flex flex-col items-center justify-center min-h-[60vh]">
                 <div className="space-y-4 text-center">
                     <h1 className="text-6xl md:text-8xl font-black tracking-tighter text-foreground/90">
-                        {new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                        {isMounted
+                            ? new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+                            : '--:--'}
                     </h1>
                     <p className="text-sm md:text-base font-medium text-muted-foreground uppercase tracking-widest mt-2 max-w-md mx-auto">
                         Welcome back, {user?.full_name || 'Administrator'}

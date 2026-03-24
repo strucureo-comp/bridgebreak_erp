@@ -268,13 +268,19 @@ export interface Notification {
 export type QuotationStatus = 'draft' | 'sent' | 'pending_approval' | 'approved' | 'rejected' | 'accepted' | 'expired';
 
 export interface QuotationItem {
+  item_code?: string;
   description: string;
+  project?: string;
+  remarks?: string;
+  date_required?: string;
+  uom?: string;
   quantity: number;
   unit_price: number;
   total: number;
 }
 
 export interface ApprovalRecord {
+  id: string;
   user_id: string;
   user_name: string;
   user_role: string;
@@ -289,6 +295,8 @@ export interface Quotation {
   project_title?: string; // Snapshot or manual
   client_id: string; // Can be empty if manual
   quotation_number: string;
+  rev_no?: string;
+  rev_date?: string;
   amount: number;
   valid_until: string;
   status: QuotationStatus;
@@ -324,6 +332,11 @@ export interface Quotation {
   client_country?: string;
   client_tax_id?: string;
   client_is_company?: boolean;
+  
+  // Shipping and Contact
+  contact_person?: string;
+  use_custom_ship_to?: boolean;
+  ship_to_address?: string;
 
   created_at: string;
   updated_at: string;
@@ -824,6 +837,81 @@ export interface Lead {
   owner?: { full_name: string; email?: string }; // Added owner
   created_at: string;
   updated_at: string;
+}
+
+export interface RFQ {
+  id: string;
+  rfq_number: string;
+  purchase_request_id?: string;
+  vendors: string[];
+  status: 'draft' | 'sent' | 'received' | 'closed' | 'cancelled';
+  items: Array<{
+    description: string;
+    quantity: number;
+    unit: string;
+  }>;
+  expiry_date?: string;
+  notes?: string;
+  created_at: string;
+}
+
+export interface RecurringBill {
+  id: string;
+  vendor_id: string;
+  frequency: 'weekly' | 'monthly' | 'quarterly' | 'yearly';
+  start_date: string;
+  end_date?: string;
+  next_bill_date?: string;
+  total_amount: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface Expense {
+  id: string;
+  expense_number: string;
+  category: string;
+  vendor_id?: string;
+  vendor?: string;
+  description: string;
+  amount: number;
+  tax_amount?: number;
+  total: number;
+  status: 'pending' | 'approved' | 'paid' | 'rejected';
+  date: string;
+  payment_method?: string;
+  receipt_url?: string;
+  currency: string;
+  is_recurring: boolean;
+  recurrence_period?: 'weekly' | 'monthly' | 'quarterly' | 'yearly';
+  created_at: string;
+}
+
+export interface RecurringExpense {
+  id: string;
+  category: string;
+  vendor_id?: string;
+  vendor?: string;
+  description: string;
+  amount: number;
+  frequency: 'weekly' | 'monthly' | 'quarterly' | 'yearly';
+  start_date: string;
+  end_date?: string;
+  next_date?: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface BatchPayment {
+  id: string;
+  batch_number: string;
+  payment_date: string;
+  total_amount: number;
+  status: 'draft' | 'processed' | 'failed';
+  payment_method: string;
+  vendor_count: number;
+  bill_count: number;
+  created_at: string;
 }
 
 export type PurchaseStatus = 'pending' | 'approved' | 'ordered' | 'received' | 'billed' | 'paid' | 'cancelled';

@@ -21,6 +21,13 @@ import {
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import type { PurchaseOrder, Warehouse, Product } from '@/lib/db/types';
+import { Skeleton } from '@/components/ui/skeleton';
+
+const generateRef = (prefix: string) => {
+    const date = new Date();
+    const seq = String(date.getTime()).slice(-5);
+    return `${prefix}-${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}-${seq}`;
+};
 
 export default function NewGRNPage() {
   const router = useRouter();
@@ -33,7 +40,7 @@ export default function NewGRNPage() {
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   
-  const [grnNumber, setGrnNumber] = useState(`GRN-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`);
+  const [grnNumber, setGrnNumber] = useState(generateRef('GRN'));
   const [receivedDate, setReceivedDate] = useState(new Date().toISOString().split('T')[0]);
   const [notes, setNotes] = useState('');
   
@@ -165,7 +172,21 @@ export default function NewGRNPage() {
     return locs;
   }, [warehouses]);
 
-  if (loading) return <div className="p-12 text-center font-bold">Loading...</div>;
+  if (loading) return (
+    <DashboardShell requireAdmin>
+        <div className="max-w-5xl mx-auto space-y-8 pb-12 animate-pulse">
+            <div className="flex justify-between items-center">
+                <Skeleton className="h-10 w-32 rounded-xl bg-muted" />
+                <Skeleton className="h-10 w-64 bg-muted" />
+            </div>
+            <div className="grid gap-8 md:grid-cols-2">
+                <Skeleton className="h-64 w-full bg-muted rounded-[2.5rem]" />
+                <Skeleton className="h-64 w-full bg-muted rounded-[2.5rem]" />
+            </div>
+            <Skeleton className="h-96 w-full bg-muted rounded-[2.5rem]" />
+        </div>
+    </DashboardShell>
+  );
 
   return (
     <DashboardShell requireAdmin>

@@ -100,6 +100,112 @@
     }
 }
 
+@layer components {
+  /* ERP-wide module normalization to match Settings visual standards */
+  :is(.settings-ui-standard, .finance-ui-standard) h1 {
+    @apply text-2xl font-semibold tracking-normal;
+  }
+
+  :is(.settings-ui-standard, .finance-ui-standard) h2,
+  :is(.settings-ui-standard, .finance-ui-standard) h3,
+  :is(.settings-ui-standard, .finance-ui-standard) .card-title-standard,
+  :is(.settings-ui-standard, .finance-ui-standard) .section-title-standard {
+    @apply text-base font-semibold tracking-normal;
+  }
+
+  :is(.settings-ui-standard, .finance-ui-standard) .text-muted-foreground {
+    @apply font-normal tracking-normal;
+  }
+
+  :is(.settings-ui-standard, .finance-ui-standard) p,
+  :is(.settings-ui-standard, .finance-ui-standard) span,
+  :is(.settings-ui-standard, .finance-ui-standard) label,
+  :is(.settings-ui-standard, .finance-ui-standard) td {
+    @apply text-sm;
+  }
+
+  :is(.settings-ui-standard, .finance-ui-standard) th {
+    @apply text-xs font-medium uppercase tracking-normal;
+  }
+
+  :is(.settings-ui-standard, .finance-ui-standard) button {
+    @apply text-sm;
+  }
+
+  :is(.settings-ui-standard, .finance-ui-standard) .font-black {
+    font-weight: 600 !important;
+  }
+
+  :is(.settings-ui-standard, .finance-ui-standard) .tracking-widest,
+  :is(.settings-ui-standard, .finance-ui-standard) .tracking-wider,
+  :is(.settings-ui-standard, .finance-ui-standard) .tracking-tight,
+  :is(.settings-ui-standard, .finance-ui-standard) .tracking-tighter,
+  :is(.settings-ui-standard, .finance-ui-standard) .tracking-\[0\.2em\] {
+    letter-spacing: 0 !important;
+  }
+
+  :is(.settings-ui-standard, .finance-ui-standard) .text-\[8px\],
+  :is(.settings-ui-standard, .finance-ui-standard) .text-\[9px\],
+  :is(.settings-ui-standard, .finance-ui-standard) .text-\[10px\],
+  :is(.settings-ui-standard, .finance-ui-standard) .text-\[11px\] {
+    font-size: 0.75rem !important;
+    line-height: 1rem !important;
+  }
+
+  /* Purchases (Procurement) strict normalization for legacy compact UI */
+  .purchases-ui-standard h1 {
+    @apply text-2xl font-semibold tracking-normal;
+  }
+
+  .purchases-ui-standard h2,
+  .purchases-ui-standard h3,
+  .purchases-ui-standard .card-title-standard,
+  .purchases-ui-standard .section-title-standard {
+    @apply text-base font-semibold tracking-normal;
+  }
+
+  .purchases-ui-standard p,
+  .purchases-ui-standard span,
+  .purchases-ui-standard label,
+  .purchases-ui-standard td,
+  .purchases-ui-standard .text-xs {
+    @apply text-sm;
+  }
+
+  .purchases-ui-standard .text-muted-foreground {
+    @apply font-normal tracking-normal;
+  }
+
+  .purchases-ui-standard th {
+    @apply text-xs font-medium uppercase tracking-normal;
+  }
+
+  .purchases-ui-standard button {
+    @apply text-sm;
+  }
+
+  .purchases-ui-standard .font-bold,
+  .purchases-ui-standard .font-black {
+    font-weight: 600 !important;
+  }
+
+  .purchases-ui-standard .tracking-widest,
+  .purchases-ui-standard .tracking-wider,
+  .purchases-ui-standard .tracking-tight,
+  .purchases-ui-standard .tracking-tighter,
+  .purchases-ui-standard .tracking-\[0\.2em\] {
+    letter-spacing: 0 !important;
+  }
+
+  .purchases-ui-standard .text-\[8px\],
+  .purchases-ui-standard .text-\[9px\],
+  .purchases-ui-standard .text-\[10px\],
+  .purchases-ui-standard .text-\[11px\] {
+    font-size: 0.875rem !important;
+    line-height: 1.25rem !important;
+  }
+}
+
 /* Print Styles for PDF Generation */
 @media print {
   /* Hide everything except PDF content */

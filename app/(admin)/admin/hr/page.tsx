@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { DashboardShell } from '@/components/shared/layout/dashboard-shell';
 import {
   Loader2,
   Users,
@@ -198,34 +197,27 @@ export default function HRPage() {
 
   if (loading) {
     return (
-      <DashboardShell requireAdmin>
-        <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
-          <LucideRefresh className="h-10 w-10 animate-spin text-primary" />
-          <p className="text-xs font-semibold text-muted-foreground">Syncing Personnel Grid</p>
+      <ModuleGuard module="hr">
+        <div className="space-y-6 max-w-6xl animate-pulse">
+            <div>
+                <div className="h-8 w-48 bg-muted rounded mb-2" />
+                <div className="h-4 w-64 bg-muted rounded" />
+            </div>
+            <div className="h-[400px] bg-muted rounded-xl w-full" />
         </div>
-      </DashboardShell>
+      </ModuleGuard>
     );
   }
 
   const activePayroll = payrolls.find(p => p.id === selectedPayrollId);
 
   return (
-    <DashboardShell requireAdmin>
-      <div className="space-y-6">
+    <ModuleGuard module="hr">
+      <div className="space-y-6 max-w-6xl">
         {/* Header Area */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
-          <div className="flex items-center gap-4">
-            <Users className="h-8 w-8 text-primary" />
-            <div>
-              <h1 className="text-xl font-bold tracking-tight text-foreground uppercase">{getModuleLabel('hr')}</h1>
-              <div className="flex items-center gap-2 mt-0.5">
-                <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Personnel Management Hub</span>
-                <Badge variant="secondary" className="hidden sm:inline-flex font-bold uppercase text-[9px] tracking-widest bg-slate-100 text-slate-600">
-                  Worker Context
-                </Badge>
-              </div>
-            </div>
-          </div>
+        <div>
+          <h1 className="text-2xl font-semibold">{getModuleLabel('hr')}</h1>
+          <p className="text-muted-foreground">Manage personnel, payroll, attendance, and recruitment.</p>
         </div>
 
         <Tabs value={activeMode} onValueChange={(v) => setActiveMode(v as HRMode)} className="w-full flex-grow flex flex-col">
@@ -353,12 +345,12 @@ export default function HRPage() {
                       <SelectValue placeholder="Select Batch" />
                     </SelectTrigger>
                     <SelectContent>
-                      {payrolls.filter(p => p.status === 'processed' || p.status === 'posted' || p.status === 'approved').length === 0 ? (
+                      {payrolls.filter(p => p.status === 'finalized' || p.status === 'processed' || p.status === 'posted' || p.status === 'approved').length === 0 ? (
                         <SelectItem value="none" disabled>No Cycles Available</SelectItem>
                       ) : (
                         <>
                           <SelectItem value="none" disabled>Select a Cycle</SelectItem>
-                          {payrolls.filter(p => p.status === 'processed' || p.status === 'posted' || p.status === 'approved').map(p => (
+                          {payrolls.filter(p => p.status === 'finalized' || p.status === 'processed' || p.status === 'posted' || p.status === 'approved').map(p => (
                             <SelectItem key={p.id} value={p.id}>{p.month} Cycle ({p.status})</SelectItem>
                           ))}
                         </>
@@ -370,7 +362,7 @@ export default function HRPage() {
               {activePayroll ? <PayslipBrowser payroll={activePayroll} /> : (
                 <div className="py-20 text-center border-2 border-dashed rounded-md border-border bg-muted/20">
                   <p className="text-sm font-medium text-muted-foreground">
-                    {payrolls.filter(p => p.status === 'processed' || p.status === 'posted' || p.status === 'approved').length === 0
+                    {payrolls.filter(p => p.status === 'finalized' || p.status === 'processed' || p.status === 'posted' || p.status === 'approved').length === 0
                       ? 'No payroll cycles available. Go to Payroll tab to run your first cycle.'
                       : 'Select a cycle above to view payslips'}
                   </p>
@@ -388,6 +380,6 @@ export default function HRPage() {
           </div>
         </Tabs>
       </div>
-    </DashboardShell>
+    </ModuleGuard>
   );
 }

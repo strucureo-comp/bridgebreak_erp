@@ -26,6 +26,9 @@ import {
   acceptOfferLetter,
   updateApplicant,
 } from '@/lib/api';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useCompanySettings } from '@/lib/hooks/use-company-settings';
+import { formatCurrency } from '@/lib/utils/currency';
 
 interface JobOpening {
   id: string;
@@ -60,12 +63,13 @@ interface OfferLetter {
 
 export default function RecruitmentModule() {
   const { toast } = useToast();
+  const { baseCurrency } = useCompanySettings();
   const [activeTab, setActiveTab] = useState('job-openings');
   const [selectedJobOpening, setSelectedJobOpening] = useState<string | null>(null);
   const [jobOpenings, setJobOpenings] = useState<JobOpening[]>([]);
   const [applicants, setApplicants] = useState<Applicant[]>([]);
   const [offerLetters, setOfferLetters] = useState<OfferLetter[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [departments, setDepartments] = useState<any[]>([]);
   const [roles, setRoles] = useState<any[]>([]);
 
@@ -73,7 +77,7 @@ export default function RecruitmentModule() {
   const fetchJobOpenings = async () => {
     try {
       const data = await getJobOpenings();
-      setJobOpenings(data);
+      setJobOpenings(data || []);
     } catch (err) {
       toast({ title: 'Error', description: 'Failed to fetch job openings', variant: 'destructive' });
     }
@@ -82,7 +86,7 @@ export default function RecruitmentModule() {
   const fetchApplicants = async () => {
     try {
       const data = await getApplicants();
-      setApplicants(data);
+      setApplicants(data || []);
     } catch (err) {
       toast({ title: 'Error', description: 'Failed to fetch applicants', variant: 'destructive' });
     }
@@ -91,7 +95,7 @@ export default function RecruitmentModule() {
   const fetchOfferLetters = async () => {
     try {
       const data = await getOfferLetters();
-      setOfferLetters(data);
+      setOfferLetters(data || []);
     } catch (err) {
       toast({ title: 'Error', description: 'Failed to fetch offer letters', variant: 'destructive' });
     }
@@ -100,7 +104,7 @@ export default function RecruitmentModule() {
   const fetchDepartments = async () => {
     try {
       const data = await getDepartments();
-      setDepartments(data);
+      setDepartments(data || []);
     } catch (err) {
       console.error('Failed to fetch departments');
     }
@@ -109,18 +113,25 @@ export default function RecruitmentModule() {
   const fetchRoles = async () => {
     try {
       const data = await getHRRoles();
-      setRoles(data);
+      setRoles(data || []);
     } catch (err) {
       console.error('Failed to fetch roles');
     }
   };
 
   useEffect(() => {
-    fetchJobOpenings();
-    fetchApplicants();
-    fetchOfferLetters();
-    fetchDepartments();
-    fetchRoles();
+    const loadAll = async () => {
+      setLoading(true);
+      await Promise.all([
+        fetchJobOpenings(),
+        fetchApplicants(),
+        fetchOfferLetters(),
+        fetchDepartments(),
+        fetchRoles()
+      ]);
+      setLoading(false);
+    };
+    loadAll();
   }, []);
 
   const getStatusBadge = (status: string) => {
@@ -205,7 +216,23 @@ export default function RecruitmentModule() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3 max-h-[600px] overflow-y-auto">
-              {jobOpenings.map((job) => (
+              {loading ? (
+                [...Array(3)].map((_, i) => (
+                  <Card key={i} className="animate-pulse">
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex justify-between">
+                        <Skeleton className="h-4 w-24 bg-muted" />
+                        <Skeleton className="h-4 w-12 bg-muted rounded-full" />
+                      </div>
+                      <Skeleton className="h-3 w-32 bg-muted" />
+                      <div className="space-y-2">
+                        <Skeleton className="h-2 w-full bg-muted" />
+                        <Skeleton className="h-2 w-full bg-muted" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              ) : jobOpenings.map((job) => (
                 <Card 
                   key={job.id}
                   className={`cursor-pointer transition-all hover:shadow-md ${selectedJobOpening === job.id ? 'ring-2 ring-primary bg-primary/5' : ''}`}
@@ -258,7 +285,27 @@ export default function RecruitmentModule() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {!selectedJobOpening ? (
+            {loading ? (
+              <div className="space-y-3">
+                {[...Array(3)].map((_, i) => (
+                  <Card key={i} className="animate-pulse">
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex justify-between">
+                        <div className="space-y-2 flex-1">
+                          <Skeleton className="h-4 w-24 bg-muted" />
+                          <Skeleton className="h-3 w-16 bg-muted" />
+                        </div>
+                        <Skeleton className="h-4 w-12 bg-muted rounded-full" />
+                      </div>
+                      <div className="space-y-2">
+                        <Skeleton className="h-2 w-full bg-muted" />
+                        <Skeleton className="h-2 w-full bg-muted" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : !selectedJobOpening ? (
               <div className="text-center py-12 text-muted-foreground">
                 <Users className="w-12 h-12 mx-auto mb-2 opacity-20" />
                 <p className="text-sm">Select a job opening to view applicants</p>
@@ -435,7 +482,25 @@ export default function RecruitmentModule() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {!selectedJobOpening ? (
+            {loading ? (
+              <div className="space-y-3">
+                {[...Array(3)].map((_, i) => (
+                  <Card key={i} className="animate-pulse">
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex justify-between">
+                        <Skeleton className="h-4 w-24 bg-muted" />
+                        <Skeleton className="h-4 w-12 bg-muted rounded-full" />
+                      </div>
+                      <Skeleton className="h-3 w-32 bg-muted" />
+                      <div className="space-y-2">
+                        <Skeleton className="h-2 w-full bg-muted" />
+                        <Skeleton className="h-2 w-full bg-muted" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : !selectedJobOpening ? (
               <div className="text-center py-12 text-muted-foreground">
                 <FileText className="w-12 h-12 mx-auto mb-2 opacity-20" />
                 <p className="text-sm">Select a job opening to view offer letters</p>
@@ -453,7 +518,7 @@ export default function RecruitmentModule() {
                       </div>
                       <p className="text-xs text-muted-foreground mb-2">{offer.designation}</p>
                       <div className="space-y-1 text-xs">
-                        <p><strong>Salary:</strong> AED {offer.gross_salary?.toLocaleString()}</p>
+                        <p><strong>Salary:</strong> {formatCurrency(offer.gross_salary || 0, baseCurrency)}</p>
                         <p><strong>Offer Date:</strong> {new Date(offer.offer_date).toLocaleDateString()}</p>
                         {offer.joining_date && (
                           <p><strong>Joining:</strong> {new Date(offer.joining_date).toLocaleDateString()}</p>

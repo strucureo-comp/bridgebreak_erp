@@ -4,7 +4,10 @@ import { createContext, useContext, useEffect, useState, useCallback } from 'rea
 import { User } from '@/lib/db/types';
 import { useRouter } from 'next/navigation';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4000/api';
+const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '/api/backend';
+const API_BASE = BASE_URL.startsWith('/')
+  ? BASE_URL
+  : (BASE_URL.endsWith('/api') ? BASE_URL : `${BASE_URL}/api`);
 
 interface AuthContextType {
   user: User | null;
@@ -20,11 +23,19 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 function mapBackendUser(u: any): User {
+  const normalizedRole = (() => {
+    const rawRole = String(u?.role || 'employee').trim().toLowerCase();
+    if (rawRole === 'admin' || rawRole === 'superadmin' || rawRole === 'administrator') {
+      return 'admin';
+    }
+    return rawRole;
+  })();
+
   return {
     id: u._id || u.id,
     email: u.email,
     full_name: u.full_name,
-    role: u.role === 'superadmin' ? 'admin' : u.role,
+    role: normalizedRole as User['role'],
     avatar_url: u.avatar_url || undefined,
     created_at: u.createdAt || u.created_at || new Date().toISOString(),
     updated_at: u.updatedAt || u.updated_at || new Date().toISOString(),

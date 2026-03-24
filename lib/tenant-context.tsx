@@ -30,6 +30,7 @@ interface TaxConfig {
 }
 
 interface CompanyProfile {
+  companyName?: string;
   tradingName: string;
   legalName: string;
   baseCurrency: string;
@@ -44,6 +45,8 @@ interface CompanyProfile {
 interface TenantContextType {
   tenantStatus: TenantSetupStatus | null;
   companyProfile: CompanyProfile | null;
+  globalCompanyName: string;
+  globalCurrency: string;
   brandingConfig: { logo?: string | null; primaryColor?: string; accentColor?: string } | null;
   loading: boolean;
   getModuleLabel: (moduleId: string) => string;
@@ -137,6 +140,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       ]);
 
       const normalizedProfile: CompanyProfile | null = company ? {
+        companyName: company.companyName || company.tradingName || company.legalName || '',
         tradingName: company.companyName || '',
         legalName: company.legalName || '',
         baseCurrency: company.baseCurrency || 'USD',
@@ -149,6 +153,17 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       setTenantStatus(status as any);
       setCompanyProfile(normalizedProfile);
       setBrandingConfig(branding || null);
+
+      if (normalizedProfile) {
+        window.dispatchEvent(new CustomEvent('erp_company_settings_changed', { 
+          detail: { 
+            companyName: normalizedProfile.companyName,
+            baseCurrency: normalizedProfile.baseCurrency,
+            address: normalizedProfile.address,
+            logo: branding?.logo || null
+          } 
+        }));
+      }
     } catch (error) {
       console.error('Failed to load tenant context:', error);
       setCompanyProfile(null);
@@ -172,14 +187,18 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    // Only fetch tenant data after auth is done loading
+    // Only fetch tenant data after auth is done loading AND we have a user
     if (!authLoading) {
-      refreshTenantStatus();
+      if (user) {
+        refreshTenantStatus();
+      } else {
+        setLoading(false);
+      }
     } else {
       // If auth is still loading, keep tenant loading too
       setLoading(true);
     }
-  }, [authLoading]);
+  }, [authLoading, user, refreshTenantStatus]);
 
   const getModuleLabel = (moduleId: string) => {
     const sector = companyProfile?.businessType || tenantStatus?.business_type || 'service';
@@ -197,7 +216,14 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     return SECTOR_LABELS[sector]?.[lookupKey] || DEFAULT_LABELS[lookupKey] || moduleId;
   };
 
+  const hasAdminAccess = (role?: string | null) => {
+    const normalized = String(role || '').trim().toLowerCase();
+    return normalized === 'admin' || normalized === 'superadmin' || normalized === 'administrator';
+  };
+
   const checkAccess = (module: ModuleKey): ModuleAccess => {
+    if (hasAdminAccess(user?.role)) return { accessible: true };
+
     if (module === 'dashboard' || module === 'settings') return { accessible: true };
 
     const sector = companyProfile?.businessType || tenantStatus?.business_type || 'service';
@@ -230,6 +256,8 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     <TenantContext.Provider value={{
       tenantStatus,
       companyProfile,
+      globalCompanyName: companyProfile?.companyName || companyProfile?.tradingName || companyProfile?.legalName || 'My Company',
+      globalCurrency: companyProfile?.baseCurrency || 'USD',
       brandingConfig,
       loading,
       getModuleLabel,

@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { CheckCircle2, XCircle, Clock, User, Calendar, MessageSquare, DollarSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getDocumentTypeLabel, getModuleLabel, getStatusInfo, AppModule, DocumentType } from '@/lib/approval-system';
+import { useSettings } from '@/lib/settings-context';
 
 interface ApprovalRecord {
     id: string;
@@ -48,6 +49,7 @@ export function ApprovalDialog({
     onApprove,
     onReject
 }: ApprovalDialogProps) {
+    const { settings } = useSettings();
     const [action, setAction] = useState<'approve' | 'reject' | null>(null);
     const [comment, setComment] = useState('');
     const [loading, setLoading] = useState(false);
@@ -82,6 +84,14 @@ export function ApprovalDialog({
     const statusInfo = getStatusInfo(currentStatus as any);
     const docLabel = getDocLabel();
 
+    const formatCurrencyValue = (amount: number) => {
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: settings.currency,
+            maximumFractionDigits: 2
+        }).format(amount);
+    };
+
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-2xl">
@@ -113,11 +123,7 @@ export function ApprovalDialog({
                                 <span className="text-sm font-medium text-blue-900">Approval Threshold</span>
                             </div>
                             <span className="text-sm text-blue-700">
-                                {new Intl.NumberFormat('en-AE', {
-                                    style: 'currency',
-                                    currency: 'AED',
-                                    maximumFractionDigits: 0
-                                }).format(threshold)}
+                                {formatCurrencyValue(threshold)}
                             </span>
                         </div>
                     )}
@@ -127,11 +133,7 @@ export function ApprovalDialog({
                         <div className="flex items-center justify-between p-3 rounded-lg border border-slate-200 bg-slate-50">
                             <span className="text-sm font-medium text-slate-900">Document Amount</span>
                             <span className="text-sm font-bold text-slate-900">
-                                {new Intl.NumberFormat('en-AE', {
-                                    style: 'currency',
-                                    currency: 'AED',
-                                    maximumFractionDigits: 2
-                                }).format(documentAmount)}
+                                {formatCurrencyValue(documentAmount)}
                             </span>
                         </div>
                     )}
@@ -195,6 +197,7 @@ export function ApprovalDialog({
                                     variant={action === 'approve' ? 'default' : 'outline'}
                                     className={cn(
                                         "h-14 flex flex-col gap-1",
+                                        // Semantic color - green indicates approval action (intentional, not brand color).
                                         action === 'approve' && "bg-green-600 hover:bg-green-700"
                                     )}
                                     onClick={() => setAction('approve')}
@@ -278,8 +281,10 @@ export function ApprovalDialog({
                             onClick={handleSubmit}
                             disabled={loading || (action === 'reject' && !comment.trim())}
                             className={cn(
+                                // Semantic color - green indicates approval action (intentional, not brand color).
                                 action === 'approve'
                                     ? "bg-green-600 hover:bg-green-700"
+                                    // Semantic color - red indicates rejection action (intentional, not brand color).
                                     : "bg-red-600 hover:bg-red-700"
                             )}
                         >

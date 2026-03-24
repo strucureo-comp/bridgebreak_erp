@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Save, Loader2, Upload, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { settingsApi } from '@/lib/settings-api';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface BrandingConfig {
     logo: string | null;
@@ -33,7 +34,7 @@ const COLOR_PRESETS = [
     { name: 'Purple', primary: '#7C3AED', accent: '#8B5CF6' },
     { name: 'Rose', primary: '#E11D48', accent: '#F43F5E' },
     { name: 'Orange', primary: '#EA580C', accent: '#F97316' },
-    { name: 'Slate', primary: '#0F172A', accent: '#64748B' },
+    { name: 'Slate', primary: '#0F172A', accent: '#10B981' },
     { name: 'Teal', primary: '#0D9488', accent: '#14B8A6' },
     { name: 'Indigo', primary: '#4338CA', accent: '#6366F1' },
 ];
@@ -149,6 +150,32 @@ export default function BrandingSettingsPage() {
         try {
             await settingsApi.saveBranding(branding);
             applyBrandingColors(branding.primaryColor, branding.accentColor);
+
+            // Broadcast event
+            window.dispatchEvent(new CustomEvent('erp_company_settings_changed', {
+                detail: {
+                    logo: branding.logo,
+                    footerText: branding.footerText,
+                    primaryColor: branding.primaryColor,
+                    accentColor: branding.accentColor
+                }
+            }));
+
+            // Sync for PDF
+            const existingPdfSettings = JSON.parse(localStorage.getItem('pdf-settings') || '{}');
+            const syncedPdfSettings = {
+                ...existingPdfSettings,
+                logo: branding.logo,
+                primaryColor: branding.primaryColor,
+                accentColor: branding.accentColor,
+                footerText: branding.footerText,
+                favicon: branding.favicon
+            };
+            localStorage.setItem('pdf-settings', JSON.stringify(syncedPdfSettings));
+            localStorage.setItem('erp_pdf_settings', JSON.stringify(syncedPdfSettings));
+            localStorage.setItem('branding_settings', JSON.stringify(branding));
+            window.dispatchEvent(new Event('erp_settings_updated'));
+
             toast.success('Branding saved');
         } catch (error: any) {
             toast.error(error?.message || 'Failed to save branding');
@@ -157,7 +184,20 @@ export default function BrandingSettingsPage() {
         }
     };
 
-    if (loading) return <div className="flex items-center justify-center min-h-[400px]"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+    if (loading) {
+        return (
+            <div className="space-y-6 max-w-4xl animate-pulse">
+                <div>
+                    <Skeleton className="h-8 w-48 mb-2" />
+                    <Skeleton className="h-4 w-64" />
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <Skeleton className="h-[500px] w-full rounded-xl" />
+                    <Skeleton className="h-[400px] w-full rounded-xl" />
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6 max-w-4xl">

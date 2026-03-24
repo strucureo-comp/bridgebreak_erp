@@ -3,7 +3,8 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/context';
-import { getOpportunities, getLeads, getInvoices, getQuotes } from '@/lib/api';
+import { getOpportunities, getLeads } from '@/lib/api';
+import { getSalesInvoices, getSalesQuotations, getProformaInvoices, getDeliveryNotes } from '@/lib/services/business-documents-api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -12,63 +13,76 @@ import {
     TrendingUp, Users, Target, DollarSign,
     ShoppingCart, FileText, UserPlus,
     Clock, Plus, Receipt,
-    ArrowUpRight, BarChart3, Briefcase, ChevronRight, Truck
+    ArrowUpRight, BarChart3, Briefcase, ChevronRight, Truck, Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Opportunity, Lead, Invoice } from '@/lib/db/types';
 import { ModuleGuard } from '@/components/shared/layout/module-guard';
 import { useTenant } from '@/lib/tenant-context';
+import { useCompanySettings } from '@/lib/hooks/use-company-settings';
+import { formatCurrency } from '@/lib/utils/currency';
 
-function isOverdue(dateStr: string) {
-    if (!dateStr) return false;
-    const d = new Date(dateStr);
+const isToday = (date: string) => {
+    if (!date) return false;
+    const d = new Date(date);
     const today = new Date();
-    return d < today && d.toDateString() !== today.toDateString();
-}
+    return d.toDateString() === today.toDateString();
+};
 
-function isToday(dateStr: string) {
-    if (!dateStr) return false;
-    return new Date(dateStr).toDateString() === new Date().toDateString();
-}
+const isOverdue = (date: string) => {
+    if (!date) return false;
+    return new Date(date) < new Date();
+};
 
 export default function SalesDashboardPage() {
     const router = useRouter();
-    const { user } = useAuth();
+    const { user, loading: authLoading } = useAuth();
     const { getModuleLabel, companyProfile } = useTenant();
+    const { baseCurrency } = useCompanySettings();
+    
     const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
     const [leads, setLeads] = useState<Lead[]>([]);
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [quotes, setQuotes] = useState<any[]>([]);
+    const [proformas, setProformas] = useState<any[]>([]);
+    const [deliveries, setDeliveries] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
     // Check if B2B/B2C based on company profile settings
     const isRetail = companyProfile?.businessType === 'b2c_retail';
 
     const fmt = useCallback((n: number) => {
-        return new Intl.NumberFormat('en-AE', {
-            style: 'currency',
-            currency: companyProfile?.baseCurrency || 'AED',
-            maximumFractionDigits: 0
-        }).format(n);
-    }, [companyProfile]);
+        return formatCurrency(n, baseCurrency, { compact: true });
+    }, [baseCurrency]);
 
     useEffect(() => {
-        if (user?.role === 'admin') fetchData();
-    }, [user]);
+        if (authLoading) return;
+
+        if (!user) {
+            setLoading(false);
+            return;
+        }
+
+        fetchData();
+    }, [authLoading, user, baseCurrency]); // Reload on currency change if needed
 
     const fetchData = async () => {
         try {
             setLoading(true);
-            const [oppsData, leadsData, invData, quotesData] = await Promise.all([
+            const [oppsData, leadsData, invData, quotesData, proformaData, deliveryData] = await Promise.all([
                 getOpportunities().catch(() => []),
                 getLeads().catch(() => []),
-                getInvoices().catch(() => []),
-                getQuotes().catch(() => []),
+                getSalesInvoices().catch(() => []),
+                getSalesQuotations().catch(() => []),
+                getProformaInvoices().catch(() => []),
+                getDeliveryNotes().catch(() => []),
             ]);
             setOpportunities((oppsData as any) || []);
             setLeads(leadsData || []);
             setInvoices(invData || []);
             setQuotes(quotesData || []);
+            setProformas(proformaData || []);
+            setDeliveries(deliveryData || []);
         } catch (e) { console.error(e); }
         finally { setLoading(false); }
     };
@@ -79,8 +93,15 @@ export default function SalesDashboardPage() {
         const revenue = wonOpps.reduce((sum, o) => sum + Number(o.amount), 0);
         const pipelineValue = pipelineOpps.reduce((sum, o) => sum + Number(o.amount), 0);
         const winRate = opportunities.length > 0 ? (wonOpps.length / opportunities.length) * 100 : 0;
-        const pendingInvoiceAmount = invoices.filter(i => i.status === 'pending').reduce((s, i) => s + Number(i.amount), 0);
-        const activeQuotes = quotes.filter(q => q.status === 'draft' || q.status === 'sent').length;
+        
+        // Count all non-completed and non-rejected invoices as "pending"
+        const pendingInvoiceAmount = invoices
+            .filter(i => i.status !== 'paid' && i.status !== 'cancelled' && i.status !== ('rejected' as any))
+            .reduce((s, i) => s + Number(i.amount || 0), 0);
+        
+        const activeQuotes = quotes.filter(q => q.status === 'draft' || q.status === 'pending_approval' || q.status === 'approved').length;
+        const activeProformas = proformas.filter(p => p.status !== 'completed' && p.status !== 'rejected').length;
+        const pendingDeliveries = deliveries.filter(d => d.status !== 'completed' && d.status !== 'rejected').length;
 
         const followUpsToday = opportunities.flatMap(o => o.followUps || []).filter(f => f.status === 'Pending' && isToday(f.scheduledAt)).length;
         const overdueFollowUps = opportunities.flatMap(o => o.followUps || []).filter(f => f.status === 'Missed' || (f.status === 'Pending' && isOverdue(f.scheduledAt))).length;
@@ -93,49 +114,52 @@ export default function SalesDashboardPage() {
             pendingInvoiceAmount,
             invoiceCount: invoices.length,
             activeQuotes,
+            activeProformas,
+            pendingDeliveries,
             followUpsToday,
             overdueFollowUps
         };
     }, [opportunities, leads, invoices, quotes]);
 
-    if (loading) return null;
-
     return (
         <ModuleGuard module="sales">
-                <div className="space-y-8 max-w-6xl mx-auto pb-12">
-
-                    {/* Header: Simple & Clear */}
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
+            {loading ? (
+                <div className="space-y-6 max-w-6xl animate-pulse">
+                    <div>
+                        <div className="h-8 w-48 bg-muted rounded mb-2" />
+                        <div className="h-4 w-64 bg-muted rounded" />
+                    </div>
+                </div>
+            ) : (
+                <div className="space-y-6 max-w-6xl">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div>
-                            <h1 className="text-xl font-bold tracking-tight text-foreground uppercase">{getModuleLabel('sales')}</h1>
-                            <div className="flex items-center gap-2 mt-0.5">
-                                <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Commercial Pipeline</span>
-                                <Badge variant="secondary" className="hidden sm:inline-flex font-bold uppercase text-[9px] tracking-widest bg-slate-100 text-slate-600">
-                                    Revenue Stream
-                                </Badge>
-                            </div>
+                            <h1 className="text-2xl font-semibold">{getModuleLabel('sales')}</h1>
+                            <p className="text-muted-foreground">Manage your commercial pipeline, leads, and revenue stream.</p>
                         </div>
 
-                        {/* Quick Actions — Lead button removed, only Quotation & Invoice */}
-                        <div className="flex flex-wrap items-center gap-3">
-                            <Button onClick={() => router.push('/admin/finance/quotations/new')} size="sm" variant="secondary" className="h-10 gap-2 font-bold shadow-sm">
+                        {/* Quick Actions */}
+                        <div className="flex items-center gap-3">
+                            <Button onClick={() => router.push('/admin/sales/quotations')} size="sm" variant="secondary" className="gap-2">
                                 <Plus className="h-4 w-4" /> New Quotation
                             </Button>
-
-                            <Button size="sm" variant="outline" className="h-10 gap-2 font-bold shadow-sm" onClick={() => router.push('/admin/finance/invoices/new')}>
+                            <Button size="sm" variant="outline" className="gap-2" onClick={() => router.push('/admin/sales/invoices')}>
                                 <Receipt className="h-4 w-4" /> New Invoice
                             </Button>
                         </div>
                     </div>
 
                     {/* Quick Stats: Clear KPI Cards */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
                         <MetricCard key="revenue" title="Total Revenue (Won)" value={fmt(stats.revenue)} trend="Confirmed" />
-                        {!isRetail && (
-                            <MetricCard key="pipeline" title="Pipeline Value" value={fmt(stats.pipelineValue)} trend="In Progress" />
-                        )}
+                        <MetricCard key="pipeline" title="Pipeline Value" value={fmt(stats.pipelineValue)} trend="In Progress" />
                         <MetricCard key="leads" title="Active Leads" value={stats.activeLeads.toString()} trend="To Contact" />
                         <MetricCard key="invoices" title="Pending Invoices" value={fmt(stats.pendingInvoiceAmount)} trend="Unpaid" />
+                        <MetricCard key="proformas" title="Active Proformas" value={stats.activeProformas.toString()} trend="Open" />
+                        <MetricCard key="deliveries" title="Pending Deliveries" value={stats.pendingDeliveries.toString()} trend="Pending" />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
                         <Card key="followups" className="border-border shadow-sm bg-orange-500/5">
                             <CardHeader className="pb-2 pt-4 px-4"><CardTitle className="text-xs font-bold text-orange-600 dark:text-orange-400 uppercase tracking-widest">Follow-ups Today</CardTitle></CardHeader>
                             <CardContent className="px-4 pb-4 pt-0"><div className="text-2xl font-black text-foreground">{stats.followUpsToday}</div></CardContent>
@@ -220,7 +244,7 @@ export default function SalesDashboardPage() {
                                 <CardHeader className="flex flex-row items-center justify-between border-b border-border py-4">
                                     <CardTitle className="text-base font-bold">Recent Quotes</CardTitle>
                                     <Button variant="ghost" size="sm" className="h-8 text-xs font-medium" asChild>
-                                        <Link href="/admin/finance/quotations">View All</Link>
+                                        <Link href="/admin/sales/quotations">View All</Link>
                                     </Button>
                                 </CardHeader>
                                 <CardContent className="p-0">
@@ -231,11 +255,11 @@ export default function SalesDashboardPage() {
                                             {quotes.slice(0, 5).map((q, idx) => (
                                                 <div key={q.id || q._id || `quote-${idx}`} className="p-4 flex items-center justify-between hover:bg-muted/30 transition-colors">
                                                     <div>
-                                                        <p className="font-bold text-sm">{q.quote_number}</p>
-                                                        <p className="text-xs text-muted-foreground mt-0.5">{q.account?.name}</p>
+                                                        <p className="font-bold text-sm">{q.number || q.quote_number}</p>
+                                                        <p className="text-xs text-muted-foreground mt-0.5">{q.customerName || q.account?.name}</p>
                                                     </div>
                                                     <div className="text-right">
-                                                        <p className="font-bold text-sm">{fmt(Number(q.total_amount))}</p>
+                                                        <p className="font-bold text-sm">{fmt(Number(q.total || q.total_amount))}</p>
                                                         <Badge variant="outline" className="mt-1 text-[10px]">{q.status}</Badge>
                                                     </div>
                                                 </div>
@@ -296,24 +320,26 @@ export default function SalesDashboardPage() {
                             </Card>
 
                         </div>
-
                     </div>
                 </div>
-            </ModuleGuard>
+            )}
+        </ModuleGuard>
     );
 }
 
 function MetricCard({ title, value, trend }: { title: string, value: string, trend: string }) {
     return (
-        <Card className="border-border shadow-sm">
-            <CardHeader className="pb-2 pt-4 px-4">
-                <CardTitle className="text-xs font-medium text-muted-foreground">{title}</CardTitle>
+        <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                    {title}
+                </CardTitle>
             </CardHeader>
-            <CardContent className="px-4 pb-4 pt-0">
-                <div className="text-2xl font-bold tracking-tight text-foreground">{value}</div>
-                <div className="mt-1 text-xs text-muted-foreground bg-muted inline-block px-2 py-0.5 rounded-md">
+            <CardContent>
+                <div className="text-2xl font-bold">{value}</div>
+                <p className="text-xs text-muted-foreground mt-1">
                     {trend}
-                </div>
+                </p>
             </CardContent>
         </Card>
     );

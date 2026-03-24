@@ -28,7 +28,8 @@ import {
     getARAgingReport,
     getAccounts
 } from '@/lib/api';
-import { useCurrency } from '@/lib/hooks/use-currency';
+import { useCompanySettings } from '@/lib/hooks/use-company-settings';
+import { formatCurrency } from '@/lib/utils/currency';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
@@ -79,10 +80,25 @@ interface Payment {
     unapplied_balance: number; status: string;
 }
 
+const AGING_RATES = {
+    current: 0.005, // 0.5% - configurable in future
+    d30: 0.02, // 2% after 30 days
+    d60: 0.05, // 5% after 60 days
+    d90: 0.15, // 15% after 90 days
+    d90Plus: 0.5, // 50% after 90+ days
+} as const;
+
 export default function AccountsReceivableUpgrade() {
-    const { format: fmt } = useCurrency();
+    const { baseCurrency, taxRate, taxName } = useCompanySettings();
+    const fmt = (amount: number, options?: { compact?: boolean }) => formatCurrency(amount, baseCurrency, options);
     const [tab, setTab] = useState('overview');
     const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const handler = () => window.location.reload();
+        window.addEventListener('erp_company_settings_changed', handler);
+        return () => window.removeEventListener('erp_company_settings_changed', handler);
+    }, []);
 
     // Data States
     const [customers, setCustomers] = useState<Customer[]>([]);
@@ -129,6 +145,12 @@ export default function AccountsReceivableUpgrade() {
         const unapplied = payments.reduce((s, p) => s + (p.unapplied_balance || 0), 0);
         return { receivable, overdue, unapplied };
     }, [invoices, payments]);
+    const requiredProvision =
+        ((aging?.current ?? 0) * AGING_RATES.current) +
+        ((aging?.d30 ?? 0) * AGING_RATES.d30) +
+        ((aging?.d60 ?? 0) * AGING_RATES.d60) +
+        ((aging?.d90 ?? 0) * AGING_RATES.d90) +
+        ((aging?.d90Plus ?? 0) * AGING_RATES.d90Plus);
 
     if (loading) {
         return (
@@ -460,11 +482,11 @@ export default function AccountsReceivableUpgrade() {
                                             <span className="col-span-3 text-right">Amount</span>
                                             <span className="col-span-3 text-right">ECL Provision</span>
                                         </div>
-                                        <AgingRow label="Current (Good Standing)" amount={aging?.current || 0} rate={0.005} />
-                                        <AgingRow label="1 - 30 Days (Minor Delays)" amount={aging?.d30 || 0} rate={0.02} />
-                                        <AgingRow label="31 - 60 Days (Watchlist)" amount={aging?.d60 || 0} rate={0.05} />
-                                        <AgingRow label="61 - 90 Days (Critical Watch)" amount={aging?.d90 || 0} rate={0.15} />
-                                        <AgingRow label="90+ Days (Default Risk)" amount={aging?.d90Plus || 0} rate={0.50} highlight />
+                                        <AgingRow label="Current (Good Standing)" amount={aging?.current || 0} rate={AGING_RATES.current} />
+                                        <AgingRow label="1 - 30 Days (Minor Delays)" amount={aging?.d30 || 0} rate={AGING_RATES.d30} />
+                                        <AgingRow label="31 - 60 Days (Watchlist)" amount={aging?.d60 || 0} rate={AGING_RATES.d60} />
+                                        <AgingRow label="61 - 90 Days (Critical Watch)" amount={aging?.d90 || 0} rate={AGING_RATES.d90} />
+                                        <AgingRow label="90+ Days (Default Risk)" amount={aging?.d90Plus || 0} rate={AGING_RATES.d90Plus} highlight />
                                     </div>
                                 </CardContent>
                             </Card>
@@ -478,7 +500,7 @@ export default function AccountsReceivableUpgrade() {
                                     <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 flex flex-col items-center">
                                         <span className="text-[10px] font-bold text-slate-500 uppercase">Required Provision</span>
                                         <span className="text-2xl font-black text-red-600 font-mono tracking-tighter">
-                                            {fmt((aging?.current * 0.005) + (aging?.d30 * 0.02) + (aging?.d60 * 0.05) + (aging?.d90 * 0.15) + (aging?.d90Plus * 0.5))}
+                                            {formatCurrency(requiredProvision, baseCurrency)}
                                         </span>
                                     </div>
                                     <div className="space-y-3">
@@ -579,6 +601,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function AgingBucket({ label, value, total, color }: { label: string; value: number; total: number; color: string }) {
+    const { baseCurrency } = useCompanySettings();
     const pct = (value / total) * 100;
     return (
         <div className="flex flex-col items-center gap-2">
@@ -586,19 +609,19 @@ function AgingBucket({ label, value, total, color }: { label: string; value: num
             <div className="relative h-20 w-3 rounded-full bg-slate-100 overflow-hidden flex flex-col justify-end">
                 <div className={cn("w-full rounded-full transition-all duration-1000", color)} style={{ height: `${pct}%` }} />
             </div>
-            <div className="text-[10px] font-bold text-slate-900">{useCurrency().format(value)}</div>
+            <div className="text-[10px] font-bold text-slate-900">{formatCurrency(value, baseCurrency)}</div>
         </div>
     );
 }
 
 function AgingRow({ label, amount, rate, highlight }: { label: string; amount: number; rate: number; highlight?: boolean }) {
-    const { format: fmt } = useCurrency();
+    const { baseCurrency } = useCompanySettings();
     const provision = amount * rate;
     return (
         <div className={cn("grid grid-cols-12 px-4 py-2.5 items-center rounded-lg text-[11px] transition-colors", highlight ? "bg-red-50 text-red-900 border border-red-100" : "hover:bg-slate-50 border border-transparent")}>
             <span className="col-span-6 font-bold">{label}</span>
-            <span className="col-span-3 text-right font-mono font-bold">{fmt(amount)}</span>
-            <span className="col-span-3 text-right font-mono text-red-600 font-black">{fmt(provision)}</span>
+            <span className="col-span-3 text-right font-mono font-bold">{formatCurrency(amount, baseCurrency)}</span>
+            <span className="col-span-3 text-right font-mono text-red-600 font-black">{formatCurrency(provision, baseCurrency)}</span>
         </div>
     );
 }
@@ -606,6 +629,7 @@ function AgingRow({ label, amount, rate, highlight }: { label: string; amount: n
 // ── FORMS ──────────────────────────────────────────────────────────────
 
 function CustomerForm({ onSuccess }: { onSuccess: () => void }) {
+    const { baseCurrency } = useCompanySettings();
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState({
         legal_name: '', trade_license_no: '', tax_registration_no: '',
@@ -642,7 +666,7 @@ function CustomerForm({ onSuccess }: { onSuccess: () => void }) {
                     <Input placeholder="100XXXXXXXXXXXX" className="h-9 text-sm" value={formData.tax_registration_no} onChange={e => setFormData({ ...formData, tax_registration_no: e.target.value })} />
                 </div>
                 <div className="space-y-2">
-                    <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Credit Limit (AED)</Label>
+                    <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Credit Limit ({baseCurrency})</Label>
                     <Input type="number" className="h-9 text-sm font-mono" value={formData.credit_limit} onChange={e => setFormData({ ...formData, credit_limit: Number(e.target.value) })} />
                 </div>
                 <div className="space-y-2">
@@ -667,8 +691,9 @@ function CustomerForm({ onSuccess }: { onSuccess: () => void }) {
 }
 
 function InvoiceForm({ customers, onSuccess }: { customers: any[], onSuccess: () => void }) {
+    const { baseCurrency, taxRate, taxName } = useCompanySettings();
     const [loading, setLoading] = useState(false);
-    const [lines, setLines] = useState<any[]>([{ description: '', quantity: 1, unit_price: 0, tax_rate: 5, amount: 0, tax_amount: 0, total: 0 }]);
+    const [lines, setLines] = useState<any[]>([{ description: '', quantity: 1, unit_price: 0, tax_rate: taxRate, amount: 0, tax_amount: 0, total: 0 }]);
     const [customerId, setCustomerId] = useState('');
     const [dueDate, setDueDate] = useState('');
 
@@ -740,7 +765,7 @@ function InvoiceForm({ customers, onSuccess }: { customers: any[], onSuccess: ()
                             <th className="px-4 py-2 text-left">Description</th>
                             <th className="px-4 py-2 text-center w-20">Qty</th>
                             <th className="px-4 py-2 text-right w-32">Unit Price</th>
-                            <th className="px-4 py-2 text-right w-24">VAT %</th>
+                            <th className="px-4 py-2 text-right w-24">{taxName} %</th>
                             <th className="px-4 py-2 text-right w-32">Total</th>
                         </tr>
                     </thead>
@@ -750,8 +775,8 @@ function InvoiceForm({ customers, onSuccess }: { customers: any[], onSuccess: ()
                                 <td className="p-2"><Input value={l.description} onChange={e => updateLine(i, 'description', e.target.value)} className="h-8 text-xs border-0 bg-transparent" /></td>
                                 <td className="p-2 text-center"><Input type="number" value={l.quantity} onChange={e => updateLine(i, 'quantity', Number(e.target.value))} className="h-8 text-xs text-center border-0" /></td>
                                 <td className="p-2 text-right"><Input type="number" value={l.unit_price} onChange={e => updateLine(i, 'unit_price', Number(e.target.value))} className="h-8 text-xs text-right border-0 font-mono" /></td>
-                                <td className="p-2 text-right font-mono text-slate-500">5%</td>
-                                <td className="p-2 text-right font-bold text-slate-900 px-4">{useCurrency().format(l.total)}</td>
+                                <td className="p-2 text-right font-mono text-slate-500">{taxRate}%</td>
+                                <td className="p-2 text-right font-bold text-slate-900 px-4">{formatCurrency(l.total, baseCurrency)}</td>
                             </tr>
                         ))}
                     </tbody>
@@ -760,11 +785,11 @@ function InvoiceForm({ customers, onSuccess }: { customers: any[], onSuccess: ()
 
             <div className="flex justify-end pt-2 border-t">
                 <div className="w-64 space-y-2 text-sm">
-                    <div className="flex justify-between text-slate-500"><span>Subtotal (Net)</span><span className="font-mono">{useCurrency().format(sub)}</span></div>
-                    <div className="flex justify-between text-slate-500"><span>VAT (5%)</span><span className="font-mono">{useCurrency().format(tax)}</span></div>
+                    <div className="flex justify-between text-slate-500"><span>Subtotal (Net)</span><span className="font-mono">{formatCurrency(sub, baseCurrency)}</span></div>
+                    <div className="flex justify-between text-slate-500"><span>{taxName} ({taxRate}%)</span><span className="font-mono">{formatCurrency(tax, baseCurrency)}</span></div>
                     <div className="flex justify-between text-lg font-black pt-2 border-t border-slate-900 border-double">
                         <span className="text-red-600">Total Due</span>
-                        <span className="font-mono">{useCurrency().format(total)}</span>
+                        <span className="font-mono">{formatCurrency(total, baseCurrency)}</span>
                     </div>
                 </div>
             </div>
@@ -778,6 +803,7 @@ function InvoiceForm({ customers, onSuccess }: { customers: any[], onSuccess: ()
 }
 
 function PaymentForm({ customers, invoices, onSuccess }: { customers: any[], invoices: any[], onSuccess: () => void }) {
+    const { baseCurrency } = useCompanySettings();
     const [loading, setLoading] = useState(false);
     const [customerId, setCustomerId] = useState('');
     const [amount, setAmount] = useState(0);
@@ -824,7 +850,7 @@ function PaymentForm({ customers, invoices, onSuccess }: { customers: any[], inv
                     <Select onValueChange={setCustomerId}>
                         <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Search Registry..." /></SelectTrigger>
                         <SelectContent>
-                            {customers.map(c => <SelectItem key={c.customer_id} value={c.customer_id}>{c.legal_name} (Bal: {useCurrency().format(c.balance || 0)})</SelectItem>)}
+                            {customers.map(c => <SelectItem key={c.customer_id} value={c.customer_id}>{c.legal_name} (Bal: {formatCurrency(c.balance || 0, baseCurrency)})</SelectItem>)}
                         </SelectContent>
                     </Select>
                 </div>
@@ -845,7 +871,7 @@ function PaymentForm({ customers, invoices, onSuccess }: { customers: any[], inv
                         {filteredInvoices.slice(0, 3).map(inv => (
                             <div key={inv._id} className="flex justify-between items-center bg-white p-2 rounded-lg text-[11px] border shadow-xs">
                                 <div><span className="font-bold text-red-600">{inv.invoice_number}</span> · Due: {new Date(inv.due_date).toLocaleDateString()}</div>
-                                <div className="font-black text-slate-900">{useCurrency().format(inv.balance_due)}</div>
+                                <div className="font-black text-slate-900">{formatCurrency(inv.balance_due, baseCurrency)}</div>
                             </div>
                         ))}
                     </div>

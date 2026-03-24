@@ -64,7 +64,7 @@ export default function TeamPage() {
     totalUsers: users.length,
     admins: users.filter(u => u.role === 'admin').length,
     clients: users.filter(u => u.role === 'client').length,
-    activeThisWeek: Math.floor(users.length * 0.8) // Placeholder
+    activeThisWeek: users.filter(u => (u as any).status === 'active').length
   }), [users]);
 
   const filteredUsers = useMemo(() => {

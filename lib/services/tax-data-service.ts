@@ -8,7 +8,7 @@ import { prisma } from '@/lib/prisma';
 import { SUPPORTED_TAX_COUNTRIES, TAX_COLLECTION_CONFIG, APILAYER_ENDPOINTS } from '@/lib/tax-data-setup';
 
 // APILayer Tax Data API Configuration
-const APILAYER_API_KEY = process.env.APILAYER_API_KEY || '';
+const APILAYER_API_KEY = process.env.APILAYER_API_KEY;
 
 export interface TaxData {
   country_code: string;
@@ -52,7 +52,7 @@ class TaxDataService {
    * Fetch single country VAT data from APILayer
    */
   async fetchCountryTaxData(countryCode: string): Promise<TaxData | null> {
-    if (!APILAYER_API_KEY || APILAYER_API_KEY === 'your_api_key_here') {
+    if (!APILAYER_API_KEY) {
       console.warn('APILAYER_API_KEY not configured properly');
       return null;
     }
@@ -107,7 +107,7 @@ class TaxDataService {
    * Fetch all supported countries from APILayer
    */
   async fetchSupportedCountries(): Promise<string[]> {
-    if (!APILAYER_API_KEY || APILAYER_API_KEY === 'your_api_key_here') {
+    if (!APILAYER_API_KEY) {
       return Object.values(SUPPORTED_TAX_COUNTRIES).flat();
     }
 
@@ -289,7 +289,7 @@ class TaxDataService {
    * Validate VAT number via APILayer
    */
   async validateVATNumber(vatNumber: string): Promise<{ valid: boolean; country: string | null }> {
-    if (!APILAYER_API_KEY || APILAYER_API_KEY === 'your_api_key_here') {
+    if (!APILAYER_API_KEY) {
       console.warn('APILAYER_API_KEY not configured');
       return { valid: false, country: null };
     }

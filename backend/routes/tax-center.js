@@ -1,50 +1,98 @@
 const express = require('express');
 const router = express.Router();
-const { TaxJurisdiction, TaxCode, FilingPeriod, TaxAdjustment } = require('../models/TaxCenter');
+const {
+    TaxJurisdiction,
+    TaxCode,
+    FilingPeriod,
+    TaxAdjustment,
+    VATReturn,
+    CorporateTaxFiling,
+} = require('../models/TaxCenter');
 const { auth } = require('../middleware/auth');
 
 router.use(auth);
+
+function tenantIdFromReq(req) {
+    return req.user?.tenant_id || 'default';
+}
+
+function tenantFilter(req, extra = {}) {
+    return { tenant_id: tenantIdFromReq(req), ...extra };
+}
+
+function normalize(doc) {
+    if (!doc) return doc;
+    const value = doc.toObject ? doc.toObject() : doc;
+    return { ...value, id: String(value._id || value.id) };
+}
+
+function safeNumber(value) {
+    return Number(value || 0);
+}
+
+function computeNetVAT(body = {}) {
+    const totalOutputVAT = safeNumber(body.totalOutputVAT);
+    const totalInputVAT = safeNumber(body.totalInputVAT);
+    const adjustments = safeNumber(body.adjustments);
+    return totalOutputVAT - totalInputVAT + adjustments;
+}
+
+function computeCorporateTax(body = {}) {
+    const taxableIncome = safeNumber(body.taxableIncome);
+    const taxRate = safeNumber(body.taxRate);
+    const lossesCarriedForward = safeNumber(body.lossesCarriedForward);
+    const adjustedIncome = Math.max(0, taxableIncome - lossesCarriedForward);
+    const taxLiability = safeNumber(body.taxLiability || (adjustedIncome * taxRate) / 100);
+    return {
+        taxableIncome,
+        taxRate,
+        lossesCarriedForward,
+        taxLiability,
+        taxPayable: safeNumber(body.taxPayable || taxLiability),
+    };
+}
 
 // ======================================================
 // TAX JURISDICTIONS
 // ======================================================
 
-// GET all jurisdictions
 router.get('/jurisdictions', async (req, res) => {
     try {
-        const items = await TaxJurisdiction.find({}).sort({ createdAt: -1 }).lean();
-        res.json(items);
+        const items = await TaxJurisdiction.find(tenantFilter(req)).sort({ createdAt: -1 }).lean();
+        res.json(items.map(normalize));
     } catch (err) {
         res.status(500).json({ error: 'Failed to fetch jurisdictions' });
     }
 });
 
-// POST create jurisdiction
 router.post('/jurisdictions', async (req, res) => {
     try {
-        const item = new TaxJurisdiction(req.body);
+        const item = new TaxJurisdiction({ ...req.body, tenant_id: tenantIdFromReq(req) });
         await item.save();
-        res.status(201).json(item);
+        res.status(201).json(normalize(item));
     } catch (err) {
         res.status(500).json({ error: 'Failed to create jurisdiction', detail: err.message });
     }
 });
 
-// PUT update jurisdiction
 router.put('/jurisdictions/:id', async (req, res) => {
     try {
-        const item = await TaxJurisdiction.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        const item = await TaxJurisdiction.findOneAndUpdate(
+            tenantFilter(req, { _id: req.params.id }),
+            req.body,
+            { new: true }
+        );
         if (!item) return res.status(404).json({ error: 'Jurisdiction not found' });
-        res.json(item);
+        res.json(normalize(item));
     } catch (err) {
         res.status(500).json({ error: 'Failed to update jurisdiction' });
     }
 });
 
-// DELETE jurisdiction
 router.delete('/jurisdictions/:id', async (req, res) => {
     try {
-        await TaxJurisdiction.findByIdAndDelete(req.params.id);
+        const item = await TaxJurisdiction.findOneAndDelete(tenantFilter(req, { _id: req.params.id }));
+        if (!item) return res.status(404).json({ error: 'Jurisdiction not found' });
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Failed to delete jurisdiction' });
@@ -55,44 +103,45 @@ router.delete('/jurisdictions/:id', async (req, res) => {
 // TAX CODES
 // ======================================================
 
-// GET all tax codes (optional ?jurisdiction=AE)
 router.get('/codes', async (req, res) => {
     try {
-        const filter = {};
+        const filter = tenantFilter(req);
         if (req.query.jurisdiction) filter.jurisdiction = req.query.jurisdiction;
         const items = await TaxCode.find(filter).sort({ createdAt: -1 }).lean();
-        res.json(items);
+        res.json(items.map(normalize));
     } catch (err) {
         res.status(500).json({ error: 'Failed to fetch tax codes' });
     }
 });
 
-// POST create tax code
 router.post('/codes', async (req, res) => {
     try {
-        const item = new TaxCode(req.body);
+        const item = new TaxCode({ ...req.body, tenant_id: tenantIdFromReq(req) });
         await item.save();
-        res.status(201).json(item);
+        res.status(201).json(normalize(item));
     } catch (err) {
         res.status(500).json({ error: 'Failed to create tax code', detail: err.message });
     }
 });
 
-// PUT update tax code
 router.put('/codes/:id', async (req, res) => {
     try {
-        const item = await TaxCode.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        const item = await TaxCode.findOneAndUpdate(
+            tenantFilter(req, { _id: req.params.id }),
+            req.body,
+            { new: true }
+        );
         if (!item) return res.status(404).json({ error: 'Tax code not found' });
-        res.json(item);
+        res.json(normalize(item));
     } catch (err) {
         res.status(500).json({ error: 'Failed to update tax code' });
     }
 });
 
-// DELETE tax code
 router.delete('/codes/:id', async (req, res) => {
     try {
-        await TaxCode.findByIdAndDelete(req.params.id);
+        const item = await TaxCode.findOneAndDelete(tenantFilter(req, { _id: req.params.id }));
+        if (!item) return res.status(404).json({ error: 'Tax code not found' });
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Failed to delete tax code' });
@@ -103,69 +152,74 @@ router.delete('/codes/:id', async (req, res) => {
 // FILING PERIODS
 // ======================================================
 
-// GET all filing periods (optional ?jurisdiction=AE)
 router.get('/filing-periods', async (req, res) => {
     try {
-        const filter = {};
+        const filter = tenantFilter(req);
         if (req.query.jurisdiction) filter.jurisdiction = req.query.jurisdiction;
         const items = await FilingPeriod.find(filter).sort({ createdAt: -1 }).lean();
-        res.json(items);
+        res.json(items.map(normalize));
     } catch (err) {
         res.status(500).json({ error: 'Failed to fetch filing periods' });
     }
 });
 
-// POST create filing period
 router.post('/filing-periods', async (req, res) => {
     try {
-        const body = { ...req.body };
-        body.netLiability = (body.taxPayable || 0) - (body.taxReceivable || 0);
+        const body = {
+            ...req.body,
+            tenant_id: tenantIdFromReq(req),
+            netLiability: safeNumber(req.body.taxPayable) - safeNumber(req.body.taxReceivable),
+        };
         const item = new FilingPeriod(body);
         await item.save();
-        res.status(201).json(item);
+        res.status(201).json(normalize(item));
     } catch (err) {
         res.status(500).json({ error: 'Failed to create filing period', detail: err.message });
     }
 });
 
-// PUT update filing period
 router.put('/filing-periods/:id', async (req, res) => {
     try {
         const body = { ...req.body };
         if (body.taxPayable !== undefined || body.taxReceivable !== undefined) {
-            body.netLiability = (body.taxPayable || 0) - (body.taxReceivable || 0);
+            body.netLiability = safeNumber(body.taxPayable) - safeNumber(body.taxReceivable);
         }
-        const item = await FilingPeriod.findByIdAndUpdate(req.params.id, body, { new: true });
+        const item = await FilingPeriod.findOneAndUpdate(
+            tenantFilter(req, { _id: req.params.id }),
+            body,
+            { new: true }
+        );
         if (!item) return res.status(404).json({ error: 'Filing period not found' });
-        res.json(item);
+        res.json(normalize(item));
     } catch (err) {
         res.status(500).json({ error: 'Failed to update filing period' });
     }
 });
 
-// PATCH toggle filing status (open → filed → locked)
 router.patch('/filing-periods/:id/status', async (req, res) => {
     try {
-        const fp = await FilingPeriod.findById(req.params.id);
+        const fp = await FilingPeriod.findOne(tenantFilter(req, { _id: req.params.id }));
         if (!fp) return res.status(404).json({ error: 'Filing period not found' });
+
         if (fp.status === 'open') {
             fp.status = 'filed';
-            fp.filedBy = req.body.filedBy || 'Admin';
+            fp.filedBy = req.body.filedBy || req.user?.full_name || req.user?.email || 'System';
             fp.filedAt = new Date().toISOString().slice(0, 10);
         } else if (fp.status === 'filed') {
             fp.status = 'locked';
         }
+
         await fp.save();
-        res.json(fp);
+        res.json(normalize(fp));
     } catch (err) {
         res.status(500).json({ error: 'Failed to update filing status' });
     }
 });
 
-// DELETE filing period
 router.delete('/filing-periods/:id', async (req, res) => {
     try {
-        await FilingPeriod.findByIdAndDelete(req.params.id);
+        const item = await FilingPeriod.findOneAndDelete(tenantFilter(req, { _id: req.params.id }));
+        if (!item) return res.status(404).json({ error: 'Filing period not found' });
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Failed to delete filing period' });
@@ -176,44 +230,43 @@ router.delete('/filing-periods/:id', async (req, res) => {
 // TAX ADJUSTMENTS
 // ======================================================
 
-// GET all adjustments
 router.get('/adjustments', async (req, res) => {
     try {
-        const items = await TaxAdjustment.find({}).sort({ createdAt: -1 }).lean();
-        res.json(items);
+        const items = await TaxAdjustment.find(tenantFilter(req)).sort({ createdAt: -1 }).lean();
+        res.json(items.map(normalize));
     } catch (err) {
         res.status(500).json({ error: 'Failed to fetch adjustments' });
     }
 });
 
-// POST create adjustment
 router.post('/adjustments', async (req, res) => {
     try {
-        const item = new TaxAdjustment(req.body);
+        const item = new TaxAdjustment({ ...req.body, tenant_id: tenantIdFromReq(req) });
         await item.save();
-        res.status(201).json(item);
+        res.status(201).json(normalize(item));
     } catch (err) {
         res.status(500).json({ error: 'Failed to create adjustment', detail: err.message });
     }
 });
 
-// PATCH post adjustment
 router.patch('/adjustments/:id/post', async (req, res) => {
     try {
-        const item = await TaxAdjustment.findByIdAndUpdate(
-            req.params.id, { status: 'posted' }, { new: true }
+        const item = await TaxAdjustment.findOneAndUpdate(
+            tenantFilter(req, { _id: req.params.id }),
+            { status: 'posted' },
+            { new: true }
         );
         if (!item) return res.status(404).json({ error: 'Adjustment not found' });
-        res.json(item);
+        res.json(normalize(item));
     } catch (err) {
         res.status(500).json({ error: 'Failed to post adjustment' });
     }
 });
 
-// DELETE adjustment
 router.delete('/adjustments/:id', async (req, res) => {
     try {
-        await TaxAdjustment.findByIdAndDelete(req.params.id);
+        const item = await TaxAdjustment.findOneAndDelete(tenantFilter(req, { _id: req.params.id }));
+        if (!item) return res.status(404).json({ error: 'Adjustment not found' });
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Failed to delete adjustment' });
@@ -223,17 +276,18 @@ router.delete('/adjustments/:id', async (req, res) => {
 // ======================================================
 // VAT RETURNS
 // ======================================================
+
 router.get('/vat-returns', async (req, res) => {
     try {
         const { status, year } = req.query;
-        const query = {};
+        const query = tenantFilter(req);
         if (status) query.status = status;
         if (year) {
             query.periodStart = { $gte: `${year}-01-01` };
             query.periodEnd = { $lte: `${year}-12-31` };
         }
-        const vatReturns = await VATReturn.find(query).sort({ periodEnd: -1 }).lean();
-        res.json(vatReturns.map(r => ({ ...r, id: r._id })));
+        const returns = await VATReturn.find(query).sort({ periodEnd: -1, createdAt: -1 }).lean();
+        res.json(returns.map(normalize));
     } catch (err) {
         res.status(500).json({ error: 'Failed to fetch VAT returns' });
     }
@@ -241,43 +295,63 @@ router.get('/vat-returns', async (req, res) => {
 
 router.post('/vat-returns', async (req, res) => {
     try {
-        const vatReturn = new VATReturn(req.body);
-        await vatReturn.save();
-        res.status(201).json({ ...vatReturn.toObject(), id: vatReturn._id });
+        const item = new VATReturn({
+            ...req.body,
+            tenant_id: tenantIdFromReq(req),
+            netVAT: req.body.netVAT !== undefined ? safeNumber(req.body.netVAT) : computeNetVAT(req.body),
+        });
+        await item.save();
+        res.status(201).json(normalize(item));
     } catch (err) {
-        res.status(500).json({ error: 'Failed to create VAT return' });
+        res.status(500).json({ error: 'Failed to create VAT return', detail: err.message });
     }
 });
 
 router.put('/vat-returns/:id', async (req, res) => {
     try {
-        const vatReturn = await VATReturn.findByIdAndUpdate(req.params.id, req.body, { new: true });
-        if (!vatReturn) return res.status(404).json({ error: 'VAT return not found' });
-        res.json({ ...vatReturn.toObject(), id: vatReturn._id });
+        const body = {
+            ...req.body,
+            netVAT: req.body.netVAT !== undefined ? safeNumber(req.body.netVAT) : computeNetVAT(req.body),
+        };
+        const item = await VATReturn.findOneAndUpdate(
+            tenantFilter(req, { _id: req.params.id }),
+            body,
+            { new: true }
+        );
+        if (!item) return res.status(404).json({ error: 'VAT return not found' });
+        res.json(normalize(item));
     } catch (err) {
         res.status(500).json({ error: 'Failed to update VAT return' });
     }
 });
 
-router.patch('/vat-returns/:id/file', async (req, res) => {
+async function fileVATReturn(req, res) {
     try {
-        const vatReturn = await VATReturn.findByIdAndUpdate(
-            req.params.id,
-            { status: 'filed', filedAt: new Date(), ...req.body },
+        const item = await VATReturn.findOneAndUpdate(
+            tenantFilter(req, { _id: req.params.id }),
+            {
+                status: 'filed',
+                filedAt: new Date().toISOString(),
+                filedBy: req.body.filedBy || req.user?.full_name || req.user?.email || 'System',
+                referenceNumber: req.body.referenceNumber || '',
+            },
             { new: true }
         );
-        if (!vatReturn) return res.status(404).json({ error: 'VAT return not found' });
-        res.json({ ...vatReturn.toObject(), id: vatReturn._id });
+        if (!item) return res.status(404).json({ error: 'VAT return not found' });
+        res.json(normalize(item));
     } catch (err) {
         res.status(500).json({ error: 'Failed to file VAT return' });
     }
-});
+}
+
+router.post('/vat-returns/:id/file', fileVATReturn);
+router.patch('/vat-returns/:id/file', fileVATReturn);
 
 router.delete('/vat-returns/:id', async (req, res) => {
     try {
-        const vatReturn = await VATReturn.findByIdAndDelete(req.params.id);
-        if (!vatReturn) return res.status(404).json({ error: 'VAT return not found' });
-        res.json({ message: 'VAT return deleted' });
+        const item = await VATReturn.findOneAndDelete(tenantFilter(req, { _id: req.params.id }));
+        if (!item) return res.status(404).json({ error: 'VAT return not found' });
+        res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Failed to delete VAT return' });
     }
@@ -286,14 +360,15 @@ router.delete('/vat-returns/:id', async (req, res) => {
 // ======================================================
 // CORPORATE TAX FILINGS
 // ======================================================
+
 router.get('/corporate-tax', async (req, res) => {
     try {
         const { status, year } = req.query;
-        const query = {};
+        const query = tenantFilter(req);
         if (status) query.status = status;
         if (year) query.taxYear = year;
-        const corpTaxFilings = await CorporateTaxFiling.find(query).sort({ taxYear: -1, periodEnd: -1 }).lean();
-        res.json(corpTaxFilings.map(c => ({ ...c, id: c._id })));
+        const filings = await CorporateTaxFiling.find(query).sort({ taxYear: -1, periodEnd: -1 }).lean();
+        res.json(filings.map(normalize));
     } catch (err) {
         res.status(500).json({ error: 'Failed to fetch corporate tax filings' });
     }
@@ -301,47 +376,82 @@ router.get('/corporate-tax', async (req, res) => {
 
 router.post('/corporate-tax', async (req, res) => {
     try {
-        const filing = new CorporateTaxFiling(req.body);
-        await filing.save();
-        res.status(201).json({ ...filing.toObject(), id: filing._id });
+        const computed = computeCorporateTax(req.body);
+        const item = new CorporateTaxFiling({
+            ...req.body,
+            ...computed,
+            tenant_id: tenantIdFromReq(req),
+        });
+        await item.save();
+        res.status(201).json(normalize(item));
     } catch (err) {
-        res.status(500).json({ error: 'Failed to create corporate tax filing' });
+        res.status(500).json({ error: 'Failed to create corporate tax filing', detail: err.message });
     }
 });
 
 router.put('/corporate-tax/:id', async (req, res) => {
     try {
-        const filing = await CorporateTaxFiling.findByIdAndUpdate(req.params.id, req.body, { new: true });
-        if (!filing) return res.status(404).json({ error: 'Corporate tax filing not found' });
-        res.json({ ...filing.toObject(), id: filing._id });
+        const item = await CorporateTaxFiling.findOneAndUpdate(
+            tenantFilter(req, { _id: req.params.id }),
+            { ...req.body, ...computeCorporateTax(req.body) },
+            { new: true }
+        );
+        if (!item) return res.status(404).json({ error: 'Corporate tax filing not found' });
+        res.json(normalize(item));
     } catch (err) {
         res.status(500).json({ error: 'Failed to update corporate tax filing' });
     }
 });
 
-router.patch('/corporate-tax/:id/file', async (req, res) => {
+async function fileCorporateTax(req, res) {
     try {
-        const filing = await CorporateTaxFiling.findByIdAndUpdate(
-            req.params.id,
-            { status: 'filed', filedAt: new Date(), ...req.body },
+        const item = await CorporateTaxFiling.findOneAndUpdate(
+            tenantFilter(req, { _id: req.params.id }),
+            {
+                status: 'filed',
+                filedAt: new Date().toISOString(),
+                filedBy: req.body.filedBy || req.user?.full_name || req.user?.email || 'System',
+                referenceNumber: req.body.referenceNumber || '',
+            },
             { new: true }
         );
-        if (!filing) return res.status(404).json({ error: 'Corporate tax filing not found' });
-        res.json({ ...filing.toObject(), id: filing._id });
+        if (!item) return res.status(404).json({ error: 'Corporate tax filing not found' });
+        res.json(normalize(item));
     } catch (err) {
-        res.status(500).json({ error: 'Failed to file corporate tax' });
+        res.status(500).json({ error: 'Failed to file corporate tax filing' });
+    }
+}
+
+router.post('/corporate-tax/:id/file', fileCorporateTax);
+router.patch('/corporate-tax/:id/file', fileCorporateTax);
+
+router.post('/corporate-tax/:id/request-assessment', async (req, res) => {
+    try {
+        const item = await CorporateTaxFiling.findOneAndUpdate(
+            tenantFilter(req, { _id: req.params.id }),
+            { status: 'pending' },
+            { new: true }
+        );
+        if (!item) return res.status(404).json({ error: 'Corporate tax filing not found' });
+        res.json(normalize(item));
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to request corporate tax assessment' });
     }
 });
 
 router.patch('/corporate-tax/:id/assess', async (req, res) => {
     try {
-        const filing = await CorporateTaxFiling.findByIdAndUpdate(
-            req.params.id,
-            { status: 'assessed', assessedAt: new Date(), ...req.body },
+        const item = await CorporateTaxFiling.findOneAndUpdate(
+            tenantFilter(req, { _id: req.params.id }),
+            {
+                status: 'assessed',
+                assessedAt: new Date().toISOString(),
+                ...req.body,
+            },
             { new: true }
         );
-        if (!filing) return res.status(404).json({ error: 'Corporate tax filing not found' });
-        res.json({ ...filing.toObject(), id: filing._id });
+        if (!item) return res.status(404).json({ error: 'Corporate tax filing not found' });
+        res.json(normalize(item));
     } catch (err) {
         res.status(500).json({ error: 'Failed to process assessment' });
     }
@@ -349,185 +459,46 @@ router.patch('/corporate-tax/:id/assess', async (req, res) => {
 
 router.delete('/corporate-tax/:id', async (req, res) => {
     try {
-        const filing = await CorporateTaxFiling.findByIdAndDelete(req.params.id);
-        if (!filing) return res.status(404).json({ error: 'Corporate tax filing not found' });
-        res.json({ message: 'Corporate tax filing deleted' });
+        const item = await CorporateTaxFiling.findOneAndDelete(tenantFilter(req, { _id: req.params.id }));
+        if (!item) return res.status(404).json({ error: 'Corporate tax filing not found' });
+        res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Failed to delete corporate tax filing' });
     }
 });
 
 // ======================================================
-// TAX CENTER SUMMARY (for Finance Hub KPIs)
+// TAX CENTER SUMMARY
 // ======================================================
+
 router.get('/center-summary', async (req, res) => {
     try {
-        const [jurisdictions, codes, filings, adjustments] = await Promise.all([
-            TaxJurisdiction.countDocuments(),
-            TaxCode.countDocuments(),
-            FilingPeriod.find({}).lean(),
-            TaxAdjustment.countDocuments(),
+        const filter = tenantFilter(req);
+        const [jurisdictions, codes, filings, adjustments, vatReturns, corpTaxFilings] = await Promise.all([
+            TaxJurisdiction.countDocuments(filter),
+            TaxCode.countDocuments(filter),
+            FilingPeriod.find(filter).lean(),
+            TaxAdjustment.countDocuments(filter),
+            VATReturn.countDocuments(filter),
+            CorporateTaxFiling.countDocuments(filter),
         ]);
-        const openPeriods = filings.filter(f => f.status === 'open').length;
+
+        const openPeriods = filings.filter(item => item.status === 'open').length;
         const totalLiability = filings
-            .filter(f => f.status === 'open')
-            .reduce((s, f) => s + (f.netLiability || 0), 0);
+            .filter(item => item.status === 'open')
+            .reduce((sum, item) => sum + safeNumber(item.netLiability), 0);
 
         res.json({
-            jurisdictions, codes, openPeriods, totalLiability, adjustments,
+            jurisdictions,
+            codes,
+            openPeriods,
+            totalLiability,
+            adjustments,
+            vatReturns,
+            corporateTaxFilings: corpTaxFilings,
         });
     } catch (err) {
         res.status(500).json({ error: 'Failed to fetch tax summary' });
-    }
-});
-
-// ======================================================
-// VAT RETURNS
-// ======================================================
-
-// In-memory storage for VAT Returns (would be a database collection in production)
-let vatReturns = [];
-
-// Get all VAT returns
-router.get('/vat-returns', async (req, res) => {
-    try {
-        res.json(vatReturns);
-    } catch (err) {
-        res.status(500).json({ error: 'Failed to fetch VAT returns' });
-    }
-});
-
-// Create a new VAT return
-router.post('/vat-returns', async (req, res) => {
-    try {
-        const newReturn = {
-            id: `VAT-${Date.now()}`,
-            ...req.body,
-            status: 'draft',
-            createdAt: new Date().toISOString()
-        };
-        vatReturns.push(newReturn);
-        res.status(201).json(newReturn);
-    } catch (err) {
-        res.status(500).json({ error: 'Failed to create VAT return' });
-    }
-});
-
-// Update VAT return (file it)
-router.put('/vat-returns/:id', async (req, res) => {
-    try {
-        const index = vatReturns.findIndex(v => v.id === req.params.id);
-        if (index === -1) return res.status(404).json({ error: 'VAT return not found' });
-
-        vatReturns[index] = { ...vatReturns[index], ...req.body };
-        res.json(vatReturns[index]);
-    } catch (err) {
-        res.status(500).json({ error: 'Failed to update VAT return' });
-    }
-});
-
-// File VAT return
-router.post('/vat-returns/:id/file', async (req, res) => {
-    try {
-        const index = vatReturns.findIndex(v => v.id === req.params.id);
-        if (index === -1) return res.status(404).json({ error: 'VAT return not found' });
-
-        vatReturns[index] = {
-            ...vatReturns[index],
-            status: 'filed',
-            filedAt: new Date().toISOString(),
-            filedBy: req.body.filedBy || 'System',
-            referenceNumber: req.body.referenceNumber || `VAT-REF-${Date.now()}`
-        };
-        res.json(vatReturns[index]);
-    } catch (err) {
-        res.status(500).json({ error: 'Failed to file VAT return' });
-    }
-});
-
-// ======================================================
-// CORPORATE TAX FILINGS
-// ======================================================
-
-// In-memory storage for Corporate Tax Filings
-let corpTaxFilings = [];
-
-// Get all corporate tax filings
-router.get('/corporate-tax', async (req, res) => {
-    try {
-        const { year } = req.query;
-        if (year) {
-            const filtered = corpTaxFilings.filter(c => c.taxYear === year);
-            return res.json(filtered);
-        }
-        res.json(corpTaxFilings);
-    } catch (err) {
-        res.status(500).json({ error: 'Failed to fetch corporate tax filings' });
-    }
-});
-
-// Create a new corporate tax filing
-router.post('/corporate-tax', async (req, res) => {
-    try {
-        const newFiling = {
-            id: `CT-${Date.now()}`,
-            ...req.body,
-            status: 'draft',
-            createdAt: new Date().toISOString()
-        };
-        corpTaxFilings.push(newFiling);
-        res.status(201).json(newFiling);
-    } catch (err) {
-        res.status(500).json({ error: 'Failed to create corporate tax filing' });
-    }
-});
-
-// Update corporate tax filing
-router.put('/corporate-tax/:id', async (req, res) => {
-    try {
-        const index = corpTaxFilings.findIndex(c => c.id === req.params.id);
-        if (index === -1) return res.status(404).json({ error: 'Corporate tax filing not found' });
-
-        corpTaxFilings[index] = { ...corpTaxFilings[index], ...req.body };
-        res.json(corpTaxFilings[index]);
-    } catch (err) {
-        res.status(500).json({ error: 'Failed to update corporate tax filing' });
-    }
-});
-
-// File corporate tax return
-router.post('/corporate-tax/:id/file', async (req, res) => {
-    try {
-        const index = corpTaxFilings.findIndex(c => c.id === req.params.id);
-        if (index === -1) return res.status(404).json({ error: 'Corporate tax filing not found' });
-
-        corpTaxFilings[index] = {
-            ...corpTaxFilings[index],
-            status: 'filed',
-            filedAt: new Date().toISOString(),
-            filedBy: req.body.filedBy || 'System',
-            referenceNumber: req.body.referenceNumber || `CT-REF-${Date.now()}`
-        };
-        res.json(corpTaxFilings[index]);
-    } catch (err) {
-        res.status(500).json({ error: 'Failed to file corporate tax return' });
-    }
-});
-
-// Request assessment for corporate tax
-router.post('/corporate-tax/:id/request-assessment', async (req, res) => {
-    try {
-        const index = corpTaxFilings.findIndex(c => c.id === req.params.id);
-        if (index === -1) return res.status(404).json({ error: 'Corporate tax filing not found' });
-
-        corpTaxFilings[index] = {
-            ...corpTaxFilings[index],
-            status: 'pending',
-            assessmentRequestedAt: new Date().toISOString()
-        };
-        res.json(corpTaxFilings[index]);
-    } catch (err) {
-        res.status(500).json({ error: 'Failed to request assessment' });
     }
 });
 

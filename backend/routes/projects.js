@@ -53,4 +53,37 @@ router.put('/:id', auth, async (req, res) => {
     }
 });
 
+// FILE UPLOADS MOCK STORE
+const projectFiles = [];
+
+// GET project files
+router.get('/upload-files', auth, async (req, res) => {
+    try {
+        const { project_id, module_type } = req.query;
+        const filtered = projectFiles.filter(f => 
+            f.project_id === project_id && 
+            f.module_type === module_type
+        );
+        res.json({ success: true, files: filtered, data: filtered });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// POST project files
+router.post('/upload-files', auth, async (req, res) => {
+    try {
+        const fileData = req.body;
+        const newFile = {
+            id: Math.random().toString(36).substr(2, 9),
+            ...fileData,
+            created_at: new Date().toISOString()
+        };
+        projectFiles.push(newFile);
+        res.json({ success: true, data: [newFile], file: newFile });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 module.exports = router;

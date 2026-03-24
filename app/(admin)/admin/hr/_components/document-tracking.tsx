@@ -20,6 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface EmployeeDocument {
   id: string;
@@ -58,11 +59,12 @@ export default function DocumentTrackingModule() {
   const [selectedEmployee, setSelectedEmployee] = useState<EmployeeWithDocs | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
 
   const fetchDocuments = async () => {
     try {
       const data = await getEmployeeDocuments();
-      setDocuments(data);
+      setDocuments(data || []);
     } catch (err) {
       toast({ title: 'Error', description: 'Failed to fetch documents', variant: 'destructive' });
     }
@@ -71,15 +73,19 @@ export default function DocumentTrackingModule() {
   const fetchEmployees = async () => {
     try {
       const data = await getEmployees();
-      setEmployees(data);
+      setEmployees(data || []);
     } catch (err) {
       console.error('Failed to fetch employees');
     }
   };
 
   useEffect(() => {
-    fetchDocuments();
-    fetchEmployees();
+    const loadAll = async () => {
+      setLoading(true);
+      await Promise.all([fetchDocuments(), fetchEmployees()]);
+      setLoading(false);
+    };
+    loadAll();
   }, []);
 
   // Group documents by employee
@@ -159,7 +165,25 @@ export default function DocumentTrackingModule() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {filteredEmployees.map((emp) => (
+        {loading ? (
+          [...Array(8)].map((_, i) => (
+            <Card key={i} className="animate-pulse">
+              <CardContent className="p-5 space-y-4">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-10 w-10 rounded-full bg-muted" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-24 bg-muted" />
+                    <Skeleton className="h-3 w-16 bg-muted" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-full bg-muted" />
+                  <Skeleton className="h-4 w-full bg-muted" />
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        ) : filteredEmployees.map((emp) => (
           <Card 
             key={emp.id} 
             className="hover:shadow-lg transition-shadow cursor-pointer group relative"

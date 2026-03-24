@@ -14,6 +14,8 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { generateSalesInvoicePDF } from '@/lib/pdf-generator';
 import { LiveDocumentPreview } from '@/components/shared/layout/live-document-preview';
+import { getSalesInvoices, createSalesInvoice, updateSalesInvoice, updateSalesInvoiceStatus, deleteSalesInvoice } from '@/lib/services/business-documents-api';
+import { getCustomers } from '@/lib/api';
 import {
     SalesDocumentType,
     DocumentStatus,
@@ -22,6 +24,10 @@ import {
     canApproveDocument,
     getStatusInfo,
 } from '@/lib/sales-approval';
+import { useCompanySettings } from '@/lib/hooks/use-company-settings';
+import { formatCurrency } from '@/lib/utils/currency';
+import { DashboardShell } from '@/components/shared/layout/dashboard-shell';
+import { ModuleGuard } from '@/components/shared/layout/module-guard';
 
 interface InvoiceItem {
     id: string;
@@ -54,20 +60,19 @@ interface SalesInvoice {
     rejectedReason?: string;
 }
 
-const DEFAULT_INVOICE: Partial<SalesInvoice> = {
-    items: [],
-    subtotal: 0,
-    taxRate: 5,
-    taxAmount: 0,
-    total: 0,
-    status: 'draft',
-};
-
 export default function SalesInvoicesPage() {
+    const { baseCurrency, taxRate, taxName } = useCompanySettings();
     const [invoices, setInvoices] = useState<SalesInvoice[]>([]);
     const [loading, setLoading] = useState(true);
     const [dialogOpen, setDialogOpen] = useState(false);
-    const [editingInvoice, setEditingInvoice] = useState<Partial<SalesInvoice>>(DEFAULT_INVOICE);
+    const [editingInvoice, setEditingInvoice] = useState<Partial<SalesInvoice>>({
+        items: [],
+        subtotal: 0,
+        taxRate: taxRate,
+        taxAmount: 0,
+        total: 0,
+        status: 'draft',
+    });
     const [customers, setCustomers] = useState<{ id: string; name: string }[]>([]);
     const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
     const [rejectReason, setRejectReason] = useState('');
@@ -75,34 +80,45 @@ export default function SalesInvoicesPage() {
     const [invoiceForReject, setInvoiceForReject] = useState<SalesInvoice | null>(null);
 
     const documentType: SalesDocumentType = 'salesInvoice';
-    const approvalRequired = isApprovalRequired(documentType);
-    const approverRole = getApproverRole(documentType);
-    const currentUserRole = localStorage.getItem('user_role') || 'Employee';
-    const canApprove = canApproveDocument(documentType);
+    const approvalRequired = isApprovalRequired('sales', documentType);
+    const approverRole = getApproverRole('sales', documentType);
+    const [currentUserRole, setCurrentUserRole] = useState<string>('Employee');
+
+    useEffect(() => {
+        setCurrentUserRole(typeof window !== 'undefined' ? (localStorage.getItem('user_role') || 'Employee') : 'Employee');
+    }, []);
+    const canApprove = canApproveDocument('sales', documentType);
 
     useEffect(() => {
         loadInvoices();
         loadCustomers();
     }, []);
 
-    const loadInvoices = () => {
-        const saved = localStorage.getItem('sales_invoices');
-        if (saved) {
-            setInvoices(JSON.parse(saved));
+    const loadInvoices = async () => {
+        try {
+            const data = await getSalesInvoices();
+            const list = (Array.isArray(data) ? data : []).map((doc: any) => ({
+                ...doc,
+                id: String(doc._id || doc.id),
+            }));
+            setInvoices(list);
+        } catch {
+            setInvoices([]);
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
-    const loadCustomers = () => {
-        const saved = localStorage.getItem('sales_customers');
-        if (saved) {
-            setCustomers(JSON.parse(saved));
-        } else {
-            setCustomers([
-                { id: '1', name: 'ABC Corporation' },
-                { id: '2', name: 'XYZ Industries' },
-                { id: '3', name: 'Global Trading LLC' },
-            ]);
+    const loadCustomers = async () => {
+        try {
+            const data = await getCustomers();
+            const list = (Array.isArray(data) ? data : []).map((c: any) => ({
+                id: String(c._id || c.id),
+                name: c.name,
+            }));
+            setCustomers(list);
+        } catch {
+            setCustomers([]);
         }
     };
 
@@ -165,7 +181,7 @@ export default function SalesInvoicesPage() {
         }));
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!editingInvoice.customerName) {
             toast.error('Please select a customer');
             return;
@@ -175,95 +191,119 @@ export default function SalesInvoicesPage() {
             return;
         }
 
-        const totals = calculateTotals(editingInvoice);
-        const invoice: SalesInvoice = {
-            id: editingInvoice.id || Date.now().toString(),
+        const payload = {
             number: editingInvoice.number || generateInvoiceNumber(),
             customerId: editingInvoice.customerId || '',
             customerName: editingInvoice.customerName || '',
             date: editingInvoice.date || new Date().toISOString().split('T')[0],
             dueDate: editingInvoice.dueDate || '',
             items: editingInvoice.items || [],
-            subtotal: totals.subtotal,
-            taxRate: editingInvoice.taxRate || 5,
-            taxAmount: totals.taxAmount,
-            total: totals.total,
+            taxRate: editingInvoice.taxRate || taxRate,
             notes: editingInvoice.notes || '',
-            status: (editingInvoice.status as DocumentStatus) || 'draft',
+            status: editingInvoice.status || 'draft',
             createdBy: editingInvoice.createdBy || 'Current User',
-            createdAt: editingInvoice.createdAt || new Date().toISOString(),
         };
 
-        const existingIndex = invoices.findIndex(i => i.id === invoice.id);
-        if (existingIndex >= 0) {
-            invoices[existingIndex] = invoice;
-            setInvoices([...invoices]);
-        } else {
-            setInvoices([...invoices, invoice]);
+        try {
+            if (editingInvoice.id) {
+                await updateSalesInvoice(editingInvoice.id, payload);
+            } else {
+                await createSalesInvoice(payload);
+            }
+            await loadInvoices();
+            toast.success('Invoice saved');
+            setDialogOpen(false);
+            setEditingInvoice({
+                items: [],
+                subtotal: 0,
+                taxRate: taxRate,
+                taxAmount: 0,
+                total: 0,
+                status: 'draft',
+            });
+        } catch {
+            toast.error('Failed to save invoice');
         }
-
-        localStorage.setItem('sales_invoices', JSON.stringify(invoices));
-        toast.success('Invoice saved');
-        setDialogOpen(false);
-        setEditingInvoice(DEFAULT_INVOICE);
     };
 
-    const handleSubmitForApproval = (invoice: SalesInvoice) => {
-        const updated = { ...invoice, status: 'pending_approval' as DocumentStatus };
-        const updatedList = invoices.map(i => i.id === invoice.id ? updated : i);
-        setInvoices(updatedList);
-        localStorage.setItem('sales_invoices', JSON.stringify(updatedList));
-        toast.success('Invoice submitted for approval');
+    const handleSubmitForApproval = async (invoice: SalesInvoice) => {
+        try {
+            await updateSalesInvoiceStatus(invoice.id, 'pending_approval');
+            await loadInvoices();
+            toast.success('Invoice submitted for approval');
+        } catch {
+            toast.error('Failed to submit invoice');
+        }
     };
 
-    const handleApprove = (invoice: SalesInvoice) => {
-        const updated = { ...invoice, status: 'approved' as DocumentStatus, approvedBy: currentUserRole, approvedAt: new Date().toISOString() };
-        const updatedList = invoices.map(i => i.id === invoice.id ? updated : i);
-        setInvoices(updatedList);
-        localStorage.setItem('sales_invoices', JSON.stringify(updatedList));
-        toast.success('Invoice approved');
+    const handleApprove = async (invoice: SalesInvoice) => {
+        try {
+            await updateSalesInvoiceStatus(invoice.id, 'approved', { updatedBy: currentUserRole });
+            await loadInvoices();
+            toast.success('Invoice approved');
+        } catch {
+            toast.error('Failed to approve invoice');
+        }
     };
 
-    const handleReject = () => {
+    const handleReject = async () => {
         if (!invoiceForReject) return;
-        const updated = { ...invoiceForReject, status: 'rejected' as DocumentStatus, rejectedBy: currentUserRole, rejectedAt: new Date().toISOString(), rejectedReason: rejectReason };
-        const updatedList = invoices.map(i => i.id === invoiceForReject.id ? updated : i);
-        setInvoices(updatedList);
-        localStorage.setItem('sales_invoices', JSON.stringify(updatedList));
-        toast.success('Invoice rejected');
-        setRejectDialogOpen(false);
-        setRejectReason('');
-        setInvoiceForReject(null);
+        try {
+            await updateSalesInvoiceStatus(invoiceForReject.id, 'rejected', { updatedBy: currentUserRole, reason: rejectReason });
+            await loadInvoices();
+            toast.success('Invoice rejected');
+            setRejectDialogOpen(false);
+            setRejectReason('');
+            setInvoiceForReject(null);
+        } catch {
+            toast.error('Failed to reject invoice');
+        }
     };
 
-    const handleResubmit = (invoice: SalesInvoice) => {
-        const updated = { ...invoice, status: 'pending_approval' as DocumentStatus };
-        const updatedList = invoices.map(i => i.id === invoice.id ? updated : i);
-        setInvoices(updatedList);
-        localStorage.setItem('sales_invoices', JSON.stringify(updatedList));
-        toast.success('Invoice resubmitted for approval');
+    const handleResubmit = async (invoice: SalesInvoice) => {
+        try {
+            await updateSalesInvoiceStatus(invoice.id, 'pending_approval');
+            await loadInvoices();
+            toast.success('Invoice resubmitted for approval');
+        } catch {
+            toast.error('Failed to resubmit invoice');
+        }
     };
 
-    const handleComplete = (invoice: SalesInvoice) => {
-        const updated = { ...invoice, status: 'completed' as DocumentStatus };
-        const updatedList = invoices.map(i => i.id === invoice.id ? updated : i);
-        setInvoices(updatedList);
-        localStorage.setItem('sales_invoices', JSON.stringify(updatedList));
-        toast.success('Invoice marked as completed');
+    const handleComplete = async (invoice: SalesInvoice) => {
+        try {
+            await updateSalesInvoiceStatus(invoice.id, 'completed');
+            await loadInvoices();
+            toast.success('Invoice marked as completed');
+        } catch {
+            toast.error('Failed to complete invoice');
+        }
     };
 
-    const handleDelete = (invoice: SalesInvoice) => {
-        const updatedList = invoices.filter(i => i.id !== invoice.id);
-        setInvoices(updatedList);
-        localStorage.setItem('sales_invoices', JSON.stringify(updatedList));
-        toast.success('Invoice deleted');
+    const handleDelete = async (invoice: SalesInvoice) => {
+        try {
+            await deleteSalesInvoice(invoice.id);
+            await loadInvoices();
+            toast.success('Invoice deleted');
+        } catch {
+            toast.error('Failed to delete invoice');
+        }
     };
 
     const openEditDialog = (invoice?: SalesInvoice) => {
         if (invoice) {
             setEditingInvoice(invoice);
         } else {
-            setEditingInvoice({ ...DEFAULT_INVOICE, number: generateInvoiceNumber(), date: new Date().toISOString().split('T')[0] });
+            setEditingInvoice({
+                items: [],
+                subtotal: 0,
+                taxRate: taxRate,
+                taxAmount: 0,
+                total: 0,
+                status: 'draft',
+                number: generateInvoiceNumber(),
+                date: new Date().toISOString().split('T')[0]
+            });
         }
         setDialogOpen(true);
     };
@@ -295,7 +335,9 @@ export default function SalesInvoicesPage() {
     }
 
     return (
-        <div className="space-y-6">
+        <DashboardShell requireAdmin>
+            <ModuleGuard module="sales">
+                <div className="space-y-6 max-w-7xl mx-auto pb-12">
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
                 <div>
@@ -360,11 +402,11 @@ export default function SalesInvoicesPage() {
 
                             <div className="flex items-center gap-6">
                                 <div className="text-right">
-                                    <p className="text-sm font-bold text-foreground">AED {invoice.total.toFixed(2)}</p>
+                                    <p className="text-sm font-bold text-foreground">{formatCurrency(invoice.total, baseCurrency)}</p>
                                     <p className="text-[10px] text-muted-foreground">Total</p>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => generateInvoicePDF(invoice, null, null)} title="Download PDF">
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => generateSalesInvoicePDF(invoice)} title="Download PDF">
                                         <Download size={16} />
                                     </Button>
                                     {canEdit(invoice) && (
@@ -445,7 +487,7 @@ export default function SalesInvoicesPage() {
                                         <Input className="flex-1" placeholder="Description" value={item.description} onChange={e => handleUpdateItem(item.id, 'description', e.target.value)} />
                                         <Input className="w-20" type="number" placeholder="Qty" value={item.quantity} onChange={e => handleUpdateItem(item.id, 'quantity', parseFloat(e.target.value) || 0)} />
                                         <Input className="w-24" type="number" placeholder="Price" value={item.unitPrice} onChange={e => handleUpdateItem(item.id, 'unitPrice', parseFloat(e.target.value) || 0)} />
-                                        <Input className="w-24" value={item.total.toFixed(2)} disabled />
+                                        <Input className="w-24" value={formatCurrency(item.total, baseCurrency)} disabled />
                                         <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)}><Trash2 className="h-4 w-4 text-red-500" /></Button>
                                     </div>
                                 ))}
@@ -454,8 +496,8 @@ export default function SalesInvoicesPage() {
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label>Tax Rate (%)</Label>
-                                    <Input type="number" value={editingInvoice.taxRate || 5} onChange={e => { const rate = parseFloat(e.target.value) || 0; setEditingInvoice(prev => ({ ...prev, taxRate: rate, ...calculateTotals({ ...prev, taxRate: rate }) })); }} />
+                                    <Label>{taxName} Rate (%)</Label>
+                                    <Input type="number" value={editingInvoice.taxRate || taxRate} onChange={e => { const rate = parseFloat(e.target.value) || 0; setEditingInvoice(prev => ({ ...prev, taxRate: rate, ...calculateTotals({ ...prev, taxRate: rate }) })); }} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label>Notes</Label>
@@ -464,9 +506,9 @@ export default function SalesInvoicesPage() {
                             </div>
 
                             <div className="border-t pt-4 space-y-2">
-                                <div className="flex justify-between"><span>Subtotal:</span><span>AED {(editingInvoice.subtotal || 0).toFixed(2)}</span></div>
-                                <div className="flex justify-between"><span>Tax:</span><span>AED {(editingInvoice.taxAmount || 0).toFixed(2)}</span></div>
-                                <div className="flex justify-between font-bold text-lg"><span>Total:</span><span>AED {(editingInvoice.total || 0).toFixed(2)}</span></div>
+                                <div className="flex justify-between"><span>Subtotal:</span><span>{formatCurrency(editingInvoice.subtotal || 0, baseCurrency)}</span></div>
+                                <div className="flex justify-between"><span>{taxName}:</span><span>{formatCurrency(editingInvoice.taxAmount || 0, baseCurrency)}</span></div>
+                                <div className="flex justify-between font-bold text-lg"><span>Total:</span><span>{formatCurrency(editingInvoice.total || 0, baseCurrency)}</span></div>
                             </div>
                         </div>
 
@@ -496,6 +538,8 @@ export default function SalesInvoicesPage() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-        </div>
+                </div>
+            </ModuleGuard>
+        </DashboardShell>
     );
 }

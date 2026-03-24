@@ -2,8 +2,10 @@
 
 import { format } from 'date-fns';
 import { ShieldCheck } from 'lucide-react';
-import { useTenant } from '@/lib/tenant-context';
 import { cn } from '@/lib/utils';
+import { useSettings } from '@/lib/settings-context';
+import { useCompanySettings } from '@/lib/hooks/use-company-settings';
+import { formatCurrency as formatCurrencyValue } from '@/lib/utils/currency';
 
 interface DocumentLine {
     description: string;
@@ -80,16 +82,25 @@ export function BrandedDocumentPreview({
     termsConditions,
     additionalChargesDescription,
 }: BrandedDocumentPreviewProps) {
-    const { companyProfile } = useTenant();
-    const branding = companyProfile?.branding;
+    const { settings: pdfSettings } = useSettings();
+    const {
+        companyName: settingsCompanyName,
+        address,
+        phone,
+        email,
+        taxId,
+        baseCurrency,
+        logo,
+        footerText,
+    } = useCompanySettings();
 
     // Use override values or fall back to settings
-    const companyName = overrideCompanyName || companyProfile?.legalName || companyProfile?.tradingName || 'SYSTEM STEEL ENGINEERING LLC';
-    const companyAddress = overrideCompanyAddress || companyProfile?.address || 'Warehouse 4, Al Quoz Industrial Area, Dubai, UAE';
-    const companyTaxId = overrideCompanyTaxId || companyProfile?.taxId || '100123456789003';
-    const companyPhone = overrideCompanyPhone || '';
-    const companyEmail = overrideCompanyEmail || '';
-    const currency = overrideCurrency || companyProfile?.baseCurrency || 'AED';
+    const companyName = overrideCompanyName || settingsCompanyName;
+    const companyAddress = overrideCompanyAddress || address;
+    const companyTaxId = overrideCompanyTaxId || taxId;
+    const companyPhone = overrideCompanyPhone || phone;
+    const companyEmail = overrideCompanyEmail || email;
+    const currency = overrideCurrency || baseCurrency;
 
     const titles = {
         invoice: 'TAX INVOICE',
@@ -115,60 +126,47 @@ export function BrandedDocumentPreview({
     };
 
     const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('en-AE', {
-            style: 'currency',
-            currency: currency,
-        }).format(amount);
+        return formatCurrencyValue(amount, currency);
     };
 
     return (
         <div className={cn(
-            "bg-card text-foreground p-12 shadow-2xl border border-border aspect-[1/1.414] w-full max-w-[800px] mx-auto flex flex-col relative overflow-hidden",
-            branding?.template === 'classic' ? 'font-serif' : branding?.template === 'mono' ? 'font-mono' : 'font-sans'
+            "bg-card text-foreground p-12 shadow-2xl border border-border aspect-[1/1.414] w-full max-w-[800px] mx-auto flex flex-col relative overflow-hidden font-sans"
         )}>
             {/* Header Area */}
             <div className={cn(
-                "flex border-b-2 border-zinc-900 pb-8 mb-10",
-                branding?.headerAlign === 'center' ? "flex-col items-center gap-6" :
-                branding?.headerAlign === 'right' ? "flex-row-reverse justify-between items-start" :
-                "flex-row justify-between items-start"
+                "flex border-b-2 border-zinc-900 pb-8 mb-10 flex-row justify-between items-start"
             )}>
                 <div className="space-y-2">
                     <div className={cn(
-                        "h-16 w-32 flex items-center mb-4 overflow-hidden",
-                        branding?.headerAlign === 'center' ? "justify-center" :
-                        branding?.headerAlign === 'right' ? "justify-end" : "justify-start"
+                        "h-16 w-32 flex items-center mb-4 overflow-hidden justify-start"
                     )}>
-                        {branding?.logo ? (
-                            <img src={branding.logo} alt="Company Logo" className="h-full w-full object-contain" />
+                        {logo || pdfSettings.logoUrl ? (
+                            <img src={logo || pdfSettings.logoUrl} alt={companyName} className="h-full w-full object-contain" />
                         ) : (
-                            <div className="h-16 w-16 bg-foreground flex items-center justify-center rounded-md">
-                                <img src="/logo_trans_(4884x4884)px_for_white_bg.png" alt="SSE" className="invert" />
+                            <div className="flex h-16 w-24 items-center justify-center rounded-md bg-muted px-2 text-center text-xs font-medium text-muted-foreground">
+                                {companyName}
                             </div>
                         )}
                     </div>
                     <div className={cn(
-                        "space-y-0.5",
-                        branding?.headerAlign === 'center' ? "text-center" :
-                        branding?.headerAlign === 'right' ? "text-right" : "text-left"
+                        "space-y-0.5 text-left"
                     )}>
                         <h1 className="text-xl font-black tracking-tighter uppercase">{companyName}</h1>
                         <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Global Engineering Solutions</p>
                         <p className="text-[8px] text-muted-foreground uppercase">{companyAddress}</p>
-                        <p className="text-[8px] font-black text-foreground">TRN: {companyTaxId}</p>
+                        {companyTaxId && <p className="text-[8px] font-black text-foreground">TRN: {companyTaxId}</p>}
                         {companyPhone && <p className="text-[8px] text-muted-foreground">Tel: {companyPhone}</p>}
                         {companyEmail && <p className="text-[8px] text-muted-foreground">{companyEmail}</p>}
                     </div>
                 </div>
                 <div className={cn(
-                    "space-y-1",
-                    branding?.headerAlign === 'center' ? "text-center mt-4" :
-                    branding?.headerAlign === 'right' ? "text-left" : "text-right"
+                    "space-y-1 text-right"
                 )}>
                     <h2 className="text-4xl font-black text-foreground tracking-tighter mb-2">{titles[type]}</h2>
                     <div className="space-y-1">
                         <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Document No</p>
-                        <p className="text-sm font-black font-mono" style={{ color: branding?.color || '#ef4444' }}>{number}</p>
+                        <p className="text-sm font-black font-mono" style={{ color: pdfSettings.accentColor || '#ef4444' }}>{number}</p>
                         {issueDate && (
                             <>
                                 <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mt-2">Issue Date</p>
@@ -295,7 +293,7 @@ export function BrandedDocumentPreview({
                     )}
                     <div className="flex justify-between items-center bg-foreground text-card-foreground p-4 rounded-sm mt-4">
                         <span className="text-[10px] font-black uppercase tracking-widest">Total Amount Due</span>
-                        <span className="text-lg font-black" style={{ color: branding?.color === '#ef4444' ? '#ffffff' : 'inherit' }}>{formatCurrency(totals.total)}</span>
+                        <span className="text-lg font-black">{formatCurrency(totals.total)}</span>
                     </div>
                 </div>
             </div>
@@ -307,12 +305,12 @@ export function BrandedDocumentPreview({
                         {termsConditions ? 'Terms & Conditions' : 'Notes & Policy'}
                     </h4>
                     <p className="text-[8px] text-muted-foreground leading-relaxed uppercase font-medium whitespace-pre-line">
-                        {termsConditions || notes || branding?.terms || 'Standard terms and conditions apply to all transactions.'}
+                        {termsConditions || notes || 'Standard terms and conditions apply to all transactions.'}
                     </p>
                 </div>
                 <div className="flex flex-col items-end justify-end space-y-2">
                     <div className="flex items-center gap-2 mb-2">
-                        <ShieldCheck className="h-6 w-6 opacity-50" style={{ color: branding?.color || '#ef4444' }} />
+                        <ShieldCheck className="h-6 w-6 opacity-50" style={{ color: pdfSettings.accentColor || '#ef4444' }} />
                         <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Verification ID</span>
                     </div>
                     <div className="h-px w-32 bg-zinc-200"></div>
@@ -321,16 +319,9 @@ export function BrandedDocumentPreview({
                 </div>
             </div>
 
-            {/* Watermark */}
-            {branding?.showWatermark && (
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -rotate-[30deg] pointer-events-none opacity-[0.03] w-full flex items-center justify-center overflow-hidden">
-                    {branding.logo ? (
-                        <img src={branding.logo} alt="Watermark" className="w-[80%] h-auto grayscale" />
-                    ) : (
-                        <div className="text-6xl font-black tracking-[0.5em]">{type.toUpperCase()}</div>
-                    )}
-                </div>
-            )}
+            <div className="mt-8 border-t border-border pt-4 text-center text-[8px] font-black uppercase tracking-widest text-muted-foreground">
+                {footerText || `${companyName} | This is a computer-generated document`}
+            </div>
         </div>
     );
 }

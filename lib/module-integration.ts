@@ -20,7 +20,7 @@ interface IntegrationResponse {
   errors?: string[];
 }
 
-const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || '/api';
+const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || '/api/backend';
 
 /**
  * File Upload Integration

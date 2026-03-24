@@ -161,6 +161,26 @@ router.post('/customers', auth, async (req, res) => {
     }
 });
 
+router.put('/customers/:id', auth, async (req, res) => {
+    try {
+        const customer = await CustomerAccount.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        if (!customer) return res.status(404).json({ error: 'Customer not found' });
+        res.json(customer);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to update customer' });
+    }
+});
+
+router.delete('/customers/:id', auth, async (req, res) => {
+    try {
+        const result = await CustomerAccount.findByIdAndDelete(req.params.id);
+        if (!result) return res.status(404).json({ error: 'Customer not found' });
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to delete customer' });
+    }
+});
+
 // ── SALES ORDERS ─────────────────────────────────────────────────────────────
 router.get('/sales-orders', auth, async (req, res) => {
     try {

@@ -6,6 +6,9 @@ import { Activity, AlertTriangle, Calendar, ChevronRight, Clock, DollarSign, Shi
 import { Area, AreaChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { cn } from '@/lib/utils';
 import type { Attendance, Employee, Holiday, Leave, Payroll } from '@/lib/db/types';
+import { useCompanySettings } from '@/lib/hooks/use-company-settings';
+import { formatCurrency } from '@/lib/utils/currency';
+import { useEffect } from 'react';
 
 interface HRDashboardProps {
   employees: Employee[];
@@ -19,20 +22,21 @@ interface HRDashboardProps {
   separations?: any[];
 }
 
-function fmt(n: number): string {
-  return new Intl.NumberFormat('en-AE', {
-    style: 'currency',
-    currency: 'AED',
-    maximumFractionDigits: 0,
-  }).format(n);
-}
-
 function asDate(input: unknown): Date | null {
   const date = new Date(String(input));
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
 export function HRDashboard({ employees, attendance, payrolls, leaves, holidays, jobOpenings = [], applicants = [], offerLetters = [], separations = [] }: HRDashboardProps) {
+  const { baseCurrency } = useCompanySettings();
+
+  useEffect(() => {
+    const handler = () => window.location.reload();
+    window.addEventListener('erp_company_settings_changed', handler);
+    return () => window.removeEventListener('erp_company_settings_changed', handler);
+  }, []);
+
+  const fmt = (n: number) => formatCurrency(n, baseCurrency, { compact: true });
   const latestAttendanceByEmployee = useMemo(() => {
     const latest = new Map<string, Attendance>();
     for (const record of attendance) {

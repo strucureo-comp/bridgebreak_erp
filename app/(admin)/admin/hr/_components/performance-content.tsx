@@ -15,6 +15,7 @@ import { Label } from"@/components/ui/label";
 import { Input } from"@/components/ui/input";
 import { Textarea } from"@/components/ui/textarea";
 import { cn } from"@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function PerformanceContent() {
   return (
@@ -49,12 +50,18 @@ function GoalsList() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => { loadGoals(); }, []);
 
   async function loadGoals() {
-    const data = await getPerformanceData('goals');
-    setGoals(data || []);
+    setLoading(true);
+    try {
+      const data = await getPerformanceData('goals');
+      setGoals(data || []);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handleCreate() {
@@ -104,7 +111,20 @@ function GoalsList() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {goals.map(goal => (
+        {loading ? (
+          [...Array(4)].map((_, i) => (
+            <Card key={i} className="animate-pulse">
+              <CardContent className="p-4 space-y-4">
+                <div className="flex justify-between">
+                  <Skeleton className="h-5 w-16 bg-muted" />
+                  <Skeleton className="h-4 w-12 bg-muted" />
+                </div>
+                <Skeleton className="h-4 w-full bg-muted" />
+                <Skeleton className="h-10 w-full bg-muted" />
+              </CardContent>
+            </Card>
+          ))
+        ) : goals.map(goal => (
           <Card key={goal.id} className="border shadow-sm rounded-md overflow-hidden bg-card hover:border-primary/50 transition-colors cursor-pointer group">
             <CardContent className="p-4">
               <div className="flex justify-between items-start mb-4">
@@ -127,10 +147,10 @@ function GoalsList() {
           </Card>
         ))}
       </div>
-      {goals.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-20 bg-muted border border-dashed border-border rounded-md">
-          <Target size={32} className="text-zinc-200 mb-4" />
-          <p className="text-xs font-medium text-muted-foreground">No objectives set</p>
+      {!loading && goals.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+          <p className="text-lg font-medium">No records found</p>
+          <p className="text-sm mt-1">Records will appear here once added</p>
         </div>
       )}
     </div>
@@ -139,12 +159,18 @@ function GoalsList() {
 
 function ReviewsList() {
   const [reviews, setReviews] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => { loadReviews(); }, []);
 
   async function loadReviews() {
-    const data = await getPerformanceData('reviews');
-    setReviews(data || []);
+    setLoading(true);
+    try {
+      const data = await getPerformanceData('reviews');
+      setReviews(data || []);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -156,41 +182,49 @@ function ReviewsList() {
         <Award className="h-4 w-4 text-muted-foreground/60" />
       </CardHeader>
       <div className="overflow-x-auto">
-        <Table>
-          <TableHeader className="bg-muted/50">
-            <TableRow>
-              <TableHead className="px-6 h-10 font-medium text-xs">Cycle</TableHead>
-              <TableHead className="px-6 h-10 font-medium text-xs">Entity</TableHead>
-              <TableHead className="px-6 h-10 font-medium text-xs">Status</TableHead>
-              <TableHead className="px-6 h-10 font-medium text-xs">Date</TableHead>
-              <TableHead className="px-6 h-10 text-right font-medium text-xs">Audit</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {reviews.map(review => (
-              <TableRow key={review.id} className="hover:bg-zinc-50/50 transition-colors">
-                <TableCell className="px-6 py-4 text-xs font-medium text-foreground">{review.cycle}</TableCell>
-                <TableCell className="px-6 py-4">
-                  <p className="text-xs font-medium text-foreground">{review.user?.full_name}</p>
-                  <p className="text-xs text-muted-foreground font-medium">Reviewer: {review.reviewer?.full_name}</p>
-                </TableCell>
-                <TableCell className="px-6 py-4">
-                  <Badge variant="outline" className="text-xs font-semibold">{review.status}</Badge>
-                </TableCell>
-                <TableCell className="px-6 py-4 text-xs font-medium text-muted-foreground">
-                  {review.review_date ? format(new Date(review.review_date), 'MMM d, yyyy') : '—'}
-                </TableCell>
-                <TableCell className="px-6 py-4 text-right">
-                  <ChevronRight className="h-4 w-4 ml-auto text-muted-foreground/60" />
-                </TableCell>
-              </TableRow>
+        {loading ? (
+          <div className="p-6 animate-pulse space-y-3">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-12 bg-muted rounded-md" />
             ))}
-          </TableBody>
-        </Table>
-        {reviews.length === 0 && (
-          <div className="p-12 text-center text-muted-foreground italic">
-            <p className="text-xs font-medium">No reviews found</p>
           </div>
+        ) : reviews.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+            <p className="text-lg font-medium">No records found</p>
+            <p className="text-sm mt-1">Records will appear here once added</p>
+          </div>
+        ) : (
+          <Table>
+            <TableHeader className="bg-muted/50">
+              <TableRow>
+                <TableHead className="px-6 h-10 font-medium text-xs">Cycle</TableHead>
+                <TableHead className="px-6 h-10 font-medium text-xs">Entity</TableHead>
+                <TableHead className="px-6 h-10 font-medium text-xs">Status</TableHead>
+                <TableHead className="px-6 h-10 font-medium text-xs">Date</TableHead>
+                <TableHead className="px-6 h-10 text-right font-medium text-xs">Audit</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {reviews.map(review => (
+                <TableRow key={review.id} className="hover:bg-zinc-50/50 transition-colors">
+                  <TableCell className="px-6 py-4 text-xs font-medium text-foreground">{review.cycle}</TableCell>
+                  <TableCell className="px-6 py-4">
+                    <p className="text-xs font-medium text-foreground">{review.user?.full_name}</p>
+                    <p className="text-xs text-muted-foreground font-medium">Reviewer: {review.reviewer?.full_name}</p>
+                  </TableCell>
+                  <TableCell className="px-6 py-4">
+                    <Badge variant="outline" className="text-xs font-semibold">{review.status}</Badge>
+                  </TableCell>
+                  <TableCell className="px-6 py-4 text-xs font-medium text-muted-foreground">
+                    {review.review_date ? format(new Date(review.review_date), 'MMM d, yyyy') : '—'}
+                  </TableCell>
+                  <TableCell className="px-6 py-4 text-right">
+                    <ChevronRight className="h-4 w-4 ml-auto text-muted-foreground/60" />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         )}
       </div>
     </Card>

@@ -1,7 +1,8 @@
 'use client';
 
 import { cn } from '@/lib/utils';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { AlertTriangle, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 
 /**
@@ -49,61 +50,66 @@ export function KpiCard({
     return (
         <Card
             className={cn(
-                'border-border shadow-sm',
-                hasAlert && 'border-red-200',
-                warn && 'border-amber-200',
+                hasAlert && 'border-red-500/50 dark:border-red-500/30',
+                warn && 'border-amber-500/50 dark:border-amber-500/30',
                 className,
             )}
         >
-            <CardContent className="p-3">
-                <p className="text-[10px] text-muted-foreground font-medium mb-1 uppercase tracking-wide">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
                     {label}
-                </p>
-
+                </CardTitle>
+            </CardHeader>
+            <CardContent>
                 {loading ? (
-                    <div className="h-7 w-24 bg-muted rounded animate-pulse" />
+                    <Skeleton className="h-7 w-24" />
                 ) : (
-                    <p
+                    <div
                         className={cn(
-                            'text-lg font-bold tracking-tight',
-                            hasAlert && 'text-red-600',
-                            warn && 'text-amber-600',
+                            'text-2xl font-bold',
+                            hasAlert && 'text-red-600 dark:text-red-400',
+                            warn && 'text-amber-600 dark:text-amber-400',
                         )}
                     >
                         {value}
-                    </p>
+                    </div>
                 )}
 
-                {/* Delta trend */}
-                {delta && !loading && (
-                    <p
-                        className={cn(
-                            'text-[10px] font-medium flex items-center gap-0.5 mt-0.5',
-                            positive ? 'text-emerald-600' : 'text-red-600',
+                {!loading && (delta || footer || hasAlert) && (
+                    <div className="text-xs text-muted-foreground mt-1 flex items-center flex-wrap gap-1">
+                        {delta && (
+                            <span
+                                className={cn(
+                                    'font-medium flex items-center',
+                                    positive ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400',
+                                )}
+                            >
+                                {positive ? (
+                                    <ArrowUpRight className="h-3 w-3 mr-0.5" />
+                                ) : (
+                                    <ArrowDownRight className="h-3 w-3 mr-0.5" />
+                                )}
+                                {delta}
+                            </span>
                         )}
-                    >
-                        {positive ? (
-                            <ArrowUpRight className="h-2.5 w-2.5" />
-                        ) : (
-                            <ArrowDownRight className="h-2.5 w-2.5" />
+                        
+                        {hasAlert && !footer && (
+                            <span className="text-red-600 dark:text-red-400 font-medium flex items-center gap-1">
+                                <AlertTriangle className="h-3 w-3" />
+                                Needs attention
+                            </span>
                         )}
-                        {delta}
-                    </p>
-                )}
 
-                {/* Alert footer */}
-                {hasAlert && !loading && (
-                    <p className="text-[10px] text-red-600 font-medium flex items-center gap-0.5 mt-0.5">
-                        <AlertTriangle className="h-2.5 w-2.5" />
-                        {footer ?? 'Needs attention'}
-                    </p>
-                )}
-
-                {/* Generic footer (non-alert) */}
-                {footer && !hasAlert && !loading && (
-                    <p className="text-[10px] text-muted-foreground mt-0.5">{footer}</p>
+                        {footer && (
+                            <span className={cn(hasAlert && 'text-red-600 dark:text-red-400 font-medium flex items-center gap-1')}>
+                                {hasAlert && <AlertTriangle className="h-3 w-3" />}
+                                {footer}
+                            </span>
+                        )}
+                    </div>
                 )}
             </CardContent>
         </Card>
     );
 }
+

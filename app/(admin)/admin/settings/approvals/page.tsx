@@ -13,6 +13,7 @@ import { Save, Loader2, Workflow, Receipt, ShoppingCart, Users, FileText, Truck,
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { settingsApi } from '@/lib/settings-api';
+import { Skeleton } from '@/components/ui/skeleton';
 
 // ============= TYPES =============
 
@@ -187,8 +188,17 @@ export default function ApprovalsSettingsPage() {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <div className="space-y-6 max-w-4xl animate-pulse">
+                <div>
+                    <Skeleton className="h-8 w-48 mb-2" />
+                    <Skeleton className="h-4 w-64" />
+                </div>
+                <div className="flex gap-2">
+                    {[...Array(4)].map((_, i) => (
+                        <Skeleton key={i} className="h-10 w-32 rounded-md" />
+                    ))}
+                </div>
+                <Skeleton className="h-[400px] w-full rounded-xl" />
             </div>
         );
     }

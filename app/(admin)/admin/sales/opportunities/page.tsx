@@ -20,7 +20,16 @@ import { toast } from 'sonner';
 import type { Opportunity, CustomerAccount, FollowUp, OpportunityStage } from '@/lib/db/types';
 import { cn } from '@/lib/utils';
 import { useTenant } from '@/lib/tenant-context';
+import { useCompanySettings } from '@/lib/hooks/use-company-settings';
+import { formatCurrency } from '@/lib/utils/currency';
 import { ModuleGuard } from '@/components/shared/layout/module-guard';
+import { Skeleton } from '@/components/ui/skeleton';
+
+const generateRef = (prefix: string) => {
+    const date = new Date();
+    const seq = String(date.getTime()).slice(-5);
+    return `${prefix}-${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}-${seq}`;
+};
 
 function isOverdue(dateStr: string) {
     const d = new Date(dateStr);
@@ -44,6 +53,7 @@ function isClosingSoon(dateStr: string) {
 export default function SalesOpportunitiesPage() {
     const { user } = useAuth();
     const { companyProfile } = useTenant();
+    const { baseCurrency } = useCompanySettings();
     const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
     const [customers, setCustomers] = useState<CustomerAccount[]>([]);
     const [loading, setLoading] = useState(true);
@@ -236,7 +246,7 @@ export default function SalesOpportunitiesPage() {
         if (!newFollowUp.scheduledAt || !newFollowUp.type) return toast.error('Type and Date required');
         setFormData(prev => ({
             ...prev,
-            followUps: [...prev.followUps, { ...newFollowUp, id: `f-${Math.random()}` }]
+            followUps: [...prev.followUps, { ...newFollowUp, id: generateRef('FUP') }]
         }));
         setNewFollowUp({ type: 'Call', scheduledAt: '', status: 'Pending', notes: '', priority: 'Medium' });
     };
@@ -250,11 +260,47 @@ export default function SalesOpportunitiesPage() {
 
     const getStageOpps = (stageId: string) => filteredOpportunities.filter(o => o.stage === stageId);
 
-    const formatCurrency = (n: number) => {
-        return new Intl.NumberFormat('en-AE', { style: 'currency', currency: companyProfile?.baseCurrency || 'AED', maximumFractionDigits: 0 }).format(n);
+    const formatCurrencyValue = (n: number) => {
+        return formatCurrency(n, baseCurrency, { compact: true });
     };
 
-    if (loading) return null;
+    if (loading) {
+        return (
+            <DashboardShell requireAdmin>
+                <div className="space-y-6 max-w-7xl mx-auto pb-12 animate-pulse">
+                    <div className="flex justify-between items-center border-b pb-6">
+                        <div className="space-y-2">
+                            <Skeleton className="h-6 w-48 bg-muted" />
+                            <Skeleton className="h-3 w-32 bg-muted" />
+                        </div>
+                        <Skeleton className="h-10 w-40 bg-muted" />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {[...Array(3)].map((_, i) => (
+                            <Card key={i} className="border-border shadow-sm">
+                                <CardContent className="p-4 flex items-center justify-between">
+                                    <div className="space-y-2 w-full">
+                                        <Skeleton className="h-3 w-24 bg-muted" />
+                                        <Skeleton className="h-8 w-32 bg-muted" />
+                                    </div>
+                                    <Skeleton className="h-10 w-10 rounded-full bg-muted" />
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+                    <div className="flex gap-6 overflow-x-auto pb-6">
+                        {[...Array(4)].map((_, i) => (
+                            <div key={i} className="w-[320px] flex-shrink-0 space-y-4">
+                                <Skeleton className="h-16 w-full bg-muted rounded-md" />
+                                <Skeleton className="h-40 w-full bg-muted rounded-md" />
+                                <Skeleton className="h-40 w-full bg-muted rounded-md" />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </DashboardShell>
+        );
+    }
 
     if (isRetail) {
         return (
@@ -348,7 +394,7 @@ export default function SalesOpportunitiesPage() {
 
                                                 <div className="grid grid-cols-3 gap-4">
                                                     <div className="space-y-1.5">
-                                                        <Label className="text-xs font-bold">Amount ({companyProfile?.baseCurrency || 'AED'})</Label>
+                                                        <Label className="text-xs font-bold">Amount ({baseCurrency})</Label>
                                                         <Input type="number" value={formData.amount || ''} onChange={e => setFormData({ ...formData, amount: Number(e.target.value) })} className="h-10 bg-background" />
                                                     </div>
                                                     <div className="space-y-1.5">
@@ -445,7 +491,7 @@ export default function SalesOpportunitiesPage() {
                             <CardContent className="p-4 flex items-center justify-between">
                                 <div>
                                     <p className="text-xs font-medium text-muted-foreground mb-1">Weighted Pipeline</p>
-                                    <p className="text-2xl font-bold tracking-tight text-foreground">{formatCurrency(kpiStats.weightedVal)}</p>
+                                    <p className="text-2xl font-bold tracking-tight text-foreground">{formatCurrencyValue(kpiStats.weightedVal)}</p>
                                 </div>
                                 <div className="h-10 w-10 bg-blue-500/10 text-blue-500 rounded-full flex items-center justify-center">
                                     <Target className="h-5 w-5" />
@@ -495,7 +541,7 @@ export default function SalesOpportunitiesPage() {
                                                 "text-xs font-bold",
                                                 isWon ? "text-emerald-600 dark:text-emerald-400" :
                                                     isLost ? "text-red-600 dark:text-red-400" : "text-foreground"
-                                            )}>{formatCurrency(totalValue)}</span>
+                                            )}>{formatCurrencyValue(totalValue)}</span>
                                         </div>
                                     </div>
 
@@ -603,7 +649,7 @@ export default function SalesOpportunitiesPage() {
                                                             </div>
                                                             <div className="flex items-center gap-2 ml-auto text-right">
                                                                 <Badge variant="outline" className="text-[10px] font-bold px-1.5 py-0 bg-transparent border-border text-muted-foreground">{opp.probability}%</Badge>
-                                                                <span className="text-sm font-bold text-foreground">{formatCurrency(Number(opp.amount))}</span>
+                                                                <span className="text-sm font-bold text-foreground">{formatCurrencyValue(Number(opp.amount))}</span>
                                                             </div>
                                                         </div>
 
@@ -612,8 +658,9 @@ export default function SalesOpportunitiesPage() {
                                             )
                                         })}
                                         {stageOpps.length === 0 && (
-                                            <div className="h-28 border border-dashed border-border rounded-lg flex items-center justify-center bg-muted/10">
-                                                <span className="text-xs font-medium text-muted-foreground">No Deals Here</span>
+                                            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground border border-dashed border-border rounded-lg bg-muted/5">
+                                                <p className="text-lg font-medium">No records found</p>
+                                                <p className="text-sm mt-1">Records will appear here once added</p>
                                             </div>
                                         )}
                                     </div>

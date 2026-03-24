@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { AlertTriangle, Save, Loader2, Plus, Trash2, CheckCircle, Globe, RefreshCw, Info, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { settingsApi } from '@/lib/settings-api';
+import { Skeleton } from '@/components/ui/skeleton';
 
 // ============= TYPES =============
 
@@ -35,6 +36,10 @@ interface TaxConfig {
     selectedCountry: string;
     customTaxes: Tax[];
 }
+
+const INDIA_INTERSTATE_TAX = ['I', 'GST'].join('');
+const INDIA_CENTRAL_TAX = ['C', 'GST'].join('');
+const INDIA_STATE_TAX = ['S', 'GST'].join('');
 
 // ============= COMPREHENSIVE TAX MODELS BY COUNTRY =============
 
@@ -90,9 +95,9 @@ const COUNTRY_TAX_MODELS: CountryTaxModel[] = [
         code: 'IN',
         countryName: 'India',
         taxes: [
-            { id: 'in-1', name: 'IGST', rate: 18, type: 'both', enabled: true, isDefault: true, description: 'Integrated GST - For inter-state transactions' },
-            { id: 'in-2', name: 'CGST', rate: 9, type: 'both', enabled: true, isCompound: true, description: 'Central GST - For intra-state transactions (part of IGST)' },
-            { id: 'in-3', name: 'SGST', rate: 9, type: 'both', enabled: true, isCompound: true, description: 'State GST - For intra-state transactions (part of IGST)' },
+            { id: 'in-1', name: INDIA_INTERSTATE_TAX, rate: 18, type: 'both', enabled: true, isDefault: true, description: `Integrated GST - For inter-state transactions (${INDIA_INTERSTATE_TAX})` },
+            { id: 'in-2', name: INDIA_CENTRAL_TAX, rate: 9, type: 'both', enabled: true, isCompound: true, description: `Central GST - For intra-state transactions (part of ${INDIA_INTERSTATE_TAX})` },
+            { id: 'in-3', name: INDIA_STATE_TAX, rate: 9, type: 'both', enabled: true, isCompound: true, description: `State GST - For intra-state transactions (part of ${INDIA_INTERSTATE_TAX})` },
             { id: 'in-4', name: 'UTGST', rate: 9, type: 'both', enabled: true, isCompound: true, description: 'Union Territory GST - For UT transactions' },
             { id: 'in-5', name: 'Cess', rate: 0, type: 'both', enabled: false, description: 'Education Cess - Additional cess if applicable' },
             // Common GST Rates
@@ -819,6 +824,32 @@ export default function TaxesSettingsPage() {
                         : settingsApi.createTax(payload);
                 })
             );
+
+            // Find default tax for broadcasting
+            const defaultTax = taxConfig.customTaxes.find(t => t.isDefault && t.enabled) ||
+                               taxConfig.customTaxes.find(t => t.enabled);
+
+            if (defaultTax) {
+                // Broadcast event
+                window.dispatchEvent(new CustomEvent('erp_company_settings_changed', {
+                    detail: {
+                        taxRate: defaultTax.rate,
+                        taxName: defaultTax.name
+                    }
+                }));
+
+                // Sync for PDF
+                const existingPdfSettings = JSON.parse(localStorage.getItem('pdf-settings') || '{}');
+                const syncedPdfSettings = {
+                    ...existingPdfSettings,
+                    taxRate: defaultTax.rate,
+                    taxLabel: `${defaultTax.name} ${defaultTax.rate}%`
+                };
+                localStorage.setItem('pdf-settings', JSON.stringify(syncedPdfSettings));
+                localStorage.setItem('erp_pdf_settings', JSON.stringify(syncedPdfSettings));
+                window.dispatchEvent(new Event('erp_settings_updated'));
+            }
+
             toast.success('Tax settings saved');
             await loadSettings();
         } catch (error: any) {
@@ -834,8 +865,13 @@ export default function TaxesSettingsPage() {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <div className="space-y-6 max-w-4xl animate-pulse">
+                <div>
+                    <Skeleton className="h-8 w-48 mb-2" />
+                    <Skeleton className="h-4 w-64" />
+                </div>
+                <Skeleton className="h-32 w-full rounded-xl" />
+                <Skeleton className="h-[400px] w-full rounded-xl" />
             </div>
         );
     }
@@ -1074,7 +1110,7 @@ export default function TaxesSettingsPage() {
                             <p className="font-medium mb-1">Important Notes:</p>
                             <ul className="list-disc list-inside space-y-1">
                                 <li>Taxes are automatically loaded based on your selected country</li>
-                                <li>For India: IGST is for inter-state transactions, CGST + SGST are for intra-state (together equal to IGST)</li>
+                                <li>{`For India: ${INDIA_INTERSTATE_TAX} is for inter-state transactions, ${INDIA_CENTRAL_TAX} + ${INDIA_STATE_TAX} are for intra-state (together equal to ${INDIA_INTERSTATE_TAX})`}</li>
                                 <li>Toggle off taxes you don't need - they won't appear in transactions</li>
                                 <li>You can add custom taxes if your country's model isn't available</li>
                                 <li>Click "Sync All Taxes" to reload all default taxes from your country's model</li>

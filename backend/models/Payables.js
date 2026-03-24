@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 // ── VENDOR MASTER ──────────────────────────────────────────────────────────
 const vendorSchema = new mongoose.Schema({
+    tenant_id: { type: String, index: true, default: 'default' },
     vendor_id: { type: String, required: true, unique: true },
     legal_name: { type: String, required: true },
     trade_name: { type: String },
@@ -26,6 +27,14 @@ const vendorSchema = new mongoose.Schema({
         country: String,
         zip: String
     },
+    multiple_addresses: [{
+        label: String, // Billing, Shipping, etc.
+        street: String,
+        city: String,
+        state: String,
+        country: String,
+        zip: String
+    }],
 
     // Bank Details (for remittances)
     bank_details: {
@@ -62,10 +71,12 @@ const billLineSchema = new mongoose.Schema({
 });
 
 const billSchema = new mongoose.Schema({
+    tenant_id: { type: String, index: true, default: 'default' },
     bill_number: { type: String, required: true, unique: true }, // Internal unique ID
     vendor_bill_reference: { type: String }, // Vendor's invoice number
     vendor_id: { type: String, required: true, index: true },
     vendor_name: { type: String },
+    purchase_order_id: { type: mongoose.Schema.Types.ObjectId, ref: 'PurchaseOrder' },
 
     bill_date: { type: Date, default: Date.now },
     posting_date: { type: Date },
@@ -104,6 +115,7 @@ const billSchema = new mongoose.Schema({
 
 // ── VENDOR PAYMENT (Outgoing Cash) ──────────────────────────────────────────────
 const paymentAllocationAPSchema = new mongoose.Schema({
+    tenant_id: { type: String, index: true, default: 'default' },
     payment_id: { type: String, required: true, index: true },
     bill_id: { type: String, required: true, index: true },
     amount_allocated: { type: Number, required: true },
@@ -111,6 +123,7 @@ const paymentAllocationAPSchema = new mongoose.Schema({
 });
 
 const vendorPaymentSchema = new mongoose.Schema({
+    tenant_id: { type: String, index: true, default: 'default' },
     payment_number: { type: String, required: true, unique: true },
     vendor_id: { type: String, required: true, index: true },
     payment_date: { type: Date, default: Date.now },
@@ -131,6 +144,7 @@ const vendorPaymentSchema = new mongoose.Schema({
 
 // ── DEBIT NOTE (Returns/Price Adjustments) ──────────────────────────────────
 const debitNoteSchema = new mongoose.Schema({
+    tenant_id: { type: String, index: true, default: 'default' },
     debit_note_number: { type: String, required: true, unique: true },
     vendor_id: { type: String, required: true, index: true },
     original_bill_id: { type: String }, // Linked bill
@@ -147,6 +161,7 @@ const debitNoteSchema = new mongoose.Schema({
 
 // ── VENDOR AGING SNAPSHOT ──────────────────────────────────────────────────
 const vendorAgingSnapshotSchema = new mongoose.Schema({
+    tenant_id: { type: String, index: true, default: 'default' },
     snapshot_date: { type: Date, default: Date.now },
     vendor_id: { type: String },
     vendor_name: { type: String },
@@ -159,18 +174,52 @@ const vendorAgingSnapshotSchema = new mongoose.Schema({
     overdue_payable: { type: Number, default: 0 },
 });
 
+// ── RECURRING BILL (Automation) ──────────────────────────────────────────
+const recurringBillSchema = new mongoose.Schema({
+    tenant_id: { type: String, index: true, default: 'default' },
+    vendor_id: { type: String, required: true },
+    frequency: { type: String, enum: ['weekly', 'monthly', 'quarterly', 'yearly'], default: 'monthly' },
+    start_date: { type: Date, default: Date.now },
+    end_date: { type: Date },
+    next_bill_date: { type: Date },
+    lines: [billLineSchema],
+    total_amount: { type: Number, required: true },
+    is_active: { type: Boolean, default: true },
+    created_by: String,
+}, { timestamps: true });
+
+// ── BATCH PAYMENT ───────────────────────────────────────────────────────────
+const batchPaymentSchema = new mongoose.Schema({
+    tenant_id: { type: String, index: true, default: 'default' },
+    batch_number: { type: String, required: true, unique: true },
+    payment_date: { type: Date, default: Date.now },
+    total_amount: { type: Number, required: true },
+    status: { type: String, enum: ['draft', 'processed', 'failed'], default: 'draft' },
+    payment_method: { type: String },
+    vendor_count: { type: Number, default: 0 },
+    bill_count: { type: Number, default: 0 },
+    payments: [{ type: mongoose.Schema.Types.ObjectId, ref: 'VendorPayment' }],
+    created_by: String,
+}, { timestamps: true });
+
 const Vendor = mongoose.models.Vendor || mongoose.model('Vendor', vendorSchema);
 const Bill = mongoose.models.Bill || mongoose.model('Bill', billSchema);
+const RecurringBill = mongoose.models.RecurringBill || mongoose.model('RecurringBill', recurringBillSchema);
 const VendorPayment = mongoose.models.VendorPayment || mongoose.model('VendorPayment', vendorPaymentSchema);
+const BatchPayment = mongoose.models.BatchPayment || mongoose.model('BatchPayment', batchPaymentSchema);
 const PaymentAllocationAP = mongoose.models.PaymentAllocationAP || mongoose.model('PaymentAllocationAP', paymentAllocationAPSchema);
 const DebitNote = mongoose.models.DebitNote || mongoose.model('DebitNote', debitNoteSchema);
+const VendorCredit = mongoose.models.DebitNote; // Alias for Procurement Standard
 const VendorAgingSnapshot = mongoose.models.VendorAgingSnapshot || mongoose.model('VendorAgingSnapshot', vendorAgingSnapshotSchema);
 
 module.exports = {
     Vendor,
     Bill,
+    RecurringBill,
     VendorPayment,
+    BatchPayment,
     PaymentAllocationAP,
     DebitNote,
+    VendorCredit,
     VendorAgingSnapshot
 };

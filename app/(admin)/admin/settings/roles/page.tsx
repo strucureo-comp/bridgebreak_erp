@@ -12,6 +12,7 @@ import { Save, Loader2, Plus, Trash2, Shield, Users, ChevronRight, Edit2 } from 
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { settingsApi } from '@/lib/settings-api';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface Permission {
     module: string;
@@ -278,8 +279,18 @@ export default function RolesSettingsPage() {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <div className="space-y-6 max-w-5xl animate-pulse">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <Skeleton className="h-8 w-48 mb-2" />
+                        <Skeleton className="h-4 w-64" />
+                    </div>
+                    <Skeleton className="h-10 w-32 rounded-md" />
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <Skeleton className="h-[500px] w-full rounded-xl" />
+                    <Skeleton className="lg:col-span-2 h-[500px] w-full rounded-xl" />
+                </div>
             </div>
         );
     }

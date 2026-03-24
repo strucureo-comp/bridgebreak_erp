@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 // ── TAX JURISDICTION ──────────────────────────────────────────────────────────
 const jurisdictionSchema = new mongoose.Schema({
+    tenant_id: { type: String, index: true, default: 'default' },
     code: { type: String, required: true, index: true },
     country: { type: String, required: true },
     regNumber: { type: String, default: '' },
@@ -15,6 +16,7 @@ jurisdictionSchema.index({ code: 1, status: 1 });
 
 // ── TAX CODE ──────────────────────────────────────────────────────────────────
 const taxCodeSchema = new mongoose.Schema({
+    tenant_id: { type: String, index: true, default: 'default' },
     code: { type: String, required: true, index: true },
     description: { type: String, default: '' },
     jurisdiction: { type: String, required: true, index: true },
@@ -32,6 +34,7 @@ taxCodeSchema.index({ jurisdiction: 1, code: 1 });
 
 // ── FILING PERIOD ──────────────────────────────────────────────────────────────
 const filingPeriodSchema = new mongoose.Schema({
+    tenant_id: { type: String, index: true, default: 'default' },
     jurisdiction: { type: String, required: true, index: true },
     period: { type: String, required: true },
     startDate: { type: String, default: '' },
@@ -47,6 +50,7 @@ const filingPeriodSchema = new mongoose.Schema({
 
 // ── TAX ADJUSTMENT ─────────────────────────────────────────────────────────────
 const taxAdjustmentSchema = new mongoose.Schema({
+    tenant_id: { type: String, index: true, default: 'default' },
     date: { type: String, required: true },
     type: { type: String, enum: ['Correction', 'Credit Note', 'Bad Debt', 'Reclassification'], default: 'Correction' },
     period: { type: String, default: '' },
@@ -56,9 +60,65 @@ const taxAdjustmentSchema = new mongoose.Schema({
     status: { type: String, enum: ['draft', 'posted'], default: 'draft' },
 }, { timestamps: true });
 
+// ── VAT RETURN ────────────────────────────────────────────────────────────────
+const vatReturnSchema = new mongoose.Schema({
+    tenant_id: { type: String, index: true, default: 'default' },
+    period: { type: String, required: true },
+    periodStart: { type: String, required: true },
+    periodEnd: { type: String, required: true },
+    jurisdiction: { type: String, required: true, index: true },
+    status: {
+        type: String,
+        enum: ['draft', 'filed', 'amended', 'pending'],
+        default: 'draft',
+    },
+    filedAt: { type: String, default: '' },
+    filedBy: { type: String, default: '' },
+    totalOutputVAT: { type: Number, default: 0 },
+    totalInputVAT: { type: Number, default: 0 },
+    netVAT: { type: Number, default: 0 },
+    totalSales: { type: Number, default: 0 },
+    totalPurchases: { type: Number, default: 0 },
+    adjustments: { type: Number, default: 0 },
+    referenceNumber: { type: String, default: '' },
+}, { timestamps: true });
+
+// ── CORPORATE TAX FILING ─────────────────────────────────────────────────────
+const corporateTaxFilingSchema = new mongoose.Schema({
+    tenant_id: { type: String, index: true, default: 'default' },
+    taxYear: { type: String, required: true, index: true },
+    periodStart: { type: String, required: true },
+    periodEnd: { type: String, required: true },
+    jurisdiction: { type: String, required: true, index: true },
+    status: {
+        type: String,
+        enum: ['draft', 'filed', 'amended', 'pending', 'assessed'],
+        default: 'draft',
+    },
+    filedAt: { type: String, default: '' },
+    filedBy: { type: String, default: '' },
+    assessedAt: { type: String, default: '' },
+    taxableIncome: { type: Number, default: 0 },
+    taxRate: { type: Number, default: 0 },
+    taxLiability: { type: Number, default: 0 },
+    lossesCarriedForward: { type: Number, default: 0 },
+    taxPayable: { type: Number, default: 0 },
+    referenceNumber: { type: String, default: '' },
+    attachments: [{ type: String }],
+}, { timestamps: true });
+
 const TaxJurisdiction = mongoose.models.TaxJurisdiction || mongoose.model('TaxJurisdiction', jurisdictionSchema);
 const TaxCode = mongoose.models.TaxCode || mongoose.model('TaxCode', taxCodeSchema);
 const FilingPeriod = mongoose.models.FilingPeriod || mongoose.model('FilingPeriod', filingPeriodSchema);
 const TaxAdjustment = mongoose.models.TaxAdjustment || mongoose.model('TaxAdjustment', taxAdjustmentSchema);
+const VATReturn = mongoose.models.VATReturn || mongoose.model('VATReturn', vatReturnSchema);
+const CorporateTaxFiling = mongoose.models.CorporateTaxFiling || mongoose.model('CorporateTaxFiling', corporateTaxFilingSchema);
 
-module.exports = { TaxJurisdiction, TaxCode, FilingPeriod, TaxAdjustment };
+module.exports = {
+    TaxJurisdiction,
+    TaxCode,
+    FilingPeriod,
+    TaxAdjustment,
+    VATReturn,
+    CorporateTaxFiling,
+};

@@ -15,13 +15,15 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
-    Dialog, DialogContent, DialogTrigger
+    Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription
 } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import type { CustomerAccount, Lead, Opportunity, Invoice } from '@/lib/db/types';
 import { useTenant } from '@/lib/tenant-context';
+import { useCompanySettings } from '@/lib/hooks/use-company-settings';
+import { formatCurrency } from '@/lib/utils/currency';
 import { ModuleGuard } from '@/components/shared/layout/module-guard';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -30,6 +32,7 @@ import { cn } from '@/lib/utils';
 export default function SalesCustomersPage() {
     const { user } = useAuth();
     const { companyProfile } = useTenant();
+    const { baseCurrency } = useCompanySettings();
     const router = useRouter();
     const [customers, setCustomers] = useState<CustomerAccount[]>([]);
     const [leads, setLeads] = useState<Lead[]>([]);
@@ -42,17 +45,15 @@ export default function SalesCustomersPage() {
     const [newComment, setNewComment] = useState('');
     const [customerPayments, setCustomerPayments] = useState<any[]>([]);
     const [customerSalesOrders, setCustomerSalesOrders] = useState<any[]>([]);
+    const [isCreateOpen, setIsCreateOpen] = useState(false);
+    const [editingId, setEditingId] = useState<string | null>(null);
 
     const isRetail = companyProfile?.businessType === 'b2c_retail';
-    const currency = companyProfile?.baseCurrency || 'AED';
+    const currency = baseCurrency;
 
-    const fmt = (n: number) => new Intl.NumberFormat('en-AE', {
-        style: 'currency', currency, maximumFractionDigits: 2
-    }).format(n);
+    const fmt = (n: number) => formatCurrency(n, baseCurrency);
 
-    const fmtNoDecimals = (n: number) => new Intl.NumberFormat('en-AE', {
-        style: 'currency', currency, maximumFractionDigits: 0
-    }).format(n);
+    const fmtNoDecimals = (n: number) => formatCurrency(n, baseCurrency, { compact: true });
 
     const [formData, setFormData] = useState({
         name: '', industry: '', website: '', phone: '', address: '', email: '',
@@ -66,17 +67,13 @@ export default function SalesCustomersPage() {
     const fetchData = async () => {
         try {
             setLoading(true);
-            // First try to load from localStorage, then fallback to API
-            let custsData = JSON.parse(localStorage.getItem('sales_customers') || '[]');
-            if (!custsData || custsData.length === 0) {
-                custsData = await getCustomers().catch(() => []) || [];
-            }
+            const custsData = await getCustomers().catch(() => []) || [];
             const [leadsData, oppsData, invsData] = await Promise.all([
                 getLeads().catch(() => []),
                 getOpportunities().catch(() => []),
                 getInvoices().catch(() => []),
             ]);
-            setCustomers(custsData as any || []);
+            setCustomers((Array.isArray(custsData) ? custsData : []).filter((customer: any) => customer?.id) as any || []);
             setLeads(leadsData || []);
             setOpportunities((oppsData as any) || []);
             setInvoices(invsData || []);
@@ -89,9 +86,9 @@ export default function SalesCustomersPage() {
 
     const filteredCustomers = useMemo(() => {
         return customers.filter(c =>
-            c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            c.industry?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            c.phone?.includes(searchQuery)
+            (c.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (c.industry || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (c.phone || '').includes(searchQuery)
         );
     }, [customers, searchQuery]);
 
@@ -127,9 +124,9 @@ export default function SalesCustomersPage() {
             const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
 
             const monthRevenue = custInvoices
-                .filter(i => i.status === 'paid' && i.paid_date)
+                .filter(i => i.status === 'paid' && (i as any).paid_at)
                 .filter(i => {
-                    const paidDate = new Date(i.paid_date);
+                    const paidDate = new Date((i as any).paid_at);
                     return paidDate >= monthStart && paidDate <= monthEnd;
                 })
                 .reduce((s, i) => s + Number(i.amount || 0), 0);
@@ -236,12 +233,16 @@ export default function SalesCustomersPage() {
     };
 
     const handleDelete = async (id: string) => {
+        if (!id) {
+            toast.error('Customer id is missing');
+            return;
+        }
         if (!confirm('Are you sure you want to delete this customer?')) return;
         try {
-            // Use localStorage for deletion
-            const existingCustomers = JSON.parse(localStorage.getItem('sales_customers') || '[]');
-            const updatedCustomers = existingCustomers.filter((c: any) => c.id !== id);
-            localStorage.setItem('sales_customers', JSON.stringify(updatedCustomers));
+            const deleted = await deleteCustomer(id);
+            if (!deleted) {
+                throw new Error('Delete request failed');
+            }
             toast.success('Customer deleted');
             fetchData();
         } catch {
@@ -595,7 +596,7 @@ export default function SalesCustomersPage() {
                                                                         </div>
                                                                         <div>
                                                                             <p className="text-xs font-bold text-foreground">{inv.invoice_number}</p>
-                                                                            <p className="text-[10px] text-muted-foreground">{new Date(inv.date).toLocaleDateString()}</p>
+                                                                            <p className="text-[10px] text-muted-foreground">{new Date(inv.created_at).toLocaleDateString()}</p>
                                                                         </div>
                                                                     </div>
                                                                     <div className="text-right">
@@ -742,7 +743,7 @@ export default function SalesCustomersPage() {
                                                                     data.invoices.forEach(inv => {
                                                                         runningBalance += Number(inv.amount || 0);
                                                                         rows.push({
-                                                                            date: inv.date,
+                                                                            date: inv.created_at,
                                                                             reference: inv.invoice_number,
                                                                             type: 'invoice',
                                                                             debit: Number(inv.amount || 0),
@@ -752,7 +753,7 @@ export default function SalesCustomersPage() {
                                                                     });
 
                                                                     // Add payments (credit)
-                                                                    data.payments.forEach(pay => {
+                                                                    data.payments.forEach((pay: any) => {
                                                                         runningBalance -= Number(pay.amount || pay.total || 0);
                                                                         rows.push({
                                                                             date: pay.date || pay.payment_date,

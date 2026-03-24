@@ -28,6 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface Shift {
   id: string;
@@ -55,11 +56,12 @@ export default function ShiftRosterModule() {
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [rosters, setRosters] = useState<Roster[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const fetchShifts = async () => {
     try {
       const data = await getShifts();
-      setShifts(data);
+      setShifts(data || []);
     } catch (err) {
       toast({ title: 'Error', description: 'Failed to fetch shifts', variant: 'destructive' });
     }
@@ -68,7 +70,7 @@ export default function ShiftRosterModule() {
   const fetchRosters = async () => {
     try {
       const data = await getRosters();
-      setRosters(data);
+      setRosters(data || []);
     } catch (err) {
       toast({ title: 'Error', description: 'Failed to fetch rosters', variant: 'destructive' });
     }
@@ -77,16 +79,23 @@ export default function ShiftRosterModule() {
   const fetchEmployees = async () => {
     try {
       const data = await getEmployees();
-      setEmployees(data.filter((e: any) => e.status === 'active'));
+      setEmployees((data || []).filter((e: any) => e.status === 'active'));
     } catch (err) {
       console.error('Failed to fetch employees');
     }
   };
 
   useEffect(() => {
-    fetchShifts();
-    fetchRosters();
-    fetchEmployees();
+    const loadAll = async () => {
+      setLoading(true);
+      await Promise.all([
+        fetchShifts(),
+        fetchRosters(),
+        fetchEmployees()
+      ]);
+      setLoading(false);
+    };
+    loadAll();
   }, []);
 
   const getStatusBadge = (status: string) => {
@@ -127,42 +136,55 @@ export default function ShiftRosterModule() {
               <CardTitle>Shift Definitions</CardTitle>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Shift Name</TableHead>
-                    <TableHead>Code</TableHead>
-                    <TableHead>Start Time</TableHead>
-                    <TableHead>End Time</TableHead>
-                    <TableHead>Working Hours</TableHead>
-                    <TableHead>Night Shift</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {shifts.map((shift) => (
-                    <TableRow key={shift.id}>
-                      <TableCell className="font-medium">{shift.shift_name}</TableCell>
-                      <TableCell>{shift.shift_code}</TableCell>
-                      <TableCell>{shift.start_time}</TableCell>
-                      <TableCell>{shift.end_time}</TableCell>
-                      <TableCell>{shift.working_hours}h</TableCell>
-                      <TableCell>
-                        {shift.is_night_shift ? (
-                          <Badge variant="secondary">Night</Badge>
-                        ) : (
-                          <Badge variant="outline">Day</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={shift.is_active ? 'default' : 'secondary'}>
-                          {shift.is_active ? 'Active' : 'Inactive'}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
+              {loading ? (
+                <div className="space-y-3">
+                  {[...Array(5)].map((_, i) => (
+                    <Skeleton key={i} className="h-12 w-full rounded-md" />
                   ))}
-                </TableBody>
-              </Table>
+                </div>
+              ) : shifts.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                  <p className="text-lg font-medium">No shifts scheduled</p>
+                  <p className="text-sm mt-1">Shift rosters will appear here once created</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Shift Name</TableHead>
+                      <TableHead>Code</TableHead>
+                      <TableHead>Start Time</TableHead>
+                      <TableHead>End Time</TableHead>
+                      <TableHead>Working Hours</TableHead>
+                      <TableHead>Night Shift</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {shifts.map((shift) => (
+                      <TableRow key={shift.id}>
+                        <TableCell className="font-medium">{shift.shift_name}</TableCell>
+                        <TableCell>{shift.shift_code}</TableCell>
+                        <TableCell>{shift.start_time}</TableCell>
+                        <TableCell>{shift.end_time}</TableCell>
+                        <TableCell>{shift.working_hours}h</TableCell>
+                        <TableCell>
+                          {shift.is_night_shift ? (
+                            <Badge variant="secondary">Night</Badge>
+                          ) : (
+                            <Badge variant="outline">Day</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={shift.is_active ? 'default' : 'secondary'}>
+                            {shift.is_active ? 'Active' : 'Inactive'}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -177,55 +199,68 @@ export default function ShiftRosterModule() {
               <CardTitle>Employee Rosters</CardTitle>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Employee</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Shift</TableHead>
-                    <TableHead>Time</TableHead>
-                    <TableHead>Site</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {rosters.map((roster) => (
-                    <TableRow key={roster.id}>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{roster.employee_id?.name}</p>
-                          <p className="text-sm text-muted-foreground">{roster.employee_id?.employee_id}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell>{new Date(roster.date).toLocaleDateString()}</TableCell>
-                      <TableCell>{roster.shift_id?.shift_name}</TableCell>
-                      <TableCell>
-                        {roster.shift_id?.start_time} - {roster.shift_id?.end_time}
-                      </TableCell>
-                      <TableCell>{roster.site_name || '-'}</TableCell>
-                      <TableCell>{getStatusBadge(roster.status)}</TableCell>
-                      <TableCell>
-                        {roster.status === 'scheduled' && (
-                          <Button size="sm" onClick={async () => {
-                            try {
-                              const updated = await updateRoster(roster.id, { status: 'confirmed' });
-                              if (updated) {
-                                toast({ title: 'Success', description: 'Roster confirmed' });
-                                fetchRosters();
-                              }
-                            } catch (err) {
-                              toast({ title: 'Error', description: 'Failed to confirm', variant: 'destructive' });
-                            }
-                          }}>
-                            Confirm
-                          </Button>
-                        )}
-                      </TableCell>
-                    </TableRow>
+              {loading ? (
+                <div className="space-y-3">
+                  {[...Array(5)].map((_, i) => (
+                    <Skeleton key={i} className="h-12 w-full rounded-md" />
                   ))}
-                </TableBody>
-              </Table>
+                </div>
+              ) : rosters.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                  <p className="text-lg font-medium">No shifts scheduled</p>
+                  <p className="text-sm mt-1">Shift rosters will appear here once created</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Employee</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Shift</TableHead>
+                      <TableHead>Time</TableHead>
+                      <TableHead>Site</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {rosters.map((roster) => (
+                      <TableRow key={roster.id}>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">{roster.employee_id?.name}</p>
+                            <p className="text-sm text-muted-foreground">{roster.employee_id?.employee_id}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>{new Date(roster.date).toLocaleDateString()}</TableCell>
+                        <TableCell>{roster.shift_id?.shift_name}</TableCell>
+                        <TableCell>
+                          {roster.shift_id?.start_time} - {roster.shift_id?.end_time}
+                        </TableCell>
+                        <TableCell>{roster.site_name || '-'}</TableCell>
+                        <TableCell>{getStatusBadge(roster.status)}</TableCell>
+                        <TableCell>
+                          {roster.status === 'scheduled' && (
+                            <Button size="sm" onClick={async () => {
+                              try {
+                                const updated = await updateRoster(roster.id, { status: 'confirmed' });
+                                if (updated) {
+                                  toast({ title: 'Success', description: 'Roster confirmed' });
+                                  fetchRosters();
+                                }
+                              } catch (err) {
+                                toast({ title: 'Error', description: 'Failed to confirm', variant: 'destructive' });
+                              }
+                            }}>
+                              Confirm
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

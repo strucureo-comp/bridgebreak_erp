@@ -34,7 +34,8 @@ export function DesignDetails({ project, onUpdate }: { project: Project, onUpdat
   });
 
   const [saving, setSaving] = useState(false);
-  const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || '/api';
+  const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4000';
+  const API_BASE = BASE_URL.endsWith('/api') ? BASE_URL : `${BASE_URL}/api`;
   const [newDoc, setNewDoc] = useState<Partial<DesignDoc>>({
     type: 'Drawing', name: '', status: 'pending', revision: 'R0', date: new Date().toISOString().split('T')[0]
   });
@@ -168,24 +169,44 @@ export function DesignDetails({ project, onUpdate }: { project: Project, onUpdat
               file_url: url,
               file_kind: fileKind,
             };
+
+            const previousDocuments = documents;
             setDocuments((prev) => [newEntry, ...prev]);
 
-            await fetch(`${apiBase}/projects/upload-files`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              credentials: 'include',
-              body: JSON.stringify({
-                project_id: project.id,
-                module_type: 'design',
-                file_path: `${project.id}/design`,
-                file_name: fileName,
-                uploaded_by: project.client_id,
-                file_size: meta?.size || 0,
-                mime_type: meta?.type || 'application/octet-stream',
-                file_type: fileKind === 'image' ? 'image' : 'document',
-                visibility: 'private',
-              }),
-            });
+            try {
+              const res = await fetch(`${API_BASE}/projects/upload-files`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                  project_id: project.id,
+                  module_type: 'design',
+                  file_path: `${project.id}/design`,
+                  file_name: fileName,
+                  uploaded_by: project.client_id,
+                  file_size: meta?.size || 0,
+                  mime_type: meta?.type || 'application/octet-stream',
+                  file_type: fileKind === 'image' ? 'image' : 'document',
+                  visibility: 'private',
+                }),
+              });
+
+              if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.error || `Upload failed with status ${res.status}`);
+              }
+              
+              const json = await res.json();
+              // Replace optimistic entry with real server data if needed
+              if (json.success && json.data && json.data[0]) {
+                setDocuments(prev => prev.map(d => d.id === newEntry.id ? { ...newEntry, ...json.data[0] } : d));
+              }
+              toast.success('File uploaded successfully');
+            } catch (err: any) {
+              console.error('File upload error:', err);
+              setDocuments(previousDocuments); // Rollback
+              toast.error(err.message || 'Failed to upload file');
+            }
           }}
         />
       </div>

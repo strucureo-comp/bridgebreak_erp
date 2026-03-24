@@ -3,19 +3,21 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ModuleGuard } from '@/components/shared/layout/module-guard';
 import { KpiCard } from '@/components/finance/KpiCard';
 import { useTenant } from '@/lib/tenant-context';
-import { useCurrency } from '@/lib/hooks/use-currency';
+import { useCompanySettings } from '@/lib/hooks/use-company-settings';
+import { formatCurrency } from '@/lib/utils/currency';
 import { cn } from '@/lib/utils';
 import { getFinanceHubSummary } from '@/lib/api';
 import {
     BookOpen, Landmark, TrendingUp, ShoppingCart, Package, Cpu,
     Scale, Building2, BarChart3, Globe, Lock,
-    DollarSign, ChevronRight,
     ShieldCheck,
+    CreditCard,
+    Receipt,
 } from 'lucide-react';
 
 // ── KPI DEFAULTS (populated from backend on mount) ─────────────────────────────
@@ -58,12 +60,12 @@ const MODULES_BASE: Omit<FinanceModule, 'stats'>[] = [
     {
         key: 'payables', label: 'Accounts Payable', icon: ShoppingCart,
         desc: 'Vendor Ledger · Bill Posting · Approvals · Payment Runs',
-        href: '/admin/finance/payables',
+        href: '/admin/purchases/bills',
     },
     {
         key: 'inventory', label: 'Inventory Accounting', icon: Package,
         desc: 'Valuation · COGS · Stock Adjustments · Write-offs',
-        href: '/admin/finance/inventory',
+        href: '/admin/inventory',
     },
     {
         key: 'assets', label: 'Fixed Assets', icon: Cpu,
@@ -73,7 +75,7 @@ const MODULES_BASE: Omit<FinanceModule, 'stats'>[] = [
     {
         key: 'tax', label: 'Tax Management', icon: Scale,
         desc: 'Tax Codes · VAT/GST · Returns · Filing · Audit',
-        href: '/admin/finance/taxes',
+        href: '/admin/settings/taxes',
     },
     {
         key: 'intercompany', label: 'Intercompany', icon: Building2,
@@ -88,7 +90,7 @@ const MODULES_BASE: Omit<FinanceModule, 'stats'>[] = [
     {
         key: 'multicurrency', label: 'Multi-Currency', icon: Globe,
         desc: 'FX Rates · Revaluation · Currency Exposure · Translation',
-        href: '/admin/finance/multi-currency',
+        href: '/admin/settings/currency',
     },
     {
         key: 'periodclose', label: 'Period Close & Governance', icon: Lock,
@@ -100,12 +102,28 @@ const MODULES_BASE: Omit<FinanceModule, 'stats'>[] = [
         desc: 'Document Workflows · Conditional Logic · SoD · Escalation',
         href: '/admin/finance/approvals',
     },
+    {
+        key: 'paymentvouchers', label: 'Payment Vouchers', icon: CreditCard,
+        desc: 'Outgoing Payment Vouchers · Posting · Tracking',
+        href: '/admin/finance/payment-vouchers',
+    },
+    {
+        key: 'receiptvouchers', label: 'Receipt Vouchers', icon: Receipt,
+        desc: 'Incoming Receipt Vouchers · Posting · Tracking',
+        href: '/admin/finance/receipt-vouchers',
+    },
+    {
+        key: 'financialaudit', label: 'Financial Audit Report', icon: BarChart3,
+        desc: 'Audit Health · Anomalies · Ledger Integrity',
+        href: '/admin/reports/audit',
+    },
 ];
 
 // ── MAIN COMPONENT ─────────────────────────────────────────────────────────────
 export default function FinancePage() {
     const { getModuleLabel } = useTenant();
-    const { format: fmt, currencyCode } = useCurrency();
+    const { baseCurrency } = useCompanySettings();
+    const fmt = (amount: number, options?: { compact?: boolean }) => formatCurrency(amount, baseCurrency, options);
     const [kpi, setKpi] = useState(KPI_DEFAULTS);
     const [loading, setLoading] = useState(true);
     const [modules, setModules] = useState<FinanceModule[]>(
@@ -146,108 +164,88 @@ export default function FinancePage() {
 
         return () => { cancelled = true; };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [baseCurrency]);
 
     return (
         <ModuleGuard module="finance">
-                <div className="space-y-8 pb-8">
+            <div className="space-y-6 max-w-7xl">
+                <div>
+                    <h1 className="text-2xl font-semibold">{getModuleLabel('finance')}</h1>
+                    <p className="text-muted-foreground">
+                        Manage your accounting, ledgers, tax, assets, and treasury operations.
+                    </p>
+                </div>
 
-                    {/* ── Hub Header ─ */}
-                    <div className="flex items-center justify-between border-b border-border pb-5">
-                        <div className="flex items-center gap-3">
-                            <div className="h-9 w-9 rounded-lg bg-red-600 text-white flex items-center justify-center">
-                                <DollarSign className="h-5 w-5" />
-                            </div>
-                            <div>
-                                <h1 className="text-xl font-bold tracking-tight uppercase leading-none">
-                                    {getModuleLabel('finance')}
-                                </h1>
-                                <div className="flex items-center gap-2 mt-1">
-                                    <span className="text-[10px] font-black text-red-600 uppercase tracking-[0.2em]">Strategic Ops Center</span>
-                                    <span className="text-muted-foreground/30">·</span>
-                                    <div className="flex items-center gap-1.5 text-[10px] font-black text-slate-500 uppercase">
-                                        <span className="font-mono text-red-600/80">{currencyCode}</span>
-                                        <span className="text-slate-400">{kpi.currentPeriod}</span>
-                                        <Badge
-                                            variant="outline"
-                                            className="h-4 text-[8px] px-1.5 border-emerald-300 text-emerald-600 font-black uppercase"
-                                        >
-                                            {kpi.periodStatus}
-                                        </Badge>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                {/* ── Executive KPI Strip ─ */}
+                <div className="grid gap-4 grid-cols-2 md:grid-cols-4 lg:grid-cols-6">
+                    <KpiCard label="Revenue YTD" value={fmt(kpi.revenue, { compact: true })} loading={loading} />
+                    <KpiCard label="Expenses YTD" value={fmt(kpi.expenses, { compact: true })} loading={loading} />
+                    <KpiCard label="Net Income" value={fmt(kpi.netIncome, { compact: true })} loading={loading} />
+                    <KpiCard label="Cash Position" value={fmt(kpi.cashPosition, { compact: true })} loading={loading} />
+                    <KpiCard label="Receivables" value={fmt(kpi.receivables, { compact: true })} loading={loading} />
+                    <KpiCard
+                        label="Payables"
+                        value={fmt(kpi.payables, { compact: true })}
+                        loading={loading}
+                        alert={kpi.overdueBills > 0}
+                        footer={kpi.overdueBills > 0 ? `${kpi.overdueBills} overdue bills` : undefined}
+                    />
+                </div>
 
-                    {/* ── Executive KPI Strip ─ */}
-                    <div className="grid gap-3 grid-cols-2 md:grid-cols-4 lg:grid-cols-6">
-                        <KpiCard label="Revenue YTD" value={fmt(kpi.revenue, { compact: true })} loading={loading} />
-                        <KpiCard label="Expenses YTD" value={fmt(kpi.expenses, { compact: true })} loading={loading} />
-                        <KpiCard label="Net Income" value={fmt(kpi.netIncome, { compact: true })} loading={loading} />
-                        <KpiCard label="Cash Position" value={fmt(kpi.cashPosition, { compact: true })} loading={loading} />
-                        <KpiCard label="Receivables" value={fmt(kpi.receivables, { compact: true })} loading={loading} />
-                        <KpiCard
-                            label="Payables"
-                            value={fmt(kpi.payables, { compact: true })}
-                            loading={loading}
-                            alert={kpi.overdueBills > 0}
-                            footer={kpi.overdueBills > 0 ? `${kpi.overdueBills} overdue bills` : undefined}
-                        />
-                    </div>
-
-                    {/* ── Module Grid ─ */}
-                    <div className="space-y-3">
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">
-                            Finance Modules
-                        </p>
-                        <div className="grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-base">Finance Components Board</CardTitle>
+                        <CardDescription>
+                            Access each finance domain including ledgers, treasury, receivables, payables, tax, and reporting.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                             {modules.map(m => (
                                 <ModuleCard key={m.key} module={m} />
                             ))}
                         </div>
-                    </div>
-
-                </div>
-            </ModuleGuard>
+                    </CardContent>
+                </Card>
+            </div>
+        </ModuleGuard>
     );
 }
 
 // ── Module Card ────────────────────────────────────────────────────────────────
 function ModuleCard({ module: m }: { module: FinanceModule }) {
     return (
-        <Link href={m.href}>
+        <Link href={m.href} className="block h-full">
             <Card
                 className={cn(
-                    'border-border shadow-sm hover:border-red-200 hover:shadow-md transition-all cursor-pointer group h-full',
-                    m.alert && 'border-red-200',
+                    'h-full transition-colors hover:bg-muted/50 cursor-pointer',
+                    m.alert && 'border-red-500/50 dark:border-red-500/30',
                 )}
             >
-                <CardContent className="p-4">
-                    <div className="flex items-start justify-between mb-3">
-                        <div className="h-8 w-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center group-hover:bg-red-600 group-hover:text-white transition-colors">
-                            <m.icon className="h-4 w-4" />
-                        </div>
+                <CardHeader className="pb-3">
+                    <div className="flex flex-row justify-between items-start mb-2">
+                        <m.icon className="h-5 w-5 text-muted-foreground" />
                         {m.alert && (
-                            <Badge variant="destructive" className="text-[8px] h-4 px-1.5">
-                                Action
+                            <Badge variant="destructive" className="h-5 px-1.5 text-[10px]">
+                                Action Required
                             </Badge>
                         )}
                     </div>
-
-                    <p className="text-sm font-bold mb-0.5">{m.label}</p>
-                    <p className="text-[11px] text-muted-foreground leading-relaxed mb-3">{m.desc}</p>
-
-                    <div className="flex items-center gap-4 pt-2 border-t border-border">
-                        {m.stats.map((s, i) => (
-                            <div key={i} className="flex items-center gap-1.5">
-                                <span className="text-[10px] text-muted-foreground">{s.label}</span>
-                                <span className="text-xs font-bold">{s.value}</span>
-                            </div>
-                        ))}
-                        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground ml-auto group-hover:text-red-600 transition-colors" />
-                    </div>
-                </CardContent>
+                    <CardTitle className="text-base font-semibold">{m.label}</CardTitle>
+                    <CardDescription className="text-xs">{m.desc}</CardDescription>
+                </CardHeader>
+                {m.stats.length > 0 && (
+                    <CardContent>
+                        <div className="flex flex-col gap-2 pt-1">
+                            {m.stats.map((s, i) => (
+                                <div key={i} className="flex justify-between items-center text-sm">
+                                    <span className="text-muted-foreground">{s.label}</span>
+                                    <span className="font-medium">{s.value}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </CardContent>
+                )}
             </Card>
         </Link>
     );

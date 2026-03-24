@@ -15,6 +15,7 @@ interface ThemeContextType {
     loading: boolean;
 }
 
+// Default branding - overridden by Settings > Branding
 const DEFAULT_BRANDING: BrandingConfig = {
     logo: null,
     primaryColor: '#0F172A',
@@ -24,7 +25,42 @@ const DEFAULT_BRANDING: BrandingConfig = {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+interface SavedPDFBranding {
+    logo?: string | null;
+    logoUrl?: string | null;
+    primaryColor?: string;
+    accentColor?: string;
+}
+
 // Helper functions
+function readStoredJSON<T>(storageKey: string): Partial<T> | null {
+    if (typeof window === 'undefined') {
+        return null;
+    }
+
+    try {
+        const saved = localStorage.getItem(storageKey);
+        return saved ? JSON.parse(saved) as Partial<T> : null;
+    } catch {
+        return null;
+    }
+}
+
+function getSavedBranding(): BrandingConfig {
+    const pdfSettings = readStoredJSON<SavedPDFBranding>('pdf-settings');
+    const legacyBranding =
+        readStoredJSON<BrandingConfig>('branding_settings') ??
+        readStoredJSON<BrandingConfig>('branding_config');
+
+    return {
+        ...DEFAULT_BRANDING,
+        ...legacyBranding,
+        logo: legacyBranding?.logo ?? pdfSettings?.logo ?? pdfSettings?.logoUrl ?? DEFAULT_BRANDING.logo,
+        primaryColor: pdfSettings?.primaryColor || legacyBranding?.primaryColor || DEFAULT_BRANDING.primaryColor,
+        accentColor: pdfSettings?.accentColor || legacyBranding?.accentColor || DEFAULT_BRANDING.accentColor,
+    };
+}
+
 function hexToRGB(hex: string): { r: number; g: number; b: number } | null {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     return result ? {
@@ -62,15 +98,22 @@ function rgbToHSL(r: number, g: number, b: number): { h: number; s: number; l: n
     };
 }
 
-export function applyBrandingColors(primaryColor: string, accentColor: string) {
+export function applyBrandingColors(primaryColor?: string, accentColor?: string) {
+    if (typeof document === 'undefined') {
+        return;
+    }
+
+    const savedBranding = getSavedBranding();
+    const resolvedPrimary = primaryColor || savedBranding.primaryColor;
+    const resolvedAccent = accentColor || savedBranding.accentColor;
     const root = document.documentElement;
 
     // Set brand hex colors as CSS variables
-    root.style.setProperty('--branding-primary', primaryColor);
-    root.style.setProperty('--branding-accent', accentColor);
+    root.style.setProperty('--branding-primary', resolvedPrimary);
+    root.style.setProperty('--branding-accent', resolvedAccent);
 
     // Convert primary to HSL and apply
-    const primaryRGB = hexToRGB(primaryColor);
+    const primaryRGB = hexToRGB(resolvedPrimary);
     if (primaryRGB) {
         const primaryHSL = rgbToHSL(primaryRGB.r, primaryRGB.g, primaryRGB.b);
         root.style.setProperty('--primary', `${primaryHSL.h} ${primaryHSL.s}% ${primaryHSL.l}%`);
@@ -81,7 +124,7 @@ export function applyBrandingColors(primaryColor: string, accentColor: string) {
     }
 
     // Convert accent to HSL and apply
-    const accentRGB = hexToRGB(accentColor);
+    const accentRGB = hexToRGB(resolvedAccent);
     if (accentRGB) {
         const accentHSL = rgbToHSL(accentRGB.r, accentRGB.g, accentRGB.b);
         root.style.setProperty('--accent', `${accentHSL.h} ${accentHSL.s}% ${accentHSL.l}%`);
@@ -94,21 +137,24 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const [branding, setBranding] = useState<BrandingConfig>(DEFAULT_BRANDING);
     const [loading, setLoading] = useState(true);
 
-    // Load branding on mount
     useEffect(() => {
-        const saved = localStorage.getItem('branding_settings');
-        let brandingData = DEFAULT_BRANDING;
+        const syncBranding = () => {
+            const brandingData = getSavedBranding();
+            setBranding(brandingData);
+            applyBrandingColors();
+            setLoading(false);
+        };
 
-        if (saved) {
-            brandingData = { ...DEFAULT_BRANDING, ...JSON.parse(saved) };
-        }
+        syncBranding();
 
-        setBranding(brandingData);
+        const handler = () => {
+            syncBranding();
+        };
 
-        // Apply branding colors immediately
-        applyBrandingColors(brandingData.primaryColor, brandingData.accentColor);
-
-        setLoading(false);
+        window.addEventListener('erp_company_settings_changed', handler);
+        return () => {
+            window.removeEventListener('erp_company_settings_changed', handler);
+        };
     }, []);
 
     // Also load company settings for company name

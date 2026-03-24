@@ -1,5 +1,7 @@
 'use server';
 
+import nodemailer from 'nodemailer';
+
 interface EmailAttachment {
   filename: string;
   content: string;
@@ -13,15 +15,66 @@ interface SendEmailParams {
   attachments?: EmailAttachment[];
 }
 
-// Disable actual email sending
+// Email configuration from environment
+const SMTP_HOST = process.env.SMTP_HOST;
+const SMTP_PORT = process.env.SMTP_PORT || '587';
+const SMTP_USER = process.env.SMTP_USER;
+const SMTP_PASS = process.env.SMTP_PASS;
+const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@bridgebreak.ae';
+const FROM_NAME = process.env.FROM_NAME || 'Bridgebreak ERP';
+
+// Create transporter only if SMTP is configured
+function getTransporter() {
+  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
+    return null;
+  }
+  return nodemailer.createTransport({
+    host: SMTP_HOST,
+    port: parseInt(SMTP_PORT),
+    secure: SMTP_PORT === '465',
+    auth: {
+      user: SMTP_USER,
+      pass: SMTP_PASS,
+    },
+  });
+}
+
 export async function sendEmail({ to, subject, html, attachments }: SendEmailParams) {
-  console.log(`[Mock Email] To: ${to}, Subject: ${subject}`);
-  return { success: true, error: null };
+  const transporter = getTransporter();
+
+  if (!transporter) {
+    console.warn('[Email] SMTP not configured. Email not sent.');
+    console.log(`[Email] To: ${to}, Subject: ${subject}`);
+    return { success: false, error: 'SMTP not configured' };
+  }
+
+  try {
+    await transporter.sendMail({
+      from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
+      to,
+      subject,
+      html,
+      attachments: attachments?.map(a => ({
+        filename: a.filename,
+        content: a.content,
+      })),
+    });
+    return { success: true, error: null };
+  } catch (error) {
+    console.error('[Email] Failed to send:', error);
+    return { success: false, error: String(error) };
+  }
 }
 
 export async function sendWelcomeEmail(to: string, fullName: string) {
-  console.log(`[Mock Email] Welcome email to ${to} (${fullName}) suppressed.`);
-  return { success: true, error: null };
+  const subject = 'Welcome to Bridgebreak ERP';
+  const html = `
+    <h2>Welcome, ${fullName}!</h2>
+    <p>Your account has been created successfully.</p>
+    <p>Please log in to get started.</p>
+    <p>Best regards,<br/>Bridgebreak Team</p>
+  `;
+  return sendEmail({ to, subject, html });
 }
 
 export async function sendProjectUpdateEmail(
@@ -30,8 +83,14 @@ export async function sendProjectUpdateEmail(
   message: string,
   updatedBy: string
 ) {
-  console.log(`[Mock Email] Project update email for ${projectTitle} to ${to} suppressed.`);
-  return { success: true, error: null };
+  const subject = `Project Update: ${projectTitle}`;
+  const html = `
+    <h2>Project Update</h2>
+    <p><strong>Project:</strong> ${projectTitle}</p>
+    <p><strong>Updated by:</strong> ${updatedBy}</p>
+    <p><strong>Message:</strong> ${message}</p>
+  `;
+  return sendEmail({ to, subject, html });
 }
 
 export async function sendSupportTicketEmail(
@@ -41,8 +100,13 @@ export async function sendSupportTicketEmail(
   clientName: string,
   isAdmin: boolean
 ) {
-  console.log(`[Mock Email] Support ticket email for ${subject} to ${to} suppressed.`);
-  return { success: true, error: null };
+  const html = `
+    <h2>Support Ticket ${isAdmin ? 'Created' : 'Updated'}</h2>
+    <p><strong>Subject:</strong> ${subject}</p>
+    <p><strong>Client:</strong> ${clientName}</p>
+    <p><strong>Description:</strong> ${description}</p>
+  `;
+  return sendEmail({ to, subject: `Support: ${subject}`, html });
 }
 
 export async function sendNotificationEmail(
@@ -53,8 +117,12 @@ export async function sendNotificationEmail(
   link?: string,
   linkText: string = 'View Details'
 ) {
-  console.log(`[Mock Email] Notification email "${title}" to ${to} suppressed.`);
-  return { success: true, error: null };
+  const html = `
+    <h2>${title}</h2>
+    <p>${message}</p>
+    ${link ? `<p><a href="${link}">${linkText}</a></p>` : ''}
+  `;
+  return sendEmail({ to, subject, html });
 }
 
 export async function sendInvoiceEmail(
@@ -63,8 +131,14 @@ export async function sendInvoiceEmail(
   amount: number,
   dueDate: string
 ) {
-  console.log(`[Mock Email] Invoice email ${invoiceNumber} to ${to} suppressed.`);
-  return { success: true, error: null };
+  const subject = `Invoice ${invoiceNumber}`;
+  const html = `
+    <h2>Invoice ${invoiceNumber}</h2>
+    <p><strong>Amount:</strong> ${amount}</p>
+    <p><strong>Due Date:</strong> ${dueDate}</p>
+    <p>Please review and process payment.</p>
+  `;
+  return sendEmail({ to, subject, html });
 }
 
 export async function sendMeetingStatusEmail(
@@ -75,6 +149,14 @@ export async function sendMeetingStatusEmail(
   status: string,
   meetingLink?: string
 ) {
-  console.log(`[Mock Email] Meeting status email for ${purpose} to ${to} suppressed.`);
-  return { success: true, error: null };
+  const subject = `Meeting Request: ${purpose} - ${status}`;
+  const html = `
+    <h2>Meeting Request Update</h2>
+    <p><strong>Purpose:</strong> ${purpose}</p>
+    <p><strong>Date:</strong> ${requestedDate}</p>
+    <p><strong>Duration:</strong> ${duration} minutes</p>
+    <p><strong>Status:</strong> ${status}</p>
+    ${meetingLink ? `<p><a href="${meetingLink}">Join Meeting</a></p>` : ''}
+  `;
+  return sendEmail({ to, subject, html });
 }

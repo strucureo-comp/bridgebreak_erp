@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -14,13 +14,37 @@ import {
     DropdownMenu, DropdownMenuContent, DropdownMenuItem,
     DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
+import { useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface SkuMasterCatalogProps {
     skus: any[];
     wasteTolerancePercent: number;
+    onDelete?: (id: string) => Promise<boolean>;
 }
 
-export function SkuMasterCatalog({ skus, wasteTolerancePercent }: SkuMasterCatalogProps) {
+export function SkuMasterCatalog({ skus, wasteTolerancePercent, onDelete }: SkuMasterCatalogProps) {
+    const router = useRouter();
+    const { toast } = useToast();
+    const [deleteId, setDeleteId] = useState<string | null>(null);
+
+    const handleDeleteSKU = async () => {
+        if (deleteId && onDelete) {
+            await onDelete(deleteId);
+            setDeleteId(null);
+        }
+    };
+
     return (
         <Card className="rounded-xl border-slate-200 overflow-hidden bg-white shadow-sm">
             <div className="overflow-x-auto">
@@ -121,14 +145,23 @@ export function SkuMasterCatalog({ skus, wasteTolerancePercent }: SkuMasterCatal
                                             <DropdownMenuContent align="end" className="w-48 font-bold text-[11px] uppercase tracking-wide">
                                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                 <DropdownMenuSeparator />
-                                                <DropdownMenuItem className="cursor-pointer">
+                                                <DropdownMenuItem 
+                                                    className="cursor-pointer"
+                                                    onClick={() => toast({ title: "Coming Soon", description: "SKU analytics is under development" })}
+                                                >
                                                     <Info className="mr-2 h-3.5 w-3.5" /> View Analytics
                                                 </DropdownMenuItem>
-                                                <DropdownMenuItem className="cursor-pointer">
+                                                <DropdownMenuItem 
+                                                    className="cursor-pointer"
+                                                    onClick={() => toast({ title: "Coming Soon", description: "Movement history is under development" })}
+                                                >
                                                     <ArrowUpRight className="mr-2 h-3.5 w-3.5" /> Movement History
                                                 </DropdownMenuItem>
                                                 <DropdownMenuSeparator />
-                                                <DropdownMenuItem className="text-red-600 cursor-pointer">
+                                                <DropdownMenuItem 
+                                                    className="text-red-600 cursor-pointer"
+                                                    onClick={() => setDeleteId(sku.id)}
+                                                >
                                                     Delete SKU
                                                 </DropdownMenuItem>
                                             </DropdownMenuContent>
@@ -140,6 +173,19 @@ export function SkuMasterCatalog({ skus, wasteTolerancePercent }: SkuMasterCatal
                     </TableBody>
                 </Table>
             </div>
+
+            <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete SKU?</AlertDialogTitle>
+                        <AlertDialogDescription>This action cannot be undone. This will permanently delete the SKU record.</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteSKU} className="bg-red-600 hover:bg-red-700">Delete</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </Card>
     );
 }

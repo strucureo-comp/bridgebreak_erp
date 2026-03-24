@@ -33,6 +33,13 @@ import { toast } from 'sonner';
 import { createPurchaseRequest } from '@/lib/api';
 import type { Project } from '@/lib/db/types';
 import { cn } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton';
+
+const generateRef = (prefix: string) => {
+    const date = new Date();
+    const seq = String(date.getTime()).slice(-5);
+    return `${prefix}-${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}-${seq}`;
+};
 
 interface MaterialRequestFormProps {
     projects: Project[];
@@ -42,6 +49,7 @@ interface MaterialRequestFormProps {
 export function MaterialRequestForm({ projects, onSuccess }: MaterialRequestFormProps) {
     const [loading, setLoading] = useState(false);
     const today = new Date().toISOString().split('T')[0];
+    const [mrNumber] = useState(generateRef('MR'));
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -97,7 +105,7 @@ export function MaterialRequestForm({ projects, onSuccess }: MaterialRequestForm
                 <div className="grid grid-cols-3 gap-4">
                     <div className="space-y-1">
                         <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest">Document No</p>
-                        <p className="text-xs font-black font-mono text-primary">MR-{Math.floor(Math.random() * 10000).toString().padStart(4, '0')}</p>
+                        <p className="text-xs font-black font-mono text-primary">{mrNumber}</p>
                     </div>
                     <div className="space-y-1">
                         <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest">Status</p>

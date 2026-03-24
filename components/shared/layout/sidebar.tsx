@@ -68,6 +68,9 @@ export function Sidebar({ isCollapsed, toggleCollapse }: SidebarProps) {
 
   useEffect(() => {
     const loadSettings = async () => {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('bb_token') : null;
+      if (!token) return;
+
       try {
         const [branding, company] = await Promise.all([
           settingsApi.getBranding(),

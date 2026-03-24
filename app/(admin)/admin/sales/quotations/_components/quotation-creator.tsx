@@ -12,6 +12,8 @@ import { Card } from '@/components/ui/card';
 import { Plus, Trash2, Save } from 'lucide-react';
 import { authHeaders } from '@/lib/api';
 import { toast } from 'sonner';
+import { useCompanySettings } from '@/lib/hooks/use-company-settings';
+import { formatCurrency } from '@/lib/utils/currency';
 
 interface QuotationLine {
   description: string;
@@ -27,6 +29,7 @@ interface QuotationCreatorProps {
 }
 
 export function QuotationCreator({ open, onClose, onSuccess }: QuotationCreatorProps) {
+  const { baseCurrency, taxRate, taxName } = useCompanySettings();
   const [loading, setLoading] = useState(false);
   const [customerType, setCustomerType] = useState<'registry' | 'manual'>('manual');
   const [customers, setCustomers] = useState<any[]>([]);
@@ -47,7 +50,7 @@ export function QuotationCreator({ open, onClose, onSuccess }: QuotationCreatorP
     notes: '',
     terms_and_conditions: 'Payment terms: Net 30 days\nDelivery: As per agreement\nValidity: 30 days from quotation date',
     tax_mode: 'auto' as 'auto' | 'manual',
-    tax_rate: 5,
+    tax_rate: taxRate,
     tax_amount: 0
   });
 
@@ -149,16 +152,16 @@ export function QuotationCreator({ open, onClose, onSuccess }: QuotationCreatorP
 
       // Remove manual customer fields if using registry
       if (customerType === 'registry') {
-        delete payload.customer_company_name;
-        delete payload.customer_contact_person;
-        delete payload.customer_email;
-        delete payload.customer_phone;
-        delete payload.customer_address;
-        delete payload.customer_city;
-        delete payload.customer_country;
-        delete payload.customer_tax_id;
+        delete (payload as any).customer_company_name;
+        delete (payload as any).customer_contact_person;
+        delete (payload as any).customer_email;
+        delete (payload as any).customer_phone;
+        delete (payload as any).customer_address;
+        delete (payload as any).customer_city;
+        delete (payload as any).customer_country;
+        delete (payload as any).customer_tax_id;
       } else {
-        delete payload.customer_id;
+        delete (payload as any).customer_id;
       }
 
       const res = await fetch('/api/crm/quotations', {
@@ -365,7 +368,7 @@ export function QuotationCreator({ open, onClose, onSuccess }: QuotationCreatorP
                   <div className="col-span-2 space-y-2">
                     <Label className="text-xs">Total</Label>
                     <Input
-                      value={line.total.toFixed(2)}
+                      value={formatCurrency(line.total, baseCurrency)}
                       disabled
                       className="bg-muted"
                     />
@@ -392,13 +395,13 @@ export function QuotationCreator({ open, onClose, onSuccess }: QuotationCreatorP
             {/* Subtotal */}
             <div className="flex justify-between items-center pb-3 border-b">
               <span className="text-muted-foreground font-medium">Subtotal:</span>
-              <span className="text-xl font-bold">AED {calculateSubtotal().toFixed(2)}</span>
+              <span className="text-xl font-bold">{formatCurrency(calculateSubtotal(), baseCurrency)}</span>
             </div>
 
             {/* Tax Section */}
             <div className="space-y-3 pb-3 border-b">
               <div className="flex items-center gap-4">
-                <Label className="text-sm font-medium">Tax Calculation</Label>
+                <Label className="text-sm font-medium">{taxName} Calculation</Label>
                 <RadioGroup
                   value={formData.tax_mode}
                   onValueChange={(v) => setFormData({ ...formData, tax_mode: v as 'auto' | 'manual' })}
@@ -421,7 +424,7 @@ export function QuotationCreator({ open, onClose, onSuccess }: QuotationCreatorP
 
               {formData.tax_mode === 'auto' ? (
                 <div className="flex items-center gap-3 ml-4">
-                  <Label className="text-sm">Tax Rate:</Label>
+                  <Label className="text-sm">{taxName} Rate:</Label>
                   <Input
                     type="number"
                     min="0"
@@ -432,11 +435,11 @@ export function QuotationCreator({ open, onClose, onSuccess }: QuotationCreatorP
                     className="w-24 h-9"
                   />
                   <span className="text-sm font-medium">%</span>
-                  <span className="text-sm font-bold ml-auto text-lg">= AED {calculateTax().toFixed(2)}</span>
+                  <span className="text-sm font-bold ml-auto text-lg">= {formatCurrency(calculateTax(), baseCurrency)}</span>
                 </div>
               ) : (
                 <div className="flex items-center gap-3 ml-4">
-                  <Label className="text-sm">Tax Amount:</Label>
+                  <Label className="text-sm">{taxName} Amount:</Label>
                   <Input
                     type="number"
                     min="0"
@@ -445,7 +448,7 @@ export function QuotationCreator({ open, onClose, onSuccess }: QuotationCreatorP
                     onChange={(e) => setFormData({ ...formData, tax_amount: parseFloat(e.target.value) || 0 })}
                     className="w-32 h-9"
                   />
-                  <span className="text-sm">AED</span>
+                  <span className="text-sm font-medium">{baseCurrency}</span>
                 </div>
               )}
             </div>
@@ -453,7 +456,7 @@ export function QuotationCreator({ open, onClose, onSuccess }: QuotationCreatorP
             {/* Total Amount - Prominent */}
             <div className="flex justify-between items-center bg-primary/10 rounded-lg p-4 border border-primary/30">
               <span className="text-lg font-bold text-primary">Total Amount:</span>
-              <span className="text-3xl font-bold text-primary">AED {calculateTotal().toFixed(2)}</span>
+              <span className="text-3xl font-bold text-primary">{formatCurrency(calculateTotal(), baseCurrency)}</span>
             </div>
           </Card>
 

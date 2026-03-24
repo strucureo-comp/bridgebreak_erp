@@ -1,10 +1,75 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const router = express.Router();
-const { Invoice, Expense, Account, JournalEntry } = require('../models/Finance');
+const { Invoice, Expense, RecurringExpense, Account, JournalEntry } = require('../models/Finance');
 const { auth } = require('../middleware/auth');
 
 router.use(auth);
+
+function tenantIdFromReq(req) {
+    return req.user?.tenant_id || 'default';
+}
+
+function tenantScopedFilter(tenant_id, filter = {}) {
+    if (tenant_id === 'default') {
+        return {
+            ...filter,
+            $or: [{ tenant_id }, { tenant_id: { $exists: false } }],
+        };
+    }
+
+    return { ...filter, tenant_id };
+}
+
+function accountLookupFilter(tenant_id, filter = {}) {
+    if (tenant_id === 'default') {
+        return tenantScopedFilter(tenant_id, filter);
+    }
+
+    return {
+        ...filter,
+        $or: [{ tenant_id }, { tenant_id: 'default' }, { tenant_id: { $exists: false } }],
+    };
+}
+
+// =====================================
+// RECURRING EXPENSES
+// =====================================
+
+router.get('/recurring-expenses', async (req, res) => {
+    try {
+        const tenant_id = tenantIdFromReq(req);
+        const expenses = await RecurringExpense.find(tenantScopedFilter(tenant_id)).sort({ createdAt: -1 }).lean();
+        res.json(expenses);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch recurring expenses' });
+    }
+});
+
+router.post('/recurring-expenses', async (req, res) => {
+    try {
+        const tenant_id = tenantIdFromReq(req);
+        const expense = new RecurringExpense({ ...req.body, tenant_id });
+        await expense.save();
+        res.status(201).json(expense);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to create recurring expense' });
+    }
+});
+
+// =====================================
+// FX RATES
+// =====================================
+
+router.get('/fx-rates', async (req, res) => {
+    try {
+        // Return base rates — can be static for now or from DB
+        const rates = { USD: 1, AED: 3.67, EUR: 0.92, GBP: 0.79, SAR: 3.75, INR: 82.50 };
+        res.json({ success: true, rates });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
 
 // =====================================
 // INVOICES CRUD
@@ -13,11 +78,12 @@ router.use(auth);
 // GET all invoices
 router.get('/invoices', async (req, res) => {
     try {
+        const tenant_id = tenantIdFromReq(req);
         const { status, type } = req.query;
         const filter = {};
         if (status) filter.status = status;
         if (type) filter.type = type;
-        const invoices = await Invoice.find(filter).sort({ createdAt: -1 }).lean();
+        const invoices = await Invoice.find(tenantScopedFilter(tenant_id, filter)).sort({ createdAt: -1 }).lean();
         res.json(invoices);
     } catch (err) {
         res.status(500).json({ error: 'Failed to fetch invoices' });
@@ -27,7 +93,8 @@ router.get('/invoices', async (req, res) => {
 // GET single invoice
 router.get('/invoices/:id', async (req, res) => {
     try {
-        const inv = await Invoice.findById(req.params.id).lean();
+        const tenant_id = tenantIdFromReq(req);
+        const inv = await Invoice.findOne(tenantScopedFilter(tenant_id, { _id: req.params.id })).lean();
         if (!inv) return res.status(404).json({ error: 'Invoice not found' });
         res.json(inv);
     } catch (err) {
@@ -38,8 +105,9 @@ router.get('/invoices/:id', async (req, res) => {
 // CREATE invoice
 router.post('/invoices', async (req, res) => {
     try {
+        const tenant_id = tenantIdFromReq(req);
         // Auto-generate invoice number
-        const count = await Invoice.countDocuments();
+        const count = await Invoice.countDocuments(tenantScopedFilter(tenant_id));
         const num = `INV-${String(count + 1001).padStart(5, '0')}`;
 
         const { items = [], ...rest } = req.body;
@@ -48,6 +116,7 @@ router.post('/invoices', async (req, res) => {
 
         const invoice = new Invoice({
             ...rest,
+            tenant_id,
             invoice_number: num,
             items,
             subtotal,
@@ -64,6 +133,7 @@ router.post('/invoices', async (req, res) => {
 // UPDATE invoice
 router.put('/invoices/:id', async (req, res) => {
     try {
+        const tenant_id = tenantIdFromReq(req);
         const { items, ...rest } = req.body;
         const update = { ...rest };
         if (items) {
@@ -72,7 +142,12 @@ router.put('/invoices/:id', async (req, res) => {
             update.tax_amount = items.reduce((s, i) => s + (Number(i.amount || 0) * Number(i.tax_rate || 0) / 100), 0);
             update.total = update.subtotal + update.tax_amount;
         }
-        const inv = await Invoice.findByIdAndUpdate(req.params.id, update, { new: true });
+        update.tenant_id = tenant_id;
+        const inv = await Invoice.findOneAndUpdate(
+            tenantScopedFilter(tenant_id, { _id: req.params.id }),
+            update,
+            { new: true }
+        );
         if (!inv) return res.status(404).json({ error: 'Invoice not found' });
         res.json(inv);
     } catch (err) {
@@ -83,7 +158,8 @@ router.put('/invoices/:id', async (req, res) => {
 // DELETE invoice
 router.delete('/invoices/:id', async (req, res) => {
     try {
-        await Invoice.findByIdAndDelete(req.params.id);
+        const tenant_id = tenantIdFromReq(req);
+        await Invoice.findOneAndDelete(tenantScopedFilter(tenant_id, { _id: req.params.id }));
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Failed to delete invoice' });
@@ -96,11 +172,12 @@ router.delete('/invoices/:id', async (req, res) => {
 
 router.get('/expenses', async (req, res) => {
     try {
+        const tenant_id = tenantIdFromReq(req);
         const { status, category } = req.query;
         const filter = {};
         if (status) filter.status = status;
         if (category) filter.category = category;
-        const expenses = await Expense.find(filter).sort({ createdAt: -1 }).lean();
+        const expenses = await Expense.find(tenantScopedFilter(tenant_id, filter)).sort({ createdAt: -1 }).lean();
         res.json(expenses);
     } catch (err) {
         res.status(500).json({ error: 'Failed to fetch expenses' });
@@ -109,7 +186,8 @@ router.get('/expenses', async (req, res) => {
 
 router.get('/expenses/:id', async (req, res) => {
     try {
-        const exp = await Expense.findById(req.params.id).lean();
+        const tenant_id = tenantIdFromReq(req);
+        const exp = await Expense.findOne(tenantScopedFilter(tenant_id, { _id: req.params.id })).lean();
         if (!exp) return res.status(404).json({ error: 'Expense not found' });
         res.json(exp);
     } catch (err) {
@@ -119,9 +197,11 @@ router.get('/expenses/:id', async (req, res) => {
 
 router.post('/expenses', async (req, res) => {
     try {
-        const count = await Expense.countDocuments();
+        const tenant_id = tenantIdFromReq(req);
+        const count = await Expense.countDocuments(tenantScopedFilter(tenant_id));
         const expense = new Expense({
             ...req.body,
+            tenant_id,
             expense_number: `EXP-${String(count + 1001).padStart(5, '0')}`,
         });
         await expense.save();
@@ -133,7 +213,12 @@ router.post('/expenses', async (req, res) => {
 
 router.put('/expenses/:id', async (req, res) => {
     try {
-        const exp = await Expense.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        const tenant_id = tenantIdFromReq(req);
+        const exp = await Expense.findOneAndUpdate(
+            tenantScopedFilter(tenant_id, { _id: req.params.id }),
+            { ...req.body, tenant_id },
+            { new: true }
+        );
         if (!exp) return res.status(404).json({ error: 'Expense not found' });
         res.json(exp);
     } catch (err) {
@@ -143,7 +228,8 @@ router.put('/expenses/:id', async (req, res) => {
 
 router.delete('/expenses/:id', async (req, res) => {
     try {
-        await Expense.findByIdAndDelete(req.params.id);
+        const tenant_id = tenantIdFromReq(req);
+        await Expense.findOneAndDelete(tenantScopedFilter(tenant_id, { _id: req.params.id }));
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Failed to delete expense' });
@@ -156,10 +242,11 @@ router.delete('/expenses/:id', async (req, res) => {
 
 router.get('/accounts', async (req, res) => {
     try {
+        const tenant_id = tenantIdFromReq(req);
         const { type } = req.query;
         const filter = {};
         if (type) filter.type = type;
-        const accounts = await Account.find(filter).sort({ code: 1 }).lean();
+        const accounts = await Account.find(accountLookupFilter(tenant_id, filter)).sort({ code: 1 }).lean();
         res.json(accounts);
     } catch (err) {
         res.status(500).json({ error: 'Failed to fetch accounts' });
@@ -168,7 +255,8 @@ router.get('/accounts', async (req, res) => {
 
 router.post('/accounts', async (req, res) => {
     try {
-        const account = new Account(req.body);
+        const tenant_id = tenantIdFromReq(req);
+        const account = new Account({ ...req.body, tenant_id });
         await account.save();
         res.status(201).json(account);
     } catch (err) {
@@ -178,7 +266,12 @@ router.post('/accounts', async (req, res) => {
 
 router.put('/accounts/:id', async (req, res) => {
     try {
-        const acc = await Account.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        const tenant_id = tenantIdFromReq(req);
+        const acc = await Account.findOneAndUpdate(
+            tenantScopedFilter(tenant_id, { _id: req.params.id }),
+            { ...req.body, tenant_id },
+            { new: true }
+        );
         if (!acc) return res.status(404).json({ error: 'Account not found' });
         res.json(acc);
     } catch (err) {
@@ -188,7 +281,8 @@ router.put('/accounts/:id', async (req, res) => {
 
 router.delete('/accounts/:id', async (req, res) => {
     try {
-        await Account.findByIdAndDelete(req.params.id);
+        const tenant_id = tenantIdFromReq(req);
+        await Account.findOneAndDelete(tenantScopedFilter(tenant_id, { _id: req.params.id }));
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Failed to delete account' });
@@ -198,7 +292,8 @@ router.delete('/accounts/:id', async (req, res) => {
 // Seed default COA
 router.post('/accounts/seed', async (req, res) => {
     try {
-        const existing = await Account.countDocuments();
+        const tenant_id = tenantIdFromReq(req);
+        const existing = await Account.countDocuments(accountLookupFilter(tenant_id));
         if (existing > 0) return res.json({ message: 'COA already seeded', count: existing });
 
         const defaultAccounts = [
@@ -228,7 +323,7 @@ router.post('/accounts/seed', async (req, res) => {
             { code: '5900', name: 'Miscellaneous Expenses', type: 'expense' },
         ];
 
-        await Account.insertMany(defaultAccounts);
+        await Account.insertMany(defaultAccounts.map((account) => ({ ...account, tenant_id })));
         res.json({ message: 'COA seeded', count: defaultAccounts.length });
     } catch (err) {
         res.status(500).json({ error: 'Failed to seed COA', detail: err.message });
@@ -241,10 +336,11 @@ router.post('/accounts/seed', async (req, res) => {
 
 router.get('/journals', async (req, res) => {
     try {
+        const tenant_id = tenantIdFromReq(req);
         const { status } = req.query;
         const filter = {};
         if (status) filter.status = status;
-        const entries = await JournalEntry.find(filter).sort({ date: -1 }).lean();
+        const entries = await JournalEntry.find(tenantScopedFilter(tenant_id, filter)).sort({ date: -1 }).lean();
         res.json(entries);
     } catch (err) {
         res.status(500).json({ error: 'Failed to fetch journal entries' });
@@ -253,7 +349,8 @@ router.get('/journals', async (req, res) => {
 
 router.post('/journals', async (req, res) => {
     try {
-        const count = await JournalEntry.countDocuments();
+        const tenant_id = tenantIdFromReq(req);
+        const count = await JournalEntry.countDocuments(tenantScopedFilter(tenant_id));
         const { lines = [], ...rest } = req.body;
 
         const total_debit = lines.reduce((s, l) => s + Number(l.debit || 0), 0);
@@ -265,15 +362,32 @@ router.post('/journals', async (req, res) => {
 
         const entry = new JournalEntry({
             ...rest,
+            tenant_id,
             entry_number: `JE-${String(count + 1001).padStart(5, '0')}`,
             lines,
             total_debit,
             total_credit,
+            posted_at: rest.status === 'posted' ? new Date() : undefined,
         });
         await entry.save();
         res.status(201).json(entry);
     } catch (err) {
         res.status(500).json({ error: 'Failed to create journal entry', detail: err.message });
+    }
+});
+
+router.delete('/journals/:id', async (req, res) => {
+    try {
+        const tenant_id = tenantIdFromReq(req);
+        const deleted = await JournalEntry.findOneAndDelete(
+            tenantScopedFilter(tenant_id, { _id: req.params.id })
+        );
+        if (!deleted) {
+            return res.status(404).json({ error: 'Journal entry not found' });
+        }
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to delete journal entry' });
     }
 });
 
@@ -283,12 +397,13 @@ router.post('/journals', async (req, res) => {
 
 router.get('/summary', async (req, res) => {
     try {
+        const tenant_id = tenantIdFromReq(req);
         const [invoices, expenses, accounts, arInvoices, apBills] = await Promise.all([
-            Invoice.find().lean(),
-            Expense.find().lean(),
-            Account.find().lean(),
-            mongoose.models.InvoiceAR ? mongoose.models.InvoiceAR.find().lean() : Promise.resolve([]),
-            mongoose.models.Bill ? mongoose.models.Bill.find().lean() : Promise.resolve([])
+            Invoice.find(tenantScopedFilter(tenant_id)).lean(),
+            Expense.find(tenantScopedFilter(tenant_id)).lean(),
+            Account.find(accountLookupFilter(tenant_id)).lean(),
+            mongoose.models.InvoiceAR ? mongoose.models.InvoiceAR.find(tenantScopedFilter(tenant_id)).lean() : Promise.resolve([]),
+            mongoose.models.Bill ? mongoose.models.Bill.find(tenantScopedFilter(tenant_id)).lean() : Promise.resolve([])
         ]);
 
         const totalRevenue = invoices

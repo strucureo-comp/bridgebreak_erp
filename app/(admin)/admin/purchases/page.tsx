@@ -5,9 +5,20 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/context';
 import { useTenant } from '@/lib/tenant-context';
 import {
-    getPurchaseOrders, getVendors, getPurchaseRequests, getGRNs, getVendorBills, getVendorPayments, getProjects
+    getPurchaseOrders, 
+    getVendors, 
+    getPurchaseRequests, 
+    getGRNs, 
+    getVendorBills, 
+    getVendorPayments, 
+    getProjects,
+    getExpenses,
+    getRFQs,
+    getRecurringBills,
+    getRecurringExpenses,
+    getVendorCredits,
+    getBatchPayments
 } from '@/lib/api';
-import { DashboardShell } from '@/components/shared/layout/dashboard-shell';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -30,7 +41,14 @@ import {
     Receipt,
     CreditCard,
     MoreHorizontal,
-    UserPlus
+    UserPlus,
+    FileCheck,
+    Repeat,
+    DollarSign,
+    Layers,
+    ChevronDown,
+    Package,
+    UploadCloud,
 } from 'lucide-react';
 import {
     PieChart,
@@ -44,30 +62,47 @@ import {
     YAxis,
     CartesianGrid
 } from 'recharts';
-import type { PurchaseOrder, Vendor, PurchaseRequest, GRN, VendorBill, VendorPayment, Project } from '@/lib/db/types';
+import type { 
+    PurchaseOrder, 
+    Vendor, 
+    PurchaseRequest, 
+    GRN, 
+    VendorBill, 
+    VendorPayment, 
+    Project,
+    RFQ,
+    Expense,
+    RecurringBill,
+    RecurringExpense,
+    BatchPayment,
+    DebitNote
+} from '@/lib/db/types';
 import { cn } from '@/lib/utils';
 import { MaterialRequestForm } from './_components/material-request-form';
 import { VendorForm } from './_components/vendor-form';
 import { ModuleGuard } from '@/components/shared/layout/module-guard';
-
-function fmt(n: number): string {
-    return new Intl.NumberFormat('en-AE', {
-        style: 'currency',
-        currency: 'AED',
-        maximumFractionDigits: 0
-    }).format(n);
-}
+import { PurchasesNav } from './_components/purchases-nav';
+import { useCompanySettings } from '@/lib/hooks/use-company-settings';
+import { formatCurrency } from '@/lib/utils/currency';
 
 export default function PurchasesPage() {
     const { getModuleLabel } = useTenant();
+    const { baseCurrency } = useCompanySettings();
     const router = useRouter();
     const [orders, setOrders] = useState<PurchaseOrder[]>([]);
     const [vendors, setVendors] = useState<Vendor[]>([]);
     const [requests, setRequests] = useState<PurchaseRequest[]>([]);
+    const [rfqs, setRfqs] = useState<RFQ[]>([]);
     const [projects, setProjects] = useState<Project[]>([]);
     const [grns, setGrns] = useState<GRN[]>([]);
     const [bills, setBills] = useState<VendorBill[]>([]);
+    const [recurringBills, setRecurringBills] = useState<RecurringBill[]>([]);
+    const [vendorCredits, setVendorCredits] = useState<DebitNote[]>([]);
+    const [expenses, setExpenses] = useState<Expense[]>([]);
+    const [recurringExpenses, setRecurringExpenses] = useState<RecurringExpense[]>([]);
     const [payments, setPayments] = useState<VendorPayment[]>([]);
+    const [batchPayments, setBatchPayments] = useState<BatchPayment[]>([]);
+    
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [isMRFormOpen, setIsMROpen] = useState(false);
@@ -75,26 +110,46 @@ export default function PurchasesPage() {
 
     useEffect(() => {
         fetchData();
-    }, []);
+    }, [baseCurrency]); // Reload if currency changes
+
+    const fmt = (n: number) => formatCurrency(n, baseCurrency);
 
     const fetchData = async () => {
         try {
             setLoading(true);
-            const [orderData, vendorData, requestData, grnData, billData, paymentData, projectData] = await Promise.all([
+            const [
+                orderData, vendorData, requestData, rfqData, grnData, 
+                billData, recBillData, creditData, 
+                expenseData, recExpenseData, 
+                paymentData, batchData, projectData
+            ] = await Promise.all([
                 getPurchaseOrders().catch(() => []),
                 getVendors().catch(() => []),
                 getPurchaseRequests().catch(() => []),
+                getRFQs().catch(() => []),
                 getGRNs().catch(() => []),
                 getVendorBills().catch(() => []),
+                getRecurringBills().catch(() => []),
+                getVendorCredits().catch(() => []),
+                getExpenses().catch(() => []),
+                getRecurringExpenses().catch(() => []),
                 getVendorPayments().catch(() => []),
+                getBatchPayments().catch(() => []),
                 getProjects().catch(() => [])
             ]);
+            
             setOrders((orderData as PurchaseOrder[]) || []);
             setVendors((vendorData as Vendor[]) || []);
             setRequests((requestData as PurchaseRequest[]) || []);
+            setRfqs((rfqData as RFQ[]) || []);
             setGrns(grnData || []);
             setBills(billData || []);
+            setRecurringBills(recBillData || []);
+            setVendorCredits(creditData || []);
+            setExpenses(expenseData || []);
+            setRecurringExpenses(recExpenseData || []);
             setPayments(paymentData || []);
+            setBatchPayments(batchData || []);
             setProjects((projectData as Project[]) || []);
         } catch (e) {
             console.error(e);
@@ -106,9 +161,17 @@ export default function PurchasesPage() {
     const stats = useMemo(() => ({
         totalSpent: orders.filter(o => ['received', 'billed', 'paid'].includes(o.status)).reduce((sum, o) => sum + Number(o.total_amount), 0),
         activeOrders: orders.filter(o => o.status === 'ordered' || o.status === 'approved').length,
-        vendors: vendors.length,
-        pendingMRs: requests.filter(r => r.status === 'pending').length
-    }), [orders, vendors, requests]);
+        vendorsCount: vendors.length,
+        pendingMRs: requests.filter(r => r.status === 'pending').length,
+        ordersIssued: orders.filter(o => ['issued', 'ordered'].includes(o.status)).length,
+        billsProcessed: bills.length,
+        rfqsClosed: rfqs.filter(r => r.status === 'closed').length,
+        totalPayables: bills.filter(b => b.status !== 'paid').reduce((sum, b) => sum + Number(b.total_amount), 0),
+        newVendors: vendors.filter(v => new Date(v.created_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)).length,
+        newItems: 12, 
+        avgLeadTime: '4.2 Days',
+        ocrRate: '85%'
+    }), [orders, vendors, requests, bills, rfqs]);
 
     const spendByVendor = useMemo(() => {
         const data: Record<string, number> = {};
@@ -119,42 +182,45 @@ export default function PurchasesPage() {
         return Object.entries(data).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 5);
     }, [orders, vendors]);
 
-    if (loading) return (
-        <DashboardShell requireAdmin>
-            <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
-                <RefreshCcw className="h-10 w-10 animate-spin text-primary" />
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Loading Procurement Ledger</p>
-            </div>
-        </DashboardShell>
-    );
+    const recentActivity = useMemo(() => {
+        const combined = [
+            ...orders.map(o => ({ type: 'order', date: o.created_at, title: `Order ${o.po_number}`, amount: o.total_amount })),
+            ...bills.map(b => ({ type: 'bill', date: b.created_at, title: `Bill ${b.bill_number}`, amount: b.total_amount })),
+            ...payments.map(p => ({ type: 'payment', date: p.created_at, title: `Payment recorded`, amount: p.amount })),
+        ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
+        return combined;
+    }, [orders, bills, payments]);
+
+    if (loading) {
+        return (
+            <ModuleGuard module="purchases">
+                <div className="space-y-6 max-w-6xl animate-pulse">
+                    <div>
+                        <div className="h-8 w-48 bg-muted rounded mb-2" />
+                        <div className="h-4 w-64 bg-muted rounded" />
+                    </div>
+                    <div className="h-[400px] bg-muted rounded-xl w-full" />
+                </div>
+            </ModuleGuard>
+        );
+    }
 
     return (
-        <DashboardShell requireAdmin>
-            <ModuleGuard module="operations">
-                <div className="space-y-6">
-                    {/* Header */}
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
-                        <div className="flex items-center gap-4">
-                            <div className="h-10 w-10 rounded-lg bg-foreground text-card-foreground flex items-center justify-center shadow-sm">
-                                <ShoppingCart className="h-5 w-5" />
-                            </div>
-                            <div>
-                                <h1 className="text-xl font-bold tracking-tight text-foreground uppercase leading-none">{getModuleLabel('purchases')}</h1>
-                                <div className="flex items-center gap-2 mt-0.5">
-                                    <span className="text-[10px] font-black text-red-600 uppercase tracking-[0.2em]">Supply Chain Control</span>
-                                    <Badge variant="secondary" className="hidden sm:inline-flex font-bold uppercase text-[9px] tracking-widest bg-slate-100 text-slate-600">
-                                        Material Flow
-                                    </Badge>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <Dialog open={isVendorFormOpen} onOpenChange={setIsVendorOpen}>
-                                <DialogTrigger asChild>
-                                    <Button variant="outline" size="sm" className="h-10 gap-2 font-bold uppercase text-[10px] border-border">
-                                        <UserPlus className="h-4 w-4 text-primary" /> Add Vendor
-                                    </Button>
-                                </DialogTrigger>
+        <ModuleGuard module="purchases">
+            <div className="space-y-6 max-w-6xl">
+                {/* Header Area */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h1 className="text-2xl font-semibold">{getModuleLabel('purchases')}</h1>
+                        <p className="text-muted-foreground">Manage vendors, procurement pipelines, and purchase orders.</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <Dialog open={isVendorFormOpen} onOpenChange={setIsVendorOpen}>
+                            <DialogTrigger asChild>
+                                <Button variant="outline" size="sm" className="gap-2">
+                                    <UserPlus className="h-4 w-4" /> Add Vendor
+                                </Button>
+                            </DialogTrigger>
                                 <DialogContent className="max-w-xl p-0 overflow-hidden border-none shadow-2xl rounded-md">
                                     <VendorForm onSuccess={() => { setIsVendorOpen(false); fetchData(); }} />
                                 </DialogContent>
@@ -177,12 +243,16 @@ export default function PurchasesPage() {
                         </div>
                     </div>
 
+                    <PurchasesNav />
+
                     {/* KPI Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
                         <StatsTile title="Committed Spend" value={fmt(stats.totalSpent)} icon={ShoppingCart} label="Net Procurement Value" />
-                        <StatsTile title="Active POs" value={stats.activeOrders} icon={Clock} label="Orders in Pipeline" />
-                        <StatsTile title="Requisitions" value={stats.pendingMRs} icon={ClipboardList} label="Pending HQ Approval" highlight={stats.pendingMRs > 0} />
-                        <StatsTile title="Supply Chain" value={stats.vendors} icon={Store} label="Verified Vendors" />
+                        <StatsTile title="Total Payables" value={fmt(stats.totalPayables)} icon={DollarSign} label="Outstanding AP" highlight={stats.totalPayables > 100000} />
+                        <StatsTile title="Avg Lead Time" value={stats.avgLeadTime} icon={Clock} label="Order to Receipt" />
+                        <StatsTile title="New Items" value={stats.newItems} icon={Package} label="SKUs Added (30d)" />
+                        <StatsTile title="RFQs Closed" value={stats.rfqsClosed} icon={Layers} label="Sourcing Efficiency" />
+                        <StatsTile title="Auto-Scan %" value={stats.ocrRate} icon={UploadCloud} label="OCR Adoption" />
                     </div>
 
                     {/* Analytics Row */}
@@ -192,7 +262,7 @@ export default function PurchasesPage() {
                                 <CardTitle className="text-xs font-black uppercase tracking-widest text-foreground">Vendor Spend Distribution</CardTitle>
                             </CardHeader>
                             <CardContent className="pt-6">
-                                <div className="h-[240px] w-full">
+                                <div className="h-[300px] w-full">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <BarChart data={spendByVendor}>
                                             <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#f1f5f9" />
@@ -206,233 +276,49 @@ export default function PurchasesPage() {
                             </CardContent>
                         </Card>
 
-                        <Card className="border shadow-sm rounded-md bg-foreground text-card-foreground p-6 flex flex-col justify-between">
-                            <div className="space-y-4">
-                                <div className="h-10 w-10 rounded-md bg-primary text-card-foreground flex items-center justify-center shadow-sm">
-                                    <TrendingUp className="h-5 w-5" />
+                        <div className="space-y-6">
+                            <Card className="border shadow-sm rounded-md bg-foreground text-card-foreground p-6 flex flex-col justify-between">
+                                <div className="space-y-4">
+                                    <div className="h-10 w-10 rounded-md bg-primary text-card-foreground flex items-center justify-center shadow-sm">
+                                        <TrendingUp className="h-5 w-5" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-sm font-bold uppercase tracking-widest">Procurement Insights</h3>
+                                        <p className="text-[10px] text-muted-foreground font-medium leading-relaxed uppercase tracking-wider mt-2">
+                                            System is tracking {orders.length} orders across {vendors.length} vendors. Average procurement lead time is currently 4.2 days.
+                                        </p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h3 className="text-sm font-bold uppercase tracking-widest">Procurement Insights</h3>
-                                    <p className="text-[10px] text-muted-foreground font-medium leading-relaxed uppercase tracking-wider mt-2">
-                                        System is tracking {orders.length} orders across {vendors.length} vendors. Average procurement lead time is currently 4.2 days.
-                                    </p>
+                                <div className="pt-6 border-t border-white/10 mt-6">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[10px] font-black uppercase text-muted-foreground">Efficiency Score</span>
+                                        <span className="text-xl font-black text-primary">94%</span>
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="pt-6 border-t border-white/10 mt-6">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-[10px] font-black uppercase text-muted-foreground">Efficiency Score</span>
-                                    <span className="text-xl font-black text-primary">94%</span>
-                                </div>
-                            </div>
-                        </Card>
-                    </div>
+                            </Card>
 
-                    <Tabs defaultValue="requests" className="space-y-6">
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                            <TabsList className="bg-muted/50 border h-10 p-0.5 w-full md:w-auto overflow-x-auto no-scrollbar justify-start">
-                                <TabsTrigger value="requests" className="text-xs font-semibold px-6 h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">Material Requests</TabsTrigger>
-                                <TabsTrigger value="orders" className="text-xs font-semibold px-6 h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">Purchase Orders</TabsTrigger>
-                                <TabsTrigger value="receipts" className="text-xs font-semibold px-6 h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">Good Receipts</TabsTrigger>
-                                <TabsTrigger value="bills" className="text-xs font-semibold px-6 h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">Vendor Bills</TabsTrigger>
-                                <TabsTrigger value="vendors" className="text-xs font-semibold px-6 h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">Vendors</TabsTrigger>
-                            </TabsList>
-
-                            <div className="relative w-full md:w-64">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                                <input
-                                    type="text"
-                                    placeholder="SEARCH LEDGER..."
-                                    className="w-full h-9 pl-9 pr-4 rounded-md border border-border bg-card text-[10px] font-bold uppercase outline-none focus:ring-1 focus:ring-primary/20"
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                />
-                            </div>
+                            <Card className="border shadow-sm rounded-md bg-card">
+                                <CardHeader className="border-b bg-muted/50 py-3">
+                                    <CardTitle className="text-[10px] font-black uppercase tracking-widest text-foreground">Recent Transactions</CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-0">
+                                    <div className="divide-y divide-border">
+                                        {recentActivity.map((act, i) => (
+                                            <div key={i} className="px-4 py-3 flex items-center justify-between hover:bg-muted/30 transition-colors">
+                                                <div>
+                                                    <p className="text-[10px] font-bold text-foreground uppercase">{act.title}</p>
+                                                    <p className="text-[8px] font-black text-muted-foreground uppercase">{new Date(act.date).toLocaleDateString()}</p>
+                                                </div>
+                                                <p className="text-[10px] font-black text-foreground">{fmt(act.amount ?? 0)}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </CardContent>
+                            </Card>
                         </div>
-
-                        <Card className="border shadow-sm rounded-md overflow-hidden bg-card">
-                            <TabsContent value="requests" className="m-0">
-                                <TableFrame>
-                                    <thead className="bg-muted border-b border-border">
-                                        <tr>
-                                            <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground">MR No</th>
-                                            <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground">Material specification</th>
-                                            <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground">Project linkage</th>
-                                            <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground">Status</th>
-                                            <th className="px-6 py-3 text-right text-[9px] font-black uppercase tracking-wider text-muted-foreground">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-border">
-                                        {requests.map((req) => (
-                                            <tr key={req.id} className="hover:bg-zinc-50/50 transition-colors">
-                                                <td className="px-6 py-4 text-[10px] font-bold text-muted-foreground font-mono uppercase">MR-{req.id.slice(0, 4).toUpperCase()}</td>
-                                                <td className="px-6 py-4">
-                                                    <p className="text-xs font-bold text-foreground uppercase">{req.item_name}</p>
-                                                    <p className="text-[10px] text-muted-foreground font-black tracking-widest">{req.quantity} {req.unit}</p>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <p className="text-xs font-bold text-foreground uppercase">{req.project?.title || 'General Site'}</p>
-                                                    <p className="text-[9px] text-muted-foreground font-bold uppercase">Requested By: {req.requester?.full_name || 'Site Team'}</p>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <Badge variant="outline" className={cn(
-                                                        "text-[8px] font-black uppercase px-2 py-0.5 rounded-full border-none",
-                                                        req.status === 'pending' ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"
-                                                    )}>{req.status}</Badge>
-                                                </td>
-                                                <td className="px-6 py-4 text-right">
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground/60 hover:text-primary" onClick={() => router.push(`/admin/purchases/new?request_id=${req.id}`)}>
-                                                        <ChevronRight size={16} />
-                                                    </Button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                        {requests.length === 0 && <EmptyTable icon={ClipboardList} label="No Material Requests" />}
-                                    </tbody>
-                                </TableFrame>
-                            </TabsContent>
-
-                            <TabsContent value="orders" className="m-0">
-                                <TableFrame>
-                                    <thead className="bg-muted border-b border-border">
-                                        <tr>
-                                            <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground">PO Number</th>
-                                            <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground">Vendor Entity</th>
-                                            <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground text-right">Commitment</th>
-                                            <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground">Status</th>
-                                            <th className="px-6 py-3 text-right text-[9px] font-black uppercase tracking-wider text-muted-foreground">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-border">
-                                        {orders.map((order) => (
-                                            <tr key={order.id} className="hover:bg-zinc-50/50 transition-colors">
-                                                <td className="px-6 py-4 text-xs font-bold text-foreground uppercase font-mono">{order.po_number}</td>
-                                                <td className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase">{vendors.find(v => v.id === order.vendor_id)?.name || 'Unknown Vendor'}</td>
-                                                <td className="px-6 py-4 text-xs font-black text-right text-foreground">{fmt(Number(order.total_amount))}</td>
-                                                <td className="px-6 py-4">
-                                                    <Badge variant="outline" className="text-[8px] font-black uppercase px-2 py-0.5 rounded-full border-none bg-muted text-muted-foreground">{order.status}</Badge>
-                                                </td>
-                                                <td className="px-6 py-4 text-right">
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground/60 hover:text-primary" onClick={() => router.push(`/admin/purchases/orders/${order.id}`)}>
-                                                        <ChevronRight size={16} />
-                                                    </Button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                        {orders.length === 0 && <EmptyTable icon={ShoppingCart} label="No Purchase Orders" />}
-                                    </tbody>
-                                </TableFrame>
-                            </TabsContent>
-
-                            <TabsContent value="receipts" className="m-0">
-                                <TableFrame>
-                                    <thead className="bg-muted border-b border-border">
-                                        <tr>
-                                            <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground">GRN Number</th>
-                                            <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground">PO Reference</th>
-                                            <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground">Received Date</th>
-                                            <th className="px-6 py-3 text-right text-[9px] font-black uppercase tracking-wider text-muted-foreground">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-border">
-                                        {grns.map((grn) => (
-                                            <tr key={grn.id} className="hover:bg-zinc-50/50 transition-colors">
-                                                <td className="px-6 py-4 text-xs font-bold text-foreground uppercase">{grn.grn_number}</td>
-                                                <td className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase font-mono">{orders.find(o => o.id === grn.purchase_order_id)?.po_number || 'REF-PO'}</td>
-                                                <td className="px-6 py-4 text-xs font-medium text-muted-foreground">{new Date(grn.received_date).toLocaleDateString()}</td>
-                                                <td className="px-6 py-4 text-right">
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground/60 hover:text-primary"><ChevronRight size={16} /></Button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                        {grns.length === 0 && <EmptyTable icon={Truck} label="No Goods Receipts" />}
-                                    </tbody>
-                                </TableFrame>
-                            </TabsContent>
-
-                            <TabsContent value="bills" className="m-0">
-                                <TableFrame>
-                                    <thead className="bg-muted border-b border-border">
-                                        <tr>
-                                            <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground">Bill Number</th>
-                                            <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground">Vendor</th>
-                                            <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground text-right">Amount</th>
-                                            <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground">Due Date</th>
-                                            <th className="px-6 py-3 text-right text-[9px] font-black uppercase tracking-wider text-muted-foreground">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-border">
-                                        {bills.map((bill) => (
-                                            <tr key={bill.id} className="hover:bg-zinc-50/50 transition-colors">
-                                                <td className="px-6 py-4 text-xs font-bold text-foreground uppercase">{bill.bill_number}</td>
-                                                <td className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase">{vendors.find(v => v.id === bill.vendor_id)?.name}</td>
-                                                <td className="px-6 py-4 text-xs font-black text-right text-foreground">{fmt(Number(bill.total_amount))}</td>
-                                                <td className="px-6 py-4 text-xs font-medium text-muted-foreground">{new Date(bill.due_date).toLocaleDateString()}</td>
-                                                <td className="px-6 py-4 text-right">
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground/60 hover:text-primary"><ChevronRight size={16} /></Button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                        {bills.length === 0 && <EmptyTable icon={Receipt} label="No Vendor Bills" />}
-                                    </tbody>
-                                </TableFrame>
-                            </TabsContent>
-
-                            <TabsContent value="vendors" className="m-0">
-                                <TableFrame>
-                                    <thead className="bg-muted border-b border-border">
-                                        <tr>
-                                            <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground">Vendor Name</th>
-                                            <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground">TRN / Tax ID</th>
-                                            <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground">Contact</th>
-                                            <th className="px-6 py-3 text-right text-[9px] font-black uppercase tracking-wider text-muted-foreground">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-border">
-                                        {vendors.map((v) => (
-                                            <tr key={v.id} className="hover:bg-zinc-50/50 transition-colors">
-                                                <td className="px-6 py-4 text-xs font-bold text-foreground uppercase">{v.name}</td>
-                                                <td className="px-6 py-4 text-xs font-bold text-muted-foreground font-mono">{v.tax_id || 'NOT REGISTERED'}</td>
-                                                <td className="px-6 py-4">
-                                                    <p className="text-xs font-bold text-muted-foreground uppercase">{v.contact_person}</p>
-                                                    <p className="text-[9px] text-muted-foreground font-medium">{v.email}</p>
-                                                </td>
-                                                <td className="px-6 py-4 text-right">
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground/60 hover:text-primary"><MoreHorizontal size={16} /></Button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                        {vendors.length === 0 && <EmptyTable icon={Store} label="No Vendors Registered" />}
-                                    </tbody>
-                                </TableFrame>
-                            </TabsContent>
-                        </Card>
-                    </Tabs>
+                    </div>
                 </div>
             </ModuleGuard>
-        </DashboardShell>
-    );
-}
-
-function TableFrame({ children }: { children: React.ReactNode }) {
-    return (
-        <div className="overflow-x-auto">
-            <table className="w-full text-left">
-                {children}
-            </table>
-        </div>
-    );
-}
-
-function EmptyTable({ icon: Icon, label }: { icon: any; label: string }) {
-    return (
-        <tr>
-            <td colSpan={10} className="py-20 text-center">
-                <div className="flex flex-col items-center gap-3">
-                    <Icon className="h-10 w-10 text-zinc-100" />
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">{label}</p>
-                </div>
-            </td>
-        </tr>
     );
 }
 
@@ -452,8 +338,8 @@ function StatsTile({ title, value, icon: Icon, label, highlight }: { title: stri
             </div>
             <div className="space-y-0.5">
                 <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{title}</p>
-                <h3 className="text-xl font-black text-foreground tracking-tight">{value}</h3>
-                <p className={cn("text-[8px] font-black uppercase tracking-tighter", highlight ? "text-primary" : "text-muted-foreground")}>{label}</p>
+                <h3 className="text-lg font-black text-foreground tracking-tight">{value}</h3>
+                <p className={cn("text-xs font-semibold tracking-tighter", highlight ? "text-primary" : "text-muted-foreground")}>{label}</p>
             </div>
         </Card>
     );

@@ -19,6 +19,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import type { CustomerAccount, Invoice } from '@/lib/db/types';
 import { useTenant } from '@/lib/tenant-context';
+import { useCompanySettings } from '@/lib/hooks/use-company-settings';
+import { formatCurrency } from '@/lib/utils/currency';
 import { ModuleGuard } from '@/components/shared/layout/module-guard';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
@@ -35,6 +37,7 @@ export default function CustomerDetailPage() {
     const router = useRouter();
     const { user } = useAuth();
     const { companyProfile } = useTenant();
+    const { baseCurrency, email, phone, address } = useCompanySettings();
     const customerId = params.id as string;
 
     const [customer, setCustomer] = useState<CustomerAccount | null>(null);
@@ -65,13 +68,9 @@ export default function CustomerDetailPage() {
     const [newComment, setNewComment] = useState('');
 
     const isRetail = companyProfile?.businessType === 'b2c_retail';
-    const currency = companyProfile?.baseCurrency || 'AED';
+    const currency = baseCurrency;
 
-    const fmt = (n: number) => new Intl.NumberFormat('en-AE', {
-        style: 'currency',
-        currency,
-        maximumFractionDigits: 2
-    }).format(n);
+    const fmt = (n: number) => formatCurrency(n, baseCurrency);
 
     useEffect(() => {
         fetchData();
@@ -81,11 +80,11 @@ export default function CustomerDetailPage() {
         try {
             setLoading(true);
 
-            // First try localStorage, then fallback to API
-            let allCustomers: CustomerAccount[] = JSON.parse(localStorage.getItem('sales_customers') || '[]');
-            if (!allCustomers || allCustomers.length === 0) {
-                allCustomers = await getCustomers().catch(() => []) || [];
-            }
+            const allCustomersRaw: any[] = await getCustomers().catch(() => []) || [];
+            const allCustomers: CustomerAccount[] = allCustomersRaw.map((c: any) => ({
+                ...c,
+                id: String(c._id || c.id),
+            }));
 
             const [leadsData, oppsData, invsData] = await Promise.all([
                 getLeads().catch(() => []),
@@ -120,7 +119,11 @@ export default function CustomerDetailPage() {
                     });
                     const savedComments = localStorage.getItem(`customer_comments_${customerId}`);
                     if (savedComments) {
-                        setComments(JSON.parse(savedComments));
+                        try {
+                            setComments(JSON.parse(savedComments));
+                        } catch {
+                            setComments([]);
+                        }
                     }
                 } else {
                     toast.error('Customer not found');
@@ -138,14 +141,24 @@ export default function CustomerDetailPage() {
         if (!customerId || customerId === 'new') return null;
 
         const custInvoices = invoices.filter(i => i.client_id === customerId || i.customer_id === customerId);
-        const custPayments = (typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('sales_payments') || '[]') : [])
-            .filter((p: any) => p.customerId === customerId || p.customer_id === customerId);
-        const custSalesOrders = (typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('sales_orders') || '[]') : [])
-            .filter((o: any) => o.customerId === customerId || o.customer_id === customerId);
+        const custPayments = (() => {
+            try {
+                return typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('sales_payments') || '[]') : [];
+            } catch {
+                return [];
+            }
+        })().filter((p: any) => p.customerId === customerId || p.customer_id === customerId);
+        const custSalesOrders = (() => {
+            try {
+                return typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('sales_orders') || '[]') : [];
+            } catch {
+                return [];
+            }
+        })().filter((o: any) => o.customerId === customerId || o.customer_id === customerId);
         const custOpps = opportunities.filter(o => o.account_id === customerId);
 
         const totalInvoiced = custInvoices.reduce((s, i) => s + Number(i.amount || 0), 0);
-        const totalPaid = custPayments.reduce((s, p) => s + Number(p.amount || p.total || 0), 0);
+        const totalPaid = custPayments.reduce((s: any, p: any) => s + Number(p.amount || p.total || 0), 0);
         const totalRevenue = custInvoices.filter(i => i.status === 'paid').reduce((s, i) => s + Number(i.amount || 0), 0);
         const pendingAmount = custInvoices.filter(i => i.status === 'pending' || i.status === 'overdue').reduce((s, i) => s + Number(i.amount || 0), 0);
         const balance = totalInvoiced - totalPaid;
@@ -159,9 +172,9 @@ export default function CustomerDetailPage() {
             const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
 
             const monthRevenue = custInvoices
-                .filter(i => i.status === 'paid' && i.paid_date)
+                .filter(i => i.status === 'paid' && (i as any).paid_at)
                 .filter(i => {
-                    const paidDate = new Date(i.paid_date);
+                    const paidDate = new Date((i as any).paid_at);
                     return paidDate >= monthStart && paidDate <= monthEnd;
                 })
                 .reduce((s, i) => s + Number(i.amount || 0), 0);
@@ -189,25 +202,12 @@ export default function CustomerDetailPage() {
         if (!formData.name) return toast.error('Customer name is required');
 
         try {
-            // Use localStorage for persistence
-            const existingCustomers = JSON.parse(localStorage.getItem('sales_customers') || '[]');
-
             if (isCreating) {
-                const newCustomer = {
-                    id: Date.now().toString(),
-                    ...formData,
-                    createdAt: new Date().toISOString(),
-                    status: 'active'
-                };
-                existingCustomers.push(newCustomer);
-                localStorage.setItem('sales_customers', JSON.stringify(existingCustomers));
+                await createCustomer(formData);
                 toast.success('Customer created successfully');
                 router.push('/admin/sales/customers');
             } else if (customer) {
-                const updatedCustomers = existingCustomers.map((c: any) =>
-                    c.id === customer.id ? { ...c, ...formData, updatedAt: new Date().toISOString() } : c
-                );
-                localStorage.setItem('sales_customers', JSON.stringify(updatedCustomers));
+                await updateCustomer(customer.id, formData);
                 setCustomer({ ...customer, ...formData } as CustomerAccount);
                 setIsEditing(false);
                 toast.success('Customer updated successfully');
@@ -222,9 +222,7 @@ export default function CustomerDetailPage() {
         if (!confirm(`Are you sure you want to delete ${customer.name}? This action cannot be undone.`)) return;
 
         try {
-            const existingCustomers = JSON.parse(localStorage.getItem('sales_customers') || '[]');
-            const updatedCustomers = existingCustomers.filter((c: any) => c.id !== customer.id);
-            localStorage.setItem('sales_customers', JSON.stringify(updatedCustomers));
+            await deleteCustomer(customer.id);
             toast.success('Customer deleted successfully');
             router.push('/admin/sales/customers');
         } catch (e) {
@@ -309,7 +307,7 @@ export default function CustomerDetailPage() {
                                                 type="email"
                                                 value={formData.email}
                                                 onChange={e => setFormData({ ...formData, email: e.target.value })}
-                                                placeholder="info@company.com"
+                                                placeholder={email || ''}
                                             />
                                         </div>
                                         <div className="space-y-2">
@@ -317,7 +315,7 @@ export default function CustomerDetailPage() {
                                             <Input
                                                 value={formData.phone}
                                                 onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                                                placeholder="+971 4 123 4567"
+                                                placeholder={phone || ''}
                                             />
                                         </div>
                                         <div className="space-y-2">
@@ -333,7 +331,7 @@ export default function CustomerDetailPage() {
                                             <Input
                                                 value={formData.address}
                                                 onChange={e => setFormData({ ...formData, address: e.target.value })}
-                                                placeholder="P.O. Box, Street, City"
+                                                placeholder={address || ''}
                                             />
                                         </div>
                                     </div>
@@ -723,7 +721,7 @@ export default function CustomerDetailPage() {
                                                     </div>
                                                     <div>
                                                         <p className="text-sm font-bold">{inv.invoice_number}</p>
-                                                        <p className="text-xs text-muted-foreground">{new Date(inv.date).toLocaleDateString()}</p>
+                                                        <p className="text-xs text-muted-foreground">{new Date(inv.created_at).toLocaleDateString()}</p>
                                                     </div>
                                                 </div>
                                                 <div className="text-right">
@@ -861,7 +859,7 @@ export default function CustomerDetailPage() {
                                                     customerData?.invoices.forEach(inv => {
                                                         runningBalance += Number(inv.amount || 0);
                                                         rows.push({
-                                                            date: inv.date,
+                                                            date: inv.created_at,
                                                             reference: inv.invoice_number,
                                                             type: 'invoice',
                                                             debit: Number(inv.amount || 0),

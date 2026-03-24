@@ -6,25 +6,25 @@ import {
   PackagePlus, ArrowRightLeft, Building, Trash2, AlertCircle, CheckCircle2
 } from "lucide-react";
 
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardDescription, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 
-import { ROLES } from "./_lib/data";
 import { useInventory } from "./_hooks/inventory";
 import { SkuMasterCatalog } from "./_components/sku-master-catalog";
 import { StockMovementLog } from "./_components/stock-movement-log";
 import { WasteManagement } from "./_components/waste-management";
 import { SiteAllocation } from "./_components/site-allocation";
 import { InventoryDialogs } from "./_components/inventory-dialogs";
+import { useCompanySettings } from "@/lib/hooks/use-company-settings";
+import { formatCurrency } from "@/lib/utils/currency";
 
 export default function InventoryControlPage() {
-  const [currentRole, setCurrentRole] = useState("warehouseManager");
+  const { baseCurrency } = useCompanySettings();
   const {
     settings, skus, warehouses, wasteLogs, movements, allocations, searchQuery, setSearchQuery,
     isRegisterOpen, setIsRegisterOpen, isAdjustOpen, setIsAdjustOpen,
@@ -32,8 +32,8 @@ export default function InventoryControlPage() {
     isSettingsOpen, setIsSettingsOpen, skuForm, setSkuForm, adjustForm, setAdjustForm,
     wasteForm, setWasteForm, allocateForm, setAllocateForm, settingsForm, setSettingsForm,
     handleRegisterSku, handleAdjustStock, handleReportWaste, handleAllocate,
-    handleSaveSettings, handleApproveWaste, role, loading
-  } = useInventory(currentRole);
+    handleSaveSettings, handleApproveWaste, handleDeleteSku, role, loading
+  } = useInventory();
 
   // --- Computed Metrics ---
   const totalSkus = skus.length;
@@ -58,37 +58,15 @@ export default function InventoryControlPage() {
   );
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto pb-12 w-full">
+    <div className="space-y-6 max-w-6xl">
         {/* Header Area */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
-          <div className="flex items-center gap-4">
-            <Factory className="h-8 w-8 text-primary" />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h1 className="text-xl font-bold tracking-tight text-foreground uppercase">Inventory Control</h1>
-              <div className="flex items-center gap-2 mt-0.5">
-                <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Operational Registry</span>
-                <Badge variant="secondary" className={`hidden sm:inline-flex font-bold uppercase text-[9px] tracking-widest ${loading ? 'bg-slate-100 text-slate-400' : 'bg-emerald-100 text-emerald-700'}`}>
-                  {loading ? 'Syncing...' : 'Perpetual Ledger'}
-                </Badge>
-              </div>
+              <h1 className="text-2xl font-semibold">Inventory Control</h1>
+              <p className="text-muted-foreground">Manage materials, stock levels, warehousing, and waste.</p>
             </div>
-          </div>
 
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground font-medium select-none">Acting As:</span>
-              <Select value={currentRole} onValueChange={setCurrentRole}>
-                <SelectTrigger className="h-10 w-[180px] bg-primary/5 border-border text-primary font-bold shadow-sm">
-                  <SelectValue placeholder="Select Role" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ROLES.map(r => (
-                    <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
             <Button
               variant="outline"
               size="icon"
@@ -145,61 +123,61 @@ export default function InventoryControlPage() {
 
           {/* Metrics Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-            <Card className="bg-white">
-              <CardHeader className="p-4 pb-2">
-                <CardDescription className="font-medium text-muted-foreground text-xs uppercase tracking-wider">Total SKUs</CardDescription>
-                <CardTitle className="text-2xl font-bold text-foreground font-semibold">{totalSkus}</CardTitle>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total SKUs</CardTitle>
               </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{totalSkus}</div>
+              </CardContent>
             </Card>
 
-            <Card className="bg-white">
-              <CardHeader className="p-4 pb-2 flex-row justify-between items-start space-y-0">
-                <div>
-                  <CardDescription className="font-medium text-muted-foreground text-xs uppercase tracking-wider">Low Stock</CardDescription>
-                  <CardTitle className="text-2xl font-bold text-orange-600">{lowStockCount}</CardTitle>
-                </div>
-                <div className="p-2 bg-orange-100/50 rounded-full">
-                  <AlertCircle className="h-4 w-4 text-orange-600" />
-                </div>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Low Stock</CardTitle>
+                <AlertCircle className="h-4 w-4 text-orange-600" />
               </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-orange-600">{lowStockCount}</div>
+              </CardContent>
             </Card>
 
-            <Card className="bg-white border-red-200">
-              <CardHeader className="p-4 pb-2 flex-row justify-between items-start space-y-0">
-                <div>
-                  <CardDescription className="font-medium text-muted-foreground text-xs uppercase tracking-wider">Critical (Zero)</CardDescription>
-                  <CardTitle className="text-2xl font-bold text-red-600">{criticalStockouts}</CardTitle>
-                </div>
-                <div className="p-2 bg-red-100/50 rounded-full">
-                  <AlertTriangle className="h-4 w-4 text-red-600" />
-                </div>
+            <Card className="border-red-500/50">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-red-600">Critical (Zero)</CardTitle>
+                <AlertTriangle className="h-4 w-4 text-red-600" />
               </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-red-600">{criticalStockouts}</div>
+              </CardContent>
             </Card>
 
-            <Card className="bg-white col-span-1 md:col-span-2 lg:col-span-1 border-border">
-              <CardHeader className="p-4 pb-2 flex-row justify-between items-start space-y-0">
-                <div>
-                  <CardDescription className="font-medium text-muted-foreground text-xs uppercase tracking-wider">Holding Value</CardDescription>
-                  <CardTitle className="text-2xl font-bold text-primary">${totalHoldingValue.toLocaleString()}</CardTitle>
-                </div>
-                <div className="p-2 bg-primary/15 rounded-full">
-                  <DollarSign className="h-4 w-4 text-primary" />
-                </div>
+            <Card className="col-span-1 md:col-span-2 lg:col-span-1">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Holding Value</CardTitle>
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-primary">{formatCurrency(totalHoldingValue, baseCurrency)}</div>
+              </CardContent>
             </Card>
 
-            <Card className="bg-white">
-              <CardHeader className="p-4 pb-2">
-                <CardDescription className="font-medium text-muted-foreground text-xs uppercase tracking-wider">Allocated</CardDescription>
-                <CardTitle className="text-2xl font-bold text-foreground font-semibold">{allocatedToSites}</CardTitle>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Allocated</CardTitle>
               </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{allocatedToSites}</div>
+              </CardContent>
             </Card>
 
-            <Card className="bg-white">
-              <CardHeader className="p-4 pb-2">
-                <CardDescription className="font-medium text-muted-foreground text-xs uppercase tracking-wider">Waste Value (MTD)</CardDescription>
-                <CardTitle className="text-2xl font-bold text-foreground font-semibold">${currentMonthWasteValue.toLocaleString()}</CardTitle>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Waste Value (MTD)</CardTitle>
               </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{formatCurrency(currentMonthWasteValue, baseCurrency)}</div>
+              </CardContent>
             </Card>
           </div>
 
@@ -220,7 +198,7 @@ export default function InventoryControlPage() {
             </TabsList>
 
             <TabsContent value="master-catalog" className="flex-grow focus-visible:outline-none data-[state=inactive]:hidden">
-              <SkuMasterCatalog skus={filteredSkus} wasteTolerancePercent={settings.wasteTolerancePercent} />
+              <SkuMasterCatalog skus={filteredSkus} wasteTolerancePercent={settings.wasteTolerancePercent} onDelete={handleDeleteSku} />
             </TabsContent>
 
             <TabsContent value="stock-movement" className="flex-grow focus-visible:outline-none data-[state=inactive]:hidden">

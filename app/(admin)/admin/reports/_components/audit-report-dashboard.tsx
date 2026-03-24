@@ -64,9 +64,73 @@ import {
   Clock,
   HelpCircle,
 } from 'lucide-react';
-type AuditReport = any;
-type ChartData = any;
-type VisualDataPoint = any;
+import { useCompanySettings } from '@/lib/hooks/use-company-settings';
+import { formatCurrency } from '@/lib/utils/currency';
+
+interface AuditAnomaly {
+  category: 'error' | 'warning' | 'observation' | string;
+  description: string;
+  impact?: string;
+}
+
+interface MonthlyPoint {
+  month: string;
+  amount: number;
+}
+
+interface ChartSlice {
+  name: string;
+  value: number;
+}
+
+interface AccountAnalysisItem {
+  account_id: string;
+  account_name: string;
+  account_code: string;
+  account_type: string;
+  closing_balance: number;
+  transactions_count: number;
+}
+
+interface AuditReport {
+  generated_at: string;
+  period: { from: string; to: string };
+  executive_summary: {
+    overall_health: 'excellent' | 'good' | 'fair' | 'poor' | string;
+    ledger_integrity: boolean;
+    total_transactions: number;
+    total_accounts: number;
+  };
+  financial_summary: {
+    total_assets: number;
+    total_liabilities: number;
+    total_equity: number;
+    total_revenue: number;
+    total_expenses: number;
+    net_income: number;
+  };
+  anomalies_detected: AuditAnomaly[];
+  compliance_checks: Record<string, boolean>;
+  audit_trail: {
+    entries_by_type: Record<string, number>;
+  };
+  key_observations: {
+    revenue_trend: string;
+    expense_trend: string;
+    cash_position: string;
+    liquidity_status: string;
+  };
+  recommendations: string[];
+  account_analysis: AccountAnalysisItem[];
+}
+
+interface ChartData {
+  monthly_revenue: MonthlyPoint[];
+  monthly_expenses: MonthlyPoint[];
+  revenue_by_source: ChartSlice[];
+  expenses_by_category: ChartSlice[];
+  account_balances: ChartSlice[];
+}
 
 interface AuditReportDashboardProps {
   report: AuditReport;
@@ -88,6 +152,7 @@ export function AuditReportDashboard({
   onExport,
 }: AuditReportDashboardProps) {
   const [selectedTab, setSelectedTab] = useState('overview');
+  const { baseCurrency } = useCompanySettings();
 
   const healthColor = STATUS_COLORS[report.executive_summary.overall_health as keyof typeof STATUS_COLORS];
 
@@ -181,12 +246,12 @@ export function AuditReportDashboard({
 
       {/* Alerts Section */}
       {report.anomalies_detected.length > 0 && (
-        <Alert variant={report.anomalies_detected.some(a => a.category === 'error') ? 'destructive' : 'default'}>
+        <Alert variant={report.anomalies_detected.some((a: AuditAnomaly) => a.category === 'error') ? 'destructive' : 'default'}>
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>⚠️ {report.anomalies_detected.length} Anomalies Detected</AlertTitle>
           <AlertDescription>
             <ul className="mt-2 space-y-1">
-              {report.anomalies_detected.slice(0, 3).map((anomaly, idx) => (
+              {report.anomalies_detected.slice(0, 3).map((anomaly: AuditAnomaly, idx: number) => (
                 <li key={idx} className="text-sm">
                   {anomaly.category === 'error' && '❌'} {anomaly.category === 'warning' && '⚠️'}{' '}
                   {anomaly.category === 'observation' && 'ℹ️'} {anomaly.description}
@@ -241,7 +306,7 @@ export function AuditReportDashboard({
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={chartData.monthly_revenue.map((m, idx) => ({
+                  <BarChart data={chartData.monthly_revenue.map((m: MonthlyPoint, idx: number) => ({
                     month: m.month,
                     revenue: m.amount,
                     expenses: chartData.monthly_expenses[idx]?.amount || 0,
@@ -249,7 +314,7 @@ export function AuditReportDashboard({
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="month" />
                     <YAxis />
-                    <Tooltip formatter={(value) => `$${(value as number).toFixed(2)}`} />
+                    <Tooltip formatter={(value) => formatCurrency(value as number, baseCurrency)} />
                     <Legend />
                     <Bar dataKey="revenue" fill="#10b981" />
                     <Bar dataKey="expenses" fill="#ef4444" />
@@ -273,7 +338,7 @@ export function AuditReportDashboard({
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium">Total Assets</span>
                       <span className="text-lg font-bold text-blue-600">
-                        ${report.financial_summary.total_assets.toFixed(2)}
+                        {formatCurrency(report.financial_summary.total_assets, baseCurrency)}
                       </span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
@@ -290,7 +355,7 @@ export function AuditReportDashboard({
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium">Total Liabilities</span>
                       <span className="text-lg font-bold text-red-600">
-                        ${report.financial_summary.total_liabilities.toFixed(2)}
+                        {formatCurrency(report.financial_summary.total_liabilities, baseCurrency)}
                       </span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
@@ -307,7 +372,7 @@ export function AuditReportDashboard({
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium">Total Equity</span>
                       <span className="text-lg font-bold text-green-600">
-                        ${report.financial_summary.total_equity.toFixed(2)}
+                        {formatCurrency(report.financial_summary.total_equity, baseCurrency)}
                       </span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
@@ -337,13 +402,13 @@ export function AuditReportDashboard({
                 <div className="rounded-lg bg-green-50 p-4">
                   <p className="text-sm text-gray-600">Revenue</p>
                   <p className="text-2xl font-bold text-green-600">
-                    ${report.financial_summary.total_revenue.toFixed(2)}
+                    {formatCurrency(report.financial_summary.total_revenue, baseCurrency)}
                   </p>
                 </div>
                 <div className="rounded-lg bg-red-50 p-4">
                   <p className="text-sm text-gray-600">Expenses</p>
                   <p className="text-2xl font-bold text-red-600">
-                    ${report.financial_summary.total_expenses.toFixed(2)}
+                    {formatCurrency(report.financial_summary.total_expenses, baseCurrency)}
                   </p>
                 </div>
                 <div className={`rounded-lg p-4 ${report.financial_summary.net_income >= 0 ? 'bg-blue-50' : 'bg-red-50'
@@ -351,7 +416,7 @@ export function AuditReportDashboard({
                   <p className="text-sm text-gray-600">Net Income</p>
                   <p className={`text-2xl font-bold ${report.financial_summary.net_income >= 0 ? 'text-blue-600' : 'text-red-600'
                     }`}>
-                    ${report.financial_summary.net_income.toFixed(2)}
+                    {formatCurrency(report.financial_summary.net_income, baseCurrency)}
                   </p>
                 </div>
               </div>
@@ -384,11 +449,11 @@ export function AuditReportDashboard({
                       fill="#8884d8"
                       dataKey="value"
                     >
-                      {chartData.revenue_by_source.map((entry, index) => (
+                      {chartData.revenue_by_source.map((entry: ChartSlice, index: number) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value) => `$${(value as number).toFixed(2)}`} />
+                    <Tooltip formatter={(value) => formatCurrency(value as number, baseCurrency)} />
                   </PieChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -416,11 +481,11 @@ export function AuditReportDashboard({
                       fill="#8884d8"
                       dataKey="value"
                     >
-                      {chartData.expenses_by_category.map((entry, index) => (
+                      {chartData.expenses_by_category.map((entry: ChartSlice, index: number) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value) => `$${(value as number).toFixed(2)}`} />
+                    <Tooltip formatter={(value) => formatCurrency(value as number, baseCurrency)} />
                   </PieChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -442,7 +507,7 @@ export function AuditReportDashboard({
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
                   <YAxis />
-                  <Tooltip formatter={(value) => `$${(value as number).toFixed(2)}`} />
+                  <Tooltip formatter={(value) => formatCurrency(value as number, baseCurrency)} />
                   <Bar dataKey="value" fill="#3b82f6" />
                 </BarChart>
               </ResponsiveContainer>
@@ -584,7 +649,7 @@ export function AuditReportDashboard({
               </h3>
               <div className="space-y-3">
                 {report.recommendations.length > 0 ? (
-                  report.recommendations.map((rec, idx) => (
+                  report.recommendations.map((rec: string, idx: number) => (
                     <Card key={idx} className="bg-gradient-to-r from-blue-50 to-indigo-50 border-none shadow-sm hover:shadow-md transition-shadow">
                       <CardContent className="p-4 flex gap-4 items-start">
                         <div className="mt-1 bg-card p-1.5 rounded-lg shadow-sm text-blue-600">
@@ -613,7 +678,7 @@ export function AuditReportDashboard({
               </h3>
               <div className="space-y-3">
                 {report.anomalies_detected.length > 0 ? (
-                  report.anomalies_detected.map((anomaly, idx) => (
+                  report.anomalies_detected.map((anomaly: AuditAnomaly, idx: number) => (
                     <Card key={idx} className={`border-l-4 shadow-sm ${anomaly.category === 'error'
                         ? 'border-l-red-500 bg-red-50/30'
                         : anomaly.category === 'warning'
@@ -670,9 +735,9 @@ export function AuditReportDashboard({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {report.account_analysis.map((account) => {
+                    {report.account_analysis.map((account: AccountAnalysisItem) => {
                       // Calculate max balance for relative bar width (simple approximation)
-                      const maxBal = Math.max(...report.account_analysis.map(a => Math.abs(a.closing_balance))) || 1;
+                      const maxBal = Math.max(...report.account_analysis.map((a: AccountAnalysisItem) => Math.abs(a.closing_balance))) || 1;
                       const percent = Math.min((Math.abs(account.closing_balance) / maxBal) * 100, 100);
 
                       return (
@@ -692,7 +757,7 @@ export function AuditReportDashboard({
                             </span>
                           </TableCell>
                           <TableCell className="text-right font-mono font-medium">
-                            ${account.closing_balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            {formatCurrency(account.closing_balance, baseCurrency)}
                           </TableCell>
                           <TableCell className="text-right">
                             <span className="text-xs text-muted-foreground">{account.transactions_count} txns</span>

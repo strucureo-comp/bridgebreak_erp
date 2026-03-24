@@ -8,6 +8,7 @@ const {
     Shift, Roster, Separation, FinalSettlement,
     OvertimeLog, PaymentDetails, BiometricDevice, AttendanceLog
 } = require('../models/HRMS');
+const { JournalEntry, Account } = require('../models/Finance');
 const { auth } = require('../middleware/auth');
 
 // Helper to transform MongoDB documents to include id field (alias for _id)
@@ -37,6 +38,19 @@ const transformDoc = (doc) => {
 };
 
 const transformArray = (arr) => arr.map(transformDoc);
+
+async function ensureAccount(code, name, type) {
+    let account = await Account.findOne({ code });
+    if (!account) {
+        account = await Account.create({ code, name, type });
+    }
+    return account;
+}
+
+function buildPayslipNumber(payroll, index) {
+    const batchCode = String(payroll.month || '').replace('-', '');
+    return `PS-${batchCode}-${String(index + 1).padStart(4, '0')}`;
+}
 
 // ── EMPLOYEES ───────────────────────────────────────────────────────────────
 router.get('/employees', auth, async (req, res) => {
@@ -560,14 +574,90 @@ router.post('/payrolls/:id/post', auth, async (req, res) => {
         const payroll = await Payroll.findById(req.params.id);
         if (!payroll) return res.status(404).json({ error: 'Payroll not found' });
 
-        // Update payroll status
+        if (!['processed', 'finalized', 'approved'].includes(payroll.status)) {
+            return res.status(400).json({
+                error: 'Payroll must be approved or processed before posting to finance',
+                currentStatus: payroll.status
+            });
+        }
+
+        if (payroll.finance_journal_id) {
+            const existingEntry = await JournalEntry.findById(payroll.finance_journal_id).lean();
+            return res.json({
+                message: 'Payroll was already posted to finance',
+                data: transformDoc(payroll),
+                journal_entry: existingEntry || { _id: payroll.finance_journal_id }
+            });
+        }
+
+        const totalDeductions = Number(payroll.total_deductions || 0);
+        const totalNet = Number(payroll.total_net || 0);
+        const totalGross = Number(payroll.total_gross || totalNet + totalDeductions || 0);
+
+        if (totalGross <= 0) {
+            return res.status(400).json({ error: 'Payroll has no amount to post' });
+        }
+
+        await Promise.all([
+            ensureAccount('5100', 'Salaries & Wages', 'expense'),
+            ensureAccount('2200', 'Accrued Liabilities', 'liability'),
+            ensureAccount('2210', 'Payroll Deductions Payable', 'liability')
+        ]);
+
+        const lineItems = [
+            {
+                account_code: '5100',
+                debit: totalGross,
+                credit: 0,
+                description: `Payroll expense for ${payroll.month}`
+            },
+            {
+                account_code: '2200',
+                debit: 0,
+                credit: totalNet,
+                description: `Payroll payable for ${payroll.month}`
+            }
+        ];
+
+        if (totalDeductions > 0) {
+            lineItems.push({
+                account_code: '2210',
+                debit: 0,
+                credit: totalDeductions,
+                description: `Payroll deductions payable for ${payroll.month}`
+            });
+        }
+
+        const postingAmount = lineItems.reduce((sum, line) => sum + Number(line.credit || 0), 0) || totalGross;
+        lineItems[0].debit = postingAmount;
+
+        const count = await JournalEntry.countDocuments();
+        const entry = await JournalEntry.create({
+            entry_number: `JE-PAY-${String(count + 1).padStart(6, '0')}`,
+            date: new Date(),
+            reference: payroll.month,
+            description: `Payroll posting for ${payroll.month}`,
+            lines: lineItems,
+            status: 'posted',
+            total_debit: postingAmount,
+            total_credit: postingAmount,
+            created_by: req.user?.full_name || req.user?.email || 'System'
+        });
+
         payroll.status = 'posted';
+        payroll.finance_journal_id = entry._id;
+        payroll.posted_at = new Date();
+        payroll.lines = (payroll.lines || []).map((line) => ({
+            ...line.toObject(),
+            status: 'posted',
+        }));
         await payroll.save();
 
-        // TODO: Create journal entry in Finance module
-        // This would post the payroll expense to the general ledger
-
-        res.json({ message: 'Payroll posted to finance successfully', data: transformDoc(payroll) });
+        res.json({
+            message: 'Payroll posted to finance successfully',
+            data: transformDoc(payroll),
+            journal_entry: entry
+        });
     } catch (err) {
         res.status(500).json({ error: 'Failed to post payroll', detail: err.message });
     }
@@ -712,13 +802,18 @@ router.post('/payrolls/:id/finalize', auth, async (req, res) => {
             });
         }
 
-        payroll.status = 'finalized';
+        payroll.status = 'processed';
+        payroll.processed_at = new Date();
+        payroll.lines = (payroll.lines || []).map((line, index) => ({
+            ...line.toObject(),
+            status: 'processed',
+            payslip_number: line.payslip_number || buildPayslipNumber(payroll, index),
+            payslip_generated_at: new Date(),
+        }));
         await payroll.save();
 
-        // TODO: Generate payslips PDFs and send to employees
-
         res.json({ 
-            message: 'Payroll finalized and payslips generated successfully', 
+            message: 'Payroll processed and payslips are now available', 
             data: transformDoc(payroll) 
         });
     } catch (err) {

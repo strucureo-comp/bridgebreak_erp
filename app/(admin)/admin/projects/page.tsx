@@ -6,7 +6,6 @@ import { useAuth } from '@/lib/auth/context';
 import { useTenant } from '@/lib/tenant-context';
 import { getProjects, updateProject, getUsers, createProject } from '@/lib/api';
 import { ProjectsContent } from './_components/projects-content';
-import { DashboardShell } from '@/components/shared/layout/dashboard-shell';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -114,70 +113,43 @@ export default function AdminProjectsPage() {
 
   if (loading) {
     return (
-      <DashboardShell requireAdmin>
-        <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
-          <RefreshCcw className="h-10 w-10 animate-spin text-primary" />
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Syncing Operational Grid</p>
+      <ModuleGuard module="projects">
+        <div className="space-y-6 max-w-6xl animate-pulse">
+            <div>
+                <div className="h-8 w-48 bg-muted rounded mb-2" />
+                <div className="h-4 w-64 bg-muted rounded" />
+            </div>
+            <div className="h-[400px] bg-muted rounded-xl w-full" />
         </div>
-      </DashboardShell>
+      </ModuleGuard>
     );
   }
 
   return (
-    <DashboardShell requireAdmin>
-      <ModuleGuard module="projects">
-        <div className="space-y-6">
-          {/* Unified Header */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6 bg-card -mx-4 px-4 sticky top-0 z-20">
-            <div className="flex items-center gap-4">
-              <div className="h-10 w-10 rounded-lg bg-foreground text-card-foreground flex items-center justify-center shadow-sm">
-                <FolderKanban className="h-5 w-5" />
-              </div>
-              <div className="space-y-0.5">
-                <h1 className="text-xl font-bold tracking-tight text-foreground uppercase leading-none">{getModuleLabel('projects')}</h1>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Deployment Control</span>
-                  <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                </div>
-              </div>
-            </div>
+    <ModuleGuard module="projects">
+      <div className="space-y-6 max-w-6xl">
+        {/* Unified Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold">{getModuleLabel('projects')}</h1>
+            <p className="text-muted-foreground">Manage your deployments, active jobs, and project registry.</p>
+          </div>
 
-            <div className="flex items-center gap-3">
-              <div className="flex flex-col items-end mr-4 hidden lg:flex text-right">
-                <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest leading-none">Management Mode</span>
-                <span className="text-xs font-black text-foreground uppercase mt-1">{activeMode === 'registry' ? 'Master Registry' : activeMode}</span>
-              </div>
+          <div className="flex items-center gap-3">
+            <Select value={activeMode} onValueChange={(v) => setActiveMode(v as ProjectMode)}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Select View" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="registry">Master Registry</SelectItem>
+                <SelectItem value="live">Live Deployments</SelectItem>
+                <SelectItem value="operations">Ops Planning</SelectItem>
+                <SelectItem value="archived">Archived Sites</SelectItem>
+              </SelectContent>
+            </Select>
 
-              <Select value={activeMode} onValueChange={(v) => setActiveMode(v as ProjectMode)}>
-                <SelectTrigger className="w-full md:w-56 h-10 border-primary bg-card shadow-lg shadow-primary/5 rounded-md text-xs font-black uppercase tracking-widest">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="rounded-md border-border">
-                  <SelectItem value="registry" className="text-xs font-bold uppercase tracking-wide">
-                    <div className="flex items-center gap-2">
-                      <LayoutGrid size={14} className="text-primary" /> Master Registry
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="live" className="text-xs font-bold uppercase tracking-wide">
-                    <div className="flex items-center gap-2">
-                      <Activity size={14} className="text-primary" /> Live Deployments
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="operations" className="text-xs font-bold uppercase tracking-wide">
-                    <div className="flex items-center gap-2">
-                      <Target size={14} className="text-primary" /> Ops Planning
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="archived" className="text-xs font-bold uppercase tracking-wide">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 size={14} className="text-primary" /> Archived Sites
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-                <DialogTrigger asChild>
+            <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+              <DialogTrigger asChild>
                   <Button onClick={handleOpenCreate} className="h-10 px-6 gap-2 bg-primary hover:bg-primary/90 font-bold uppercase text-[10px] tracking-widest shadow-lg shadow-primary/20">
                     <Plus className="h-4 w-4" /> Launch Project
                   </Button>
@@ -269,7 +241,7 @@ export default function AdminProjectsPage() {
                 {filteredProjects.length === 0 && (
                   <div className="col-span-full py-20 text-center border-2 border-dashed border-border rounded-md bg-muted">
                     <Box className="h-10 w-10 text-zinc-200 mx-auto mb-2" />
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">No Projects found in this mode</p>
+                    <p className="text-muted-foreground">No Projects found in this mode</p>
                   </div>
                 )}
               </div>
@@ -277,7 +249,6 @@ export default function AdminProjectsPage() {
           </div>
         </div>
       </ModuleGuard>
-    </DashboardShell>
   );
 }
 
@@ -292,7 +263,7 @@ function ProjectVisualCard({ project, onClick }: { project: Project; onClick: ()
             <Briefcase size={20} />
           </div>
           <Badge variant="outline" className={cn(
-            "text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border-none",
+            "text-xs font-semibold tracking-widest px-2 py-0.5 rounded-full border-none",
             project.status === 'completed' ? "bg-emerald-50 text-emerald-700" :
               project.status === 'pending' ? "bg-amber-50 text-amber-700" : "bg-primary/5 text-primary"
           )}>
@@ -309,7 +280,7 @@ function ProjectVisualCard({ project, onClick }: { project: Project; onClick: ()
         </div>
 
         <div className="space-y-2 mb-6">
-          <div className="flex items-center justify-between text-[8px] font-black uppercase tracking-widest">
+          <div className="flex items-center justify-between text-xs font-semibold tracking-widest">
             <span className="text-muted-foreground">Project Integrity</span>
             <span className="text-foreground">{progress}%</span>
           </div>
@@ -354,7 +325,7 @@ function StatsTile({ title, value, icon: Icon, label, highlight }: { title: stri
       <div className="space-y-0.5">
         <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{title}</p>
         <h3 className="text-xl font-black text-foreground tracking-tight">{value}</h3>
-        <p className={cn("text-[8px] font-black uppercase tracking-tighter", highlight ? "text-primary" : "text-muted-foreground")}>{label}</p>
+        <p className={cn("text-xs font-semibold tracking-tighter", highlight ? "text-primary" : "text-muted-foreground")}>{label}</p>
       </div>
     </Card>
   );

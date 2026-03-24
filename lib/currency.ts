@@ -26,25 +26,75 @@ export const CURRENCY_NAMES: Record<string, string> = {
     TRY: 'Turkish Lira', RUB: 'Russian Ruble',
 };
 
-// Approximate FX rates relative to USD (for mock conversion only)
-// In production, fetch from a real FX API
-export const MOCK_FX_RATES: Record<string, number> = {
-    USD: 1, AED: 3.6725, EUR: 0.92, GBP: 0.79, JPY: 149.5, INR: 83.1,
-    CNY: 7.24, CHF: 0.89, CAD: 1.36, AUD: 1.53, SGD: 1.34, HKD: 7.82,
-    SAR: 3.75, KWD: 0.307, QAR: 3.64, BHD: 0.376, OMR: 0.385, ZAR: 18.6,
-    BRL: 4.97, MXN: 17.2, MYR: 4.72, THB: 35.1, IDR: 15600, PHP: 56.4,
-    KRW: 1325, TRY: 32.1, RUB: 91.3, NZD: 1.63, SEK: 10.4, NOK: 10.5,
-    DKK: 6.87, PLN: 3.98,
-};
+// Exchange rates must be fetched from API at runtime
+export const MOCK_FX_RATES: Record<string, number> = {};
+
+let cachedRates: Record<string, number> | null = null;
+let lastFetchTime = 0;
+const CACHE_DURATION_MS = 60 * 60 * 1000; // 1 hour
+
+// Fetch FX rates from free API
+async function fetchFxRates(): Promise<Record<string, number> | null> {
+    const FX_API_URL = process.env.FX_API_URL || 'https://open.er-api.com/v6/latest/USD';
+
+    try {
+        const res = await fetch(FX_API_URL, { signal: AbortSignal.timeout(5000) });
+        if (res.ok) {
+            const data = await res.json();
+            if (data.rates) {
+                return data.rates as Record<string, number>;
+            }
+        }
+    } catch (e) {
+        console.warn('[Currency] Failed to fetch FX rates, using fallback:', e);
+    }
+    return null;
+}
 
 /**
- * Convert amount from a source currency to a target currency using mock FX rates.
- * @note This is for display purposes. Use a real FX API for financial accuracy.
+ * Get FX rates (from cache, API, or fallback)
  */
-export function convertAmount(amount: number, fromCurrency: string, toCurrency: string): number {
+export async function getFxRates(): Promise<Record<string, number>> {
+    const now = Date.now();
+
+    // Return cached rates if still valid
+    if (cachedRates && (now - lastFetchTime) < CACHE_DURATION_MS) {
+        return cachedRates;
+    }
+
+    // Try to fetch from API
+    const freshRates = await fetchFxRates();
+    if (freshRates) {
+        cachedRates = freshRates;
+        lastFetchTime = now;
+        return cachedRates;
+    }
+
+    // Return fallback rates if API fails
+    return MOCK_FX_RATES;
+}
+
+/**
+ * Convert amount from a source currency to a target currency.
+ * Uses API rates if available, falls back to static rates.
+ */
+export async function convertAmount(amount: number, fromCurrency: string, toCurrency: string): Promise<number> {
     if (fromCurrency === toCurrency) return amount;
-    const fromRate = MOCK_FX_RATES[fromCurrency] ?? 1;
-    const toRate = MOCK_FX_RATES[toCurrency] ?? 1;
+
+    const rates = await getFxRates();
+    const fromRate = rates[fromCurrency] ?? 1;
+    const toRate = rates[toCurrency] ?? 1;
+    return (amount / fromRate) * toRate;
+}
+
+/**
+ * Synchronous conversion using cached/fallback rates (for SSR)
+ */
+export function convertAmountSync(amount: number, fromCurrency: string, toCurrency: string): number {
+    if (fromCurrency === toCurrency) return amount;
+    const rates = cachedRates || MOCK_FX_RATES;
+    const fromRate = rates[fromCurrency] ?? 1;
+    const toRate = rates[toCurrency] ?? 1;
     return (amount / fromRate) * toRate;
 }
 

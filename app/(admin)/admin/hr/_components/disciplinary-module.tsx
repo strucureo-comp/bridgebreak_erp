@@ -20,6 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface DisciplinaryAction {
   id: string;
@@ -40,11 +41,12 @@ export default function DisciplinaryModule() {
   const [employees, setEmployees] = useState<any[]>([]);
   const [selectedAction, setSelectedAction] = useState<DisciplinaryAction | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const fetchActions = async () => {
     try {
       const data = await getDisciplinaryActions();
-      setActions(data);
+      setActions(data || []);
     } catch (err) {
       toast({ title: 'Error', description: 'Failed to fetch disciplinary actions', variant: 'destructive' });
     }
@@ -53,15 +55,19 @@ export default function DisciplinaryModule() {
   const fetchEmployees = async () => {
     try {
       const data = await getEmployees();
-      setEmployees(data);
+      setEmployees(data || []);
     } catch (err) {
       console.error('Failed to fetch employees');
     }
   };
 
   useEffect(() => {
-    fetchActions();
-    fetchEmployees();
+    const loadAll = async () => {
+      setLoading(true);
+      await Promise.all([fetchActions(), fetchEmployees()]);
+      setLoading(false);
+    };
+    loadAll();
   }, []);
 
   const getSeverityBadge = (severity: string) => {
@@ -96,44 +102,57 @@ export default function DisciplinaryModule() {
           <CardTitle>Disciplinary Records</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Employee</TableHead>
-                <TableHead>Incident Date</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Title</TableHead>
-                <TableHead>Severity</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {actions.map((action) => (
-                <TableRow key={action.id}>
-                  <TableCell>
-                    <div>
-                      <p className="font-medium">{action.employee?.name ?? <span className="text-muted">Unknown Employee</span>}</p>
-                      <p className="text-sm text-muted-foreground">{action.employee?.employee_id ?? action.employee_id ?? '—'}</p>
-                    </div>
-                  </TableCell>
-                  <TableCell>{new Date(action.incident_date).toLocaleDateString()}</TableCell>
-                  <TableCell>{action.type}</TableCell>
-                  <TableCell>{action.title}</TableCell>
-                  <TableCell>{getSeverityBadge(action.severity)}</TableCell>
-                  <TableCell>{getStatusBadge(action.resolution_status)}</TableCell>
-                  <TableCell>
-                    <Button size="sm" variant="outline" onClick={() => {
-                      setSelectedAction(action);
-                      setDetailsOpen(true);
-                    }}>
-                      View
-                    </Button>
-                  </TableCell>
-                </TableRow>
+          {loading ? (
+            <div className="space-y-3">
+              {[...Array(5)].map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full rounded-md" />
               ))}
-            </TableBody>
-          </Table>
+            </div>
+          ) : actions.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+              <p className="text-lg font-medium">No records found</p>
+              <p className="text-sm mt-1">Disciplinary records will appear here</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Employee</TableHead>
+                  <TableHead>Incident Date</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Title</TableHead>
+                  <TableHead>Severity</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {actions.map((action) => (
+                  <TableRow key={action.id}>
+                    <TableCell>
+                      <div>
+                        <p className="font-medium">{action.employee?.name ?? <span className="text-muted">Unknown Employee</span>}</p>
+                        <p className="text-sm text-muted-foreground">{action.employee?.employee_id ?? action.employee_id ?? '—'}</p>
+                      </div>
+                    </TableCell>
+                    <TableCell>{new Date(action.incident_date).toLocaleDateString()}</TableCell>
+                    <TableCell>{action.type}</TableCell>
+                    <TableCell>{action.title}</TableCell>
+                    <TableCell>{getSeverityBadge(action.severity)}</TableCell>
+                    <TableCell>{getStatusBadge(action.resolution_status)}</TableCell>
+                    <TableCell>
+                      <Button size="sm" variant="outline" onClick={() => {
+                        setSelectedAction(action);
+                        setDetailsOpen(true);
+                      }}>
+                        View
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 

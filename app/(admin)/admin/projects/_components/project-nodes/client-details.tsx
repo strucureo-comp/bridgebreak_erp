@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { FileUploader } from '@/components/shared/common/file-uploader';
 import { Mail, Phone, MapPin, FileText, Image as ImageIcon, Eye } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface ProjectFileItem {
   id: string;
@@ -17,14 +18,25 @@ interface ProjectFileItem {
 export function ClientDetails({ project }: { project: any }) {
   const client = project.client || { full_name: 'Unknown Client', email: 'no-email@example.com' };
   const [files, setFiles] = useState<ProjectFileItem[]>([]);
-  const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || '/api';
+  const [loading, setLoading] = useState(false);
+  const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4000';
+  const API_BASE = BASE_URL.endsWith('/api') ? BASE_URL : `${BASE_URL}/api`;
 
   const loadFiles = async () => {
     if (!project?.id) return;
-    const res = await fetch(`${apiBase}/projects/upload-files?project_id=${project.id}&module_type=client`, { credentials: 'include' });
-    if (!res.ok) return;
-    const data = await res.json();
-    setFiles(data.files || []);
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/projects/upload-files?project_id=${project.id}&module_type=client`, { credentials: 'include' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}: Failed to load files`);
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || 'Failed to load files');
+      setFiles(json.files || json.data || []);
+    } catch (err: any) {
+      console.error('Failed to load project files:', err);
+      toast.error(err.message || 'Failed to load project files');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -76,22 +88,34 @@ export function ClientDetails({ project }: { project: any }) {
         accepts=".pdf,.doc,.docx,.xlsx,.png,.jpg,.jpeg"
         onUploadComplete={async (url, fileName, meta) => {
           if (!fileName) return;
-          await fetch(`${apiBase}/projects/upload-files`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({
-              project_id: project.id,
-              module_type: 'client',
-              file_path: `${project.id}/client`,
-              file_name: fileName,
-              file_size: meta?.size || 0,
-              mime_type: meta?.type || 'application/octet-stream',
-              file_type: meta?.type?.startsWith('image/') ? 'image' : 'document',
-              visibility: 'private',
-            }),
-          });
-          await loadFiles();
+          try {
+            const res = await fetch(`${API_BASE}/projects/upload-files`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({
+                project_id: project.id,
+                module_type: 'client',
+                file_path: `${project.id}/client`,
+                file_name: fileName,
+                file_size: meta?.size || 0,
+                mime_type: meta?.type || 'application/octet-stream',
+                file_type: meta?.type?.startsWith('image/') ? 'image' : 'document',
+                visibility: 'private',
+              }),
+            });
+
+            if (!res.ok) {
+              const errData = await res.json().catch(() => ({}));
+              throw new Error(errData.error || `Upload failed with status ${res.status}`);
+            }
+
+            toast.success('File uploaded successfully');
+            await loadFiles();
+          } catch (err: any) {
+            console.error('File upload error:', err);
+            toast.error(err.message || 'Failed to upload file');
+          }
         }}
       />
 

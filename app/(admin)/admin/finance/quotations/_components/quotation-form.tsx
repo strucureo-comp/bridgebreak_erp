@@ -10,8 +10,8 @@ import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Trash2, Hash, User, Lock, Unlock, Building2, Phone, MapPin, Globe } from 'lucide-react';
 import type { User as UserType, Project, QuotationItem, QuotationStatus } from '@/lib/db/types';
-import { cn } from '@/lib/utils';
-import { getSettings } from '@/lib/api';
+import { useCompanySettings } from '@/lib/hooks/use-company-settings';
+import { formatCurrency } from '@/lib/utils/currency';
 
 interface QuotationFormProps {
   formData: {
@@ -28,6 +28,8 @@ interface QuotationFormProps {
     project_id: string;
     project_title: string;
     quotation_number: string;
+    rev_no?: string;
+    rev_date?: string;
     valid_until: string;
     status: QuotationStatus;
     currency: string;
@@ -36,6 +38,9 @@ interface QuotationFormProps {
     terms_and_conditions?: string;
     tax_mode?: 'auto' | 'manual';
     manual_tax_adjustment?: number;
+    contact_person?: string;
+    use_custom_ship_to?: boolean;
+    ship_to_address?: string;
   };
   items: QuotationItem[];
   users: UserType[];
@@ -62,32 +67,36 @@ export function QuotationForm({
   autoGenerateNumber = true,
   onAutoGenerateNumberChange
 }: QuotationFormProps) {
-  const [taxRate, setTaxRate] = useState(5);
-  const [defaultCurrency, setDefaultCurrency] = useState('AED');
+  const { baseCurrency, taxRate: settingsTaxRate, taxName } = useCompanySettings();
+  const [taxRate, setTaxRate] = useState(settingsTaxRate);
 
   useEffect(() => {
-    // Fetch tax and currency settings
-    const loadSettings = async () => {
-      try {
-        const financeSettings = await getSettings<any>('finance');
-        if (financeSettings) {
-          setTaxRate(financeSettings.defaultTaxRate || 5);
-          setDefaultCurrency(financeSettings.defaultCurrency || 'AED');
-          // Update form data currency if not set
-          if (!formData.currency || formData.currency === 'AED') {
-            onFormDataChange({ ...formData, currency: financeSettings.defaultCurrency || 'AED' });
-          }
-        }
-      } catch (error) {
-        console.warn('Failed to load finance settings, using defaults');
-      }
-    };
-    loadSettings();
+    const handler = () => window.location.reload();
+    window.addEventListener('erp_company_settings_changed', handler);
+    return () => window.removeEventListener('erp_company_settings_changed', handler);
   }, []);
+
+  useEffect(() => {
+    setTaxRate(settingsTaxRate);
+  }, [settingsTaxRate]);
+
+  useEffect(() => {
+    if (formData.currency !== baseCurrency) {
+      onFormDataChange({ ...formData, currency: baseCurrency });
+    }
+  }, [baseCurrency, formData.currency]);
+
   const handleItemChange = (index: number, field: keyof QuotationItem, value: any) => {
     const newItems = [...items];
     const item = { ...newItems[index] };
+
+    // Explicitly handle all fields
     if (field === 'description') item.description = value;
+    else if (field === 'item_code') item.item_code = value;
+    else if (field === 'project') item.project = value;
+    else if (field === 'remarks') item.remarks = value;
+    else if (field === 'date_required') item.date_required = value;
+    else if (field === 'uom') item.uom = value;
     else if (field === 'quantity') {
       item.quantity = Number(value);
       item.total = item.quantity * item.unit_price;
@@ -95,18 +104,29 @@ export function QuotationForm({
       item.unit_price = Number(value);
       item.total = item.quantity * item.unit_price;
     }
+
     newItems[index] = item;
     onItemsChange(newItems);
   };
 
-  const addItem = () => onItemsChange([...items, { description: '', quantity: 1, unit_price: 0, total: 0 }]);
+  const addItem = () => onItemsChange([...items, {
+    description: '',
+    quantity: 1,
+    unit_price: 0,
+    total: 0,
+    item_code: '',
+    project: '',
+    remarks: '',
+    date_required: new Date().toISOString().split('T')[0],
+    uom: 'PCS'
+  }]);
   const removeItem = (index: number) => items.length > 1 && onItemsChange(items.filter((_, i) => i !== index));
 
   const totals = useMemo(() => {
     const subtotal = items.reduce((acc, item) => acc + item.total, 0);
     const autoTax = subtotal * (taxRate / 100);
-    const tax = formData.tax_mode === 'manual' && formData.manual_tax_adjustment !== undefined 
-      ? formData.manual_tax_adjustment 
+    const tax = formData.tax_mode === 'manual' && formData.manual_tax_adjustment !== undefined
+      ? formData.manual_tax_adjustment
       : autoTax;
     return { subtotal, tax, total: subtotal + tax, taxRate };
   }, [items, taxRate, formData.tax_mode, formData.manual_tax_adjustment]);
@@ -144,6 +164,26 @@ export function QuotationForm({
                   placeholder={autoGenerateNumber ? "Auto-generated..." : "Enter quote number"}
                 />
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Rev No</Label>
+                  <Input
+                    value={formData.rev_no || ''}
+                    onChange={e => onFormDataChange({ ...formData, rev_no: e.target.value })}
+                    className="h-9 border-border font-mono font-bold text-xs"
+                    placeholder="00"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Rev Date</Label>
+                  <Input
+                    type="date"
+                    value={formData.rev_date || ''}
+                    onChange={e => onFormDataChange({ ...formData, rev_date: e.target.value })}
+                    className="h-9 border-border text-xs font-bold"
+                  />
+                </div>
+              </div>
               <div className="space-y-1.5">
                 <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Valid Until</Label>
                 <Input type="date" value={formData.valid_until} onChange={e => onFormDataChange({ ...formData, valid_until: e.target.value })} className="h-9 border-border text-xs font-bold" />
@@ -171,7 +211,7 @@ export function QuotationForm({
                     />
                     <Label className="text-[9px] font-bold uppercase tracking-widest cursor-pointer">Company Client</Label>
                   </div>
-                  
+
                   <div className="grid grid-cols-2 gap-3">
                     <div className="col-span-2">
                       <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1">
@@ -184,7 +224,7 @@ export function QuotationForm({
                         className="h-9 border-border text-xs font-bold mt-1.5"
                       />
                     </div>
-                    
+
                     {formData.client_is_company && (
                       <div className="col-span-2">
                         <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1">
@@ -198,7 +238,7 @@ export function QuotationForm({
                         />
                       </div>
                     )}
-                    
+
                     <div>
                       <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1">
                         <Globe size={10} /> Email
@@ -211,7 +251,7 @@ export function QuotationForm({
                         className="h-9 border-border text-xs mt-1.5"
                       />
                     </div>
-                    
+
                     <div>
                       <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1">
                         <Phone size={10} /> Phone
@@ -224,7 +264,7 @@ export function QuotationForm({
                       />
                     </div>
                   </div>
-                  
+
                   <div>
                     <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1">
                       <MapPin size={10} /> Address
@@ -236,7 +276,7 @@ export function QuotationForm({
                       className="min-h-[60px] text-xs border-border mt-1.5"
                     />
                   </div>
-                  
+
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">City</Label>
@@ -257,10 +297,10 @@ export function QuotationForm({
                       />
                     </div>
                   </div>
-                  
+
                   {formData.client_is_company && (
                     <div>
-                      <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Tax ID / VAT Number</Label>
+                      <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">{taxName} Number</Label>
                       <Input
                         placeholder="TRN: 123456789012345"
                         value={formData.client_tax_id || ''}
@@ -269,6 +309,31 @@ export function QuotationForm({
                       />
                     </div>
                   )}
+
+                  <div className="pt-2 border-t mt-4 space-y-4">
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="use_custom_ship_to"
+                        checked={formData.use_custom_ship_to || false}
+                        onCheckedChange={(checked) => onFormDataChange({ ...formData, use_custom_ship_to: checked })}
+                      />
+                      <Label htmlFor="use_custom_ship_to" className="text-[9px] font-bold uppercase tracking-widest cursor-pointer">Ship To (Different from Bill To)</Label>
+                    </div>
+
+                    {formData.use_custom_ship_to && (
+                      <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1">
+                        <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1">
+                          <MapPin size={10} /> Shipping Address
+                        </Label>
+                        <Textarea
+                          placeholder="Enter shipping address..."
+                          value={formData.ship_to_address || ''}
+                          onChange={e => onFormDataChange({ ...formData, ship_to_address: e.target.value })}
+                          className="min-h-[80px] text-xs border-border mt-1.5"
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <Select value={formData.client_id} onValueChange={v => onFormDataChange({ ...formData, client_id: v })}>
@@ -299,21 +364,84 @@ export function QuotationForm({
                 <table className="w-full text-left">
                   <thead className="bg-muted/50 border-b border-border">
                     <tr>
-                      <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground">Description</th>
-                      <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground w-24">Quantity</th>
-                      <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground w-32">Unit Price</th>
-                      <th className="px-6 py-3 text-[9px] font-black uppercase tracking-wider text-muted-foreground w-28 text-right">Total</th>
-                      <th className="px-6 py-3 w-12"></th>
+                      <th className="px-4 py-3 text-xs font-medium text-muted-foreground w-28">Item Code</th>
+                      <th className="px-4 py-3 text-xs font-medium text-muted-foreground">Description & Remarks</th>
+                      <th className="px-4 py-3 text-xs font-medium text-muted-foreground w-24">Project</th>
+                      <th className="px-4 py-3 text-xs font-medium text-muted-foreground w-24">Required</th>
+                      <th className="px-4 py-3 text-xs font-medium text-muted-foreground w-16">UOM</th>
+                      <th className="px-4 py-3 text-xs font-medium text-muted-foreground w-16 text-center">Qty</th>
+                      <th className="px-4 py-3 text-xs font-medium text-muted-foreground w-24">Price</th>
+                      <th className="px-4 py-3 text-xs font-medium text-muted-foreground w-24 text-right">Total</th>
+                      <th className="px-4 py-3 w-10"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
                     {items.map((item, idx) => (
-                      <tr key={idx} className="group hover:bg-zinc-50/50">
-                        <td className="px-6 py-3"><Input value={item.description} onChange={e => handleItemChange(idx, 'description', e.target.value)} className="h-8 border-none bg-transparent font-bold text-xs uppercase" placeholder="Enter service..." /></td>
-                        <td className="px-6 py-3"><Input type="number" value={item.quantity} onChange={e => handleItemChange(idx, 'quantity', e.target.value)} className="h-8 border-border text-center text-xs font-bold" /></td>
-                        <td className="px-6 py-3"><Input type="number" value={item.unit_price} onChange={e => handleItemChange(idx, 'unit_price', e.target.value)} className="h-8 border-border text-xs font-bold" /></td>
-                        <td className="px-6 py-3 text-right text-xs font-black text-foreground">{item.total.toLocaleString()}</td>
-                        <td className="px-6 py-3 text-right">
+                      <tr key={idx} className="group hover:bg-zinc-50/50 align-top">
+                        <td className="px-4 py-3">
+                          <Input
+                            value={item.item_code}
+                            onChange={e => handleItemChange(idx, 'item_code', e.target.value)}
+                            className="h-8 border-border bg-transparent font-mono text-[10px] uppercase"
+                            placeholder="CODE-001"
+                          />
+                        </td>
+                        <td className="px-4 py-3 space-y-2">
+                          <Input
+                            value={item.description}
+                            onChange={e => handleItemChange(idx, 'description', e.target.value)}
+                            className="h-8 border-none bg-transparent font-bold text-xs uppercase"
+                            placeholder="Enter service..."
+                          />
+                          <Textarea
+                            value={item.remarks}
+                            onChange={e => handleItemChange(idx, 'remarks', e.target.value)}
+                            className="min-h-[60px] border-border bg-transparent text-[10px] resize-none"
+                            placeholder="Additional remarks..."
+                          />
+                        </td>
+                        <td className="px-4 py-3">
+                          <Input
+                            value={item.project}
+                            onChange={e => handleItemChange(idx, 'project', e.target.value)}
+                            className="h-8 border-border bg-transparent text-[10px]"
+                            placeholder="Project"
+                          />
+                        </td>
+                        <td className="px-4 py-3">
+                          <Input
+                            type="date"
+                            value={item.date_required}
+                            onChange={e => handleItemChange(idx, 'date_required', e.target.value)}
+                            className="h-8 border-border bg-transparent text-[10px] p-1"
+                          />
+                        </td>
+                        <td className="px-4 py-3">
+                          <Input
+                            value={item.uom}
+                            onChange={e => handleItemChange(idx, 'uom', e.target.value)}
+                            className="h-8 border-border bg-transparent text-center text-[10px] uppercase"
+                            placeholder="PCS"
+                          />
+                        </td>
+                        <td className="px-4 py-3">
+                          <Input
+                            type="number"
+                            value={item.quantity}
+                            onChange={e => handleItemChange(idx, 'quantity', e.target.value)}
+                            className="h-8 border-border text-center text-xs font-bold"
+                          />
+                        </td>
+                        <td className="px-4 py-3">
+                          <Input
+                            type="number"
+                            value={item.unit_price}
+                            onChange={e => handleItemChange(idx, 'unit_price', e.target.value)}
+                            className="h-8 border-border text-xs font-bold"
+                          />
+                        </td>
+                        <td className="px-4 py-3 text-right text-xs font-black text-foreground pt-5">{formatCurrency(item.total, baseCurrency)}</td>
+                        <td className="px-4 py-3 text-right pt-5">
                           <button onClick={() => removeItem(idx)} className="text-muted-foreground/60 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={14} /></button>
                         </td>
                       </tr>
@@ -329,30 +457,30 @@ export function QuotationForm({
                   </div>
                   <div className="space-y-3">
                     <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Terms & Conditions</Label>
-                    <Textarea 
-                      value={formData.terms_and_conditions || ''} 
-                      onChange={e => onFormDataChange({ ...formData, terms_and_conditions: e.target.value })} 
-                      className="min-h-[120px] border-border text-xs resize-none" 
-                      placeholder="Enter terms and conditions, payment terms, delivery terms, warranties, etc..." 
+                    <Textarea
+                      value={formData.terms_and_conditions || ''}
+                      onChange={e => onFormDataChange({ ...formData, terms_and_conditions: e.target.value })}
+                      className="min-h-[120px] border-border text-xs resize-none"
+                      placeholder="Enter terms and conditions, payment terms, delivery terms, warranties, etc..."
                     />
                   </div>
                 </div>
                 <div className="space-y-4">
                   <div className="flex justify-between border-b pb-4">
                     <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Subtotal Position</span>
-                    <span className="text-sm font-black text-foreground">{formData.currency} {totals.subtotal.toLocaleString()}</span>
+                    <span className="text-sm font-black text-foreground">{formatCurrency(totals.subtotal, baseCurrency)}</span>
                   </div>
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Tax ({taxRate}%)</span>
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{`${taxName} (${taxRate}%)`}</span>
                         <div className="flex items-center gap-1 text-[8px]">
                           <button
                             type="button"
                             onClick={() => onFormDataChange({ ...formData, tax_mode: 'auto', manual_tax_adjustment: undefined })}
                             className={`px-2 py-0.5 rounded uppercase font-bold ${
-                              (formData.tax_mode || 'auto') === 'auto' 
-                                ? 'bg-primary text-primary-foreground' 
+                              (formData.tax_mode || 'auto') === 'auto'
+                                ? 'bg-primary text-primary-foreground'
                                 : 'bg-muted text-muted-foreground hover:bg-muted/80'
                             }`}
                           >
@@ -362,8 +490,8 @@ export function QuotationForm({
                             type="button"
                             onClick={() => onFormDataChange({ ...formData, tax_mode: 'manual' })}
                             className={`px-2 py-0.5 rounded uppercase font-bold ${
-                              formData.tax_mode === 'manual' 
-                                ? 'bg-primary text-primary-foreground' 
+                              formData.tax_mode === 'manual'
+                                ? 'bg-primary text-primary-foreground'
                                 : 'bg-muted text-muted-foreground hover:bg-muted/80'
                             }`}
                           >
@@ -371,7 +499,7 @@ export function QuotationForm({
                           </button>
                         </div>
                       </div>
-                      <span className="text-sm font-black text-foreground">{formData.currency} {totals.tax.toLocaleString()}</span>
+                      <span className="text-sm font-black text-foreground">{formatCurrency(totals.tax, baseCurrency)}</span>
                     </div>
                     {formData.tax_mode === 'manual' && (
                       <div className="flex items-center gap-2 pl-4">
@@ -389,9 +517,19 @@ export function QuotationForm({
                   </div>
                   <div className="flex justify-between items-center bg-foreground text-card-foreground p-6 rounded-md">
                     <div className="space-y-0.5">
-                      <p className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground">Proposal Commitment</p>
-                      <p className="text-2xl font-black tracking-tighter">{formData.currency} {totals.total.toLocaleString()}</p>
+                      <p className="text-xs font-semibold tracking-[0.2em] text-muted-foreground">Proposal Commitment</p>
+                      <p className="text-2xl font-black tracking-tighter">{formatCurrency(totals.total, baseCurrency)}</p>
                     </div>
+                  </div>
+
+                  <div className="pt-4 space-y-2">
+                    <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Authorized Contact Person</Label>
+                    <Input
+                      placeholder="Name of contact person for this quote"
+                      value={formData.contact_person || ''}
+                      onChange={e => onFormDataChange({ ...formData, contact_person: e.target.value })}
+                      className="h-9 border-border text-xs"
+                    />
                   </div>
                 </div>
               </div>
@@ -470,7 +608,7 @@ export function QuotationForm({
                         <Input
                           id="client_email"
                           type="email"
-                          placeholder="john@example.com"
+                          placeholder="email@example.com"
                           value={formData.client_email}
                           onChange={(e) => onFormDataChange({ ...formData, client_email: e.target.value })}
                         />
@@ -526,7 +664,7 @@ export function QuotationForm({
 
                     {formData.client_is_company && (
                       <div className="space-y-2">
-                        <Label htmlFor="client_tax_id" className="text-xs">Tax ID / VAT Number</Label>
+                        <Label htmlFor="client_tax_id" className="text-xs">{taxName} Number</Label>
                         <Input
                           id="client_tax_id"
                           placeholder="TRN: 123456789012345"
@@ -570,6 +708,28 @@ export function QuotationForm({
                   />
                 </div>
 
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="rev_no" className="text-xs">Rev No</Label>
+                    <Input
+                      id="rev_no"
+                      value={formData.rev_no || ''}
+                      onChange={(e) => onFormDataChange({ ...formData, rev_no: e.target.value })}
+                      placeholder="00"
+                      className="font-mono"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="rev_date" className="text-xs">Rev Date</Label>
+                    <Input
+                      id="rev_date"
+                      type="date"
+                      value={formData.rev_date || ''}
+                      onChange={(e) => onFormDataChange({ ...formData, rev_date: e.target.value })}
+                    />
+                  </div>
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="valid_until" className="text-xs">Valid Until *</Label>
                   <Input
@@ -582,17 +742,35 @@ export function QuotationForm({
 
                 <div className="space-y-2">
                   <Label htmlFor="currency" className="text-xs">Currency</Label>
-                  <Select value={formData.currency} onValueChange={v => onFormDataChange({ ...formData, currency: v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="AED">AED</SelectItem>
-                      <SelectItem value="USD">USD</SelectItem>
-                      <SelectItem value="EUR">EUR</SelectItem>
-                      <SelectItem value="GBP">GBP</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="flex h-10 items-center rounded-md border border-input bg-muted px-3 text-sm font-medium">
+                    {baseCurrency}
+                  </div>
                 </div>
               </div>
+            </div>
+
+            <div className="pt-4 border-t space-y-4">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="use_custom_ship_to_trad"
+                  checked={formData.use_custom_ship_to || false}
+                  onCheckedChange={(checked) => onFormDataChange({ ...formData, use_custom_ship_to: checked })}
+                />
+                <Label htmlFor="use_custom_ship_to_trad" className="cursor-pointer">Ship To (Different from Bill To)</Label>
+              </div>
+
+              {formData.use_custom_ship_to && (
+                <div className="space-y-2 animate-in fade-in slide-in-from-top-1">
+                  <Label htmlFor="ship_to_address_trad" className="text-xs">Shipping Address</Label>
+                  <Textarea
+                    id="ship_to_address_trad"
+                    placeholder="Enter shipping address..."
+                    value={formData.ship_to_address || ''}
+                    onChange={e => onFormDataChange({ ...formData, ship_to_address: e.target.value })}
+                    className="min-h-[80px]"
+                  />
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -630,6 +808,27 @@ export function QuotationForm({
                     )}
                   </div>
 
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-xs">Item Code</Label>
+                      <Input
+                        value={item.item_code}
+                        onChange={e => handleItemChange(idx, 'item_code', e.target.value)}
+                        placeholder="CODE-001"
+                        className="text-xs font-mono"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs">Project</Label>
+                      <Input
+                        value={item.project}
+                        onChange={e => handleItemChange(idx, 'project', e.target.value)}
+                        placeholder="Project name"
+                        className="text-xs"
+                      />
+                    </div>
+                  </div>
+
                   <div className="space-y-2">
                     <Label className="text-xs">Description</Label>
                     <Input
@@ -640,7 +839,35 @@ export function QuotationForm({
                     />
                   </div>
 
+                  <div className="space-y-2">
+                    <Label className="text-xs">Remarks</Label>
+                    <Textarea
+                      value={item.remarks}
+                      onChange={e => handleItemChange(idx, 'remarks', e.target.value)}
+                      placeholder="Additional remarks..."
+                      className="text-xs min-h-[60px]"
+                    />
+                  </div>
+
                   <div className="grid grid-cols-3 gap-2">
+                    <div className="space-y-2">
+                      <Label className="text-xs">Date Required</Label>
+                      <Input
+                        type="date"
+                        value={item.date_required}
+                        onChange={e => handleItemChange(idx, 'date_required', e.target.value)}
+                        className="text-xs"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs">UOM</Label>
+                      <Input
+                        value={item.uom}
+                        onChange={e => handleItemChange(idx, 'uom', e.target.value)}
+                        placeholder="PCS"
+                        className="text-xs"
+                      />
+                    </div>
                     <div className="space-y-2">
                       <Label className="text-xs">Quantity</Label>
                       <Input
@@ -650,6 +877,9 @@ export function QuotationForm({
                         className="text-xs"
                       />
                     </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-2">
                       <Label className="text-xs">Unit Price</Label>
                       <Input
@@ -662,7 +892,7 @@ export function QuotationForm({
                     <div className="space-y-2">
                       <Label className="text-xs">Total</Label>
                       <div className="h-9 flex items-center px-3 bg-muted rounded-md text-xs font-semibold">
-                        {item.total.toLocaleString()}
+                        {formatCurrency(item.total, baseCurrency)}
                       </div>
                     </div>
                   </div>
@@ -672,16 +902,27 @@ export function QuotationForm({
               <div className="border-t pt-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Subtotal:</span>
-                  <span className="font-semibold">{formData.currency} {totals.subtotal.toLocaleString()}</span>
+                  <span className="font-semibold">{formatCurrency(totals.subtotal, baseCurrency)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span>Tax ({taxRate}%):</span>
-                  <span className="font-semibold">{formData.currency} {totals.tax.toLocaleString()}</span>
+                  <span>{`${taxName} (${taxRate}%):`}</span>
+                  <span className="font-semibold">{formatCurrency(totals.tax, baseCurrency)}</span>
                 </div>
                 <div className="flex justify-between text-base font-bold border-t pt-2">
                   <span>Total:</span>
-                  <span>{formData.currency} {totals.total.toLocaleString()}</span>
+                  <span>{formatCurrency(totals.total, baseCurrency)}</span>
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="contact_person_trad" className="text-xs">Authorized Contact Person</Label>
+                <Input
+                  id="contact_person_trad"
+                  placeholder="Name of contact person"
+                  value={formData.contact_person || ''}
+                  onChange={e => onFormDataChange({ ...formData, contact_person: e.target.value })}
+                  className="text-xs"
+                />
               </div>
 
               <div className="space-y-2">

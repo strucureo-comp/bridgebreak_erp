@@ -9,6 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Save, Loader2, CheckCircle2, Globe, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { settingsApi } from '@/lib/settings-api';
+import { useTenant } from '@/lib/tenant-context';
+import { broadcastCurrencyChange } from '@/lib/hooks/use-currency';
+import { Skeleton } from '@/components/ui/skeleton';
 
 // ============= TYPES =============
 
@@ -45,7 +48,7 @@ const ALL_COUNTRIES_CURRENCIES: CountryCurrency[] = [
     { code: 'OM', countryName: 'Oman', currency: { code: 'OMR', name: 'Omani Rial', symbol: 'ر.ع', flag: '🇴🇲' }, fiscalYearStart: 1 },
 
     // Asia
-    { code: 'IN', countryName: 'India', currency: { code: 'INR', name: 'Indian Rupee', symbol: '₹', flag: '🇮🇳' }, fiscalYearStart: 4 },
+    { code: 'IN', countryName: 'India', currency: { code: 'INR', name: 'Indian Rupee', symbol: '\u20B9', flag: '🇮🇳' }, fiscalYearStart: 4 },
     { code: 'SG', countryName: 'Singapore', currency: { code: 'SGD', name: 'Singapore Dollar', symbol: 'S$', flag: '🇸🇬' }, fiscalYearStart: 1 },
     { code: 'MY', countryName: 'Malaysia', currency: { code: 'MYR', name: 'Malaysian Ringgit', symbol: 'RM', flag: '🇲🇾' }, fiscalYearStart: 1 },
     { code: 'TH', countryName: 'Thailand', currency: { code: 'THB', name: 'Thai Baht', symbol: '฿', flag: '🇹🇭' }, fiscalYearStart: 1 },
@@ -135,6 +138,7 @@ export default function CurrencySettingsPage() {
     const [saving, setSaving] = useState(false);
     const [finance, setFinance] = useState<FinanceConfig>(DEFAULT_FINANCE);
     const [companyCountry, setCompanyCountry] = useState<string>('AE');
+    const { refreshTenantStatus } = useTenant();
     const uniqueCurrencies = Array.from(
         new Map(ALL_COUNTRIES_CURRENCIES.map((c) => [c.currency.code, c.currency])).values()
     );
@@ -197,6 +201,28 @@ export default function CurrencySettingsPage() {
                     fiscalYearStart: String(finance.fiscalYearStart),
                 }),
             ]);
+            broadcastCurrencyChange(finance.baseCurrency);
+            await refreshTenantStatus();
+
+            // Broadcast event
+            window.dispatchEvent(new CustomEvent('erp_company_settings_changed', {
+                detail: {
+                    baseCurrency: finance.baseCurrency,
+                    fiscalYearStart: finance.fiscalYearStart,
+                    country: finance.selectedCountry
+                }
+            }));
+
+            // Sync for PDF
+            const existingPdfSettings = JSON.parse(localStorage.getItem('pdf-settings') || '{}');
+            const syncedPdfSettings = {
+                ...existingPdfSettings,
+                currency: finance.baseCurrency
+            };
+            localStorage.setItem('pdf-settings', JSON.stringify(syncedPdfSettings));
+            localStorage.setItem('erp_pdf_settings', JSON.stringify(syncedPdfSettings));
+            window.dispatchEvent(new Event('erp_settings_updated'));
+
             toast.success('Currency & Fiscal settings saved');
         } catch (error: any) {
             toast.error(error?.message || 'Failed to save currency settings');
@@ -209,8 +235,17 @@ export default function CurrencySettingsPage() {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <div className="space-y-6 max-w-4xl animate-pulse">
+                <div>
+                    <Skeleton className="h-8 w-48 mb-2" />
+                    <Skeleton className="h-4 w-64" />
+                </div>
+                <Skeleton className="h-32 w-full rounded-xl" />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <Skeleton className="h-48 w-full rounded-xl" />
+                    <Skeleton className="h-48 w-full rounded-xl" />
+                    <Skeleton className="h-48 w-full rounded-xl" />
+                </div>
             </div>
         );
     }
